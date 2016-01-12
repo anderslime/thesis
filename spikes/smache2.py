@@ -1,28 +1,30 @@
+DEBUG = False
+
+def debug(message):
+    if DEBUG == True:
+        print message
+
 class SourceNode:
     def __init__(self, id, value = None):
         self.id       = id
         self._parents = []
         self.value    = value
 
-    def did_update(self):
-        print "Updating myself %s" % self.id
-        # Update dependencies
-
     def get_value(self):
         return self._value
 
     def set_value(self, new_value):
-        print "Updating source value {}".format(new_value)
+        debug("Updating source value {}".format(new_value))
         self.value = new_value
         for parent in self._parents:
-            print "Cascaded updating parent {}".format(parent.id)
+            debug("Cascaded updating parent {}".format(parent.id))
             parent.update()
 
     def set_parent(self, new_parent):
         self._parents.append(new_parent)
 
 class ComputedNode:
-    def __init__(self, id, dependencies = []):
+    def __init__(self, id, *dependencies):
         self.id            = id
         self._value        = None
         self._dependencies = []
@@ -32,11 +34,11 @@ class ComputedNode:
         self.update()
 
     def update(self):
-        print "Updating myself %s" % self.id
+        debug("Updating myself %s" % self.id)
         values = [node.value for node in self._dependencies]
         self.value = self.evaluate(*values)
         for parent in self._parents:
-            print "Cascaded updating parent {}".format(parent.id)
+            debug("Cascaded updating parent {}".format(parent.id))
             parent.update()
 
     def evalute(self, **input):
@@ -61,16 +63,49 @@ class StudentGrade(ComputedNode):
         }
 
     def _average_grade(self, grades):
+        if grades is None:
+            return None
         return float(sum(grades)) / len(grades)
 
+class Graph:
+    def __init__(self):
+        student       = SourceNode("Student")
+        grades        = SourceNode("Grades")
+        student_grade = StudentGrade("StudentGrade", student, grades)
+        self.sources = (student, grades)
+        self.nodes = self.sources + tuple([student_grade])
+
+    def set_value(self, node_id, new_value):
+        node = next(node for node in self.sources if node.id == node_id)
+        node.set_value(new_value)
+
+    def get_value(self, node_id):
+        node = next(node for node in self.nodes if node.id == node_id)
+        return node.value
+
 if __name__ == '__main__':
-    student = SourceNode("Student", { 'name': 'Henrik' })
-    grades  = SourceNode("Grades", [2, 4])
-    student_grade_inputs = (student, grades)
-    student_grade = StudentGrade("StudentGrade", (student, grades))
+    graph = Graph()
 
-    print student_grade.value
+    print graph.get_value("StudentGrade")
 
-    grades.set_value([4, 6])
+    graph.set_value("Student", "Henrik")
+    graph.set_value("Grades",  [2, 4])
 
-    print student_grade.value
+    print graph.get_value("StudentGrade")
+
+    # smache        = Smache()
+    #
+    #
+    # smache.cache_graph("StudentGrade", student, grades)
+    # smache.create_graph_instance(
+    #     "StudentGrade",
+    #     ("Student", 1, 'Henrik'),
+    #     ("Grade", 60, [2, 4])
+    # )
+    #
+    # print student_grade.value
+    #
+    # grades.set_value([4, 6])
+    # student.set_value({'name': 'Henrik'})
+    #
+    # print student_grade.value
