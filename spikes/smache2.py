@@ -75,19 +75,6 @@ def dependency(computed_nodes, dependency):
     else:
         return next(node for node in computed_nodes if dependency.__name__ == node.id)
 
-
-# def cached_graph(init):
-#     def new_init(self, *args):
-#         sources = find_sources(self.__class__)
-#         computed_funs = computed_functions(self.__class__)
-#         computed_nodes = []
-#         self.sources = [copy.deepcopy(source) for source in sources]
-#         for name, computed_fun in computed_funs:
-#             dependencies = [dependency(computed_nodes, obj) for obj in computed_fun.dependencies]
-#             computed_nodes.append(ComputedNode(name, computed_fun, *dependencies))
-#         init(self, *args)
-#     return new_init
-
 def computed(*deps):
     def _computed(f):
         f.computed = True
