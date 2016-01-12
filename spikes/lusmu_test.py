@@ -4,8 +4,10 @@ from lusmu.visualization import visualize_graph
 class Fragment(Node):
     def __init__(self, **kwargs):
         super(Fragment, self).__init__(
-            name=self.__class__.__name__,
-            action=self.build_and_save_fragment,
+            # name=self.__class__.__name__,
+            # name='hello',
+            # action=self.build_and_save_fragment,
+            action=self.build_fragment,
             **kwargs
         )
 
@@ -21,6 +23,7 @@ class Fragment(Node):
 
 class Difference(Fragment):
     def build_fragment(self, x, y):
+        print "diff between {} and {}".format(x, y)
         return x - y
 
 class Addition(Fragment):
@@ -36,18 +39,15 @@ y = Input(name='y-value')
 p = Input(name='power')
 
 difference = Difference(inputs = Node.inputs(x, y))
-addition   = Addition(inputs   = Node.inputs(difference))
+difference2 = Difference(inputs = Node.inputs(p, p))
+addition   = Addition(inputs   = Node.inputs(difference, difference2))
 power      = Power(inputs      = Node.inputs(difference, p))
 
 update_inputs([(p, 10), (x, 5), (y, 10)])
 
-print power.value
+# print power.value
+print addition.value
 
-update_inputs([(y, 7)])
-
-print power.value
-
-try:
-    visualize_graph([addition], 'lusmus_test.gif')
-except OSError:
-    print 'Please install graphviz to visualize the graph.'
+print "changing y"
+update_inputs([(y, 5)])
+print addition.value
