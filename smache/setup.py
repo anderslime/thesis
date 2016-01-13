@@ -32,7 +32,11 @@ setup(
     keywords='smart caching dataflow reactive push-based',
     long_description=open('README.rst').read(),
     install_requires=[
-        'dagger'
+        'dagger',
+        'redis',
+        'datadiff',
+        'blinker',
+        'mongoengine'
     ],
     tests_require=['tox'],
     url='http://limecode.dk',

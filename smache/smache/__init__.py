@@ -68,7 +68,7 @@ def computed_functions(cls):
             if hasattr(thing, 'computed') and getattr(thing, 'computed') == True]
 
 def is_source(obj):
-    return type(obj).__name__ == 'instance' and obj.__class__.__name__ == 'SourceNode'
+    return type(obj).__name__ == 'instance' and issubclass(obj.__class__, SourceNode)
 
 def find_sources(cls):
     return [thing for name, thing in cls.__dict__.iteritems() if is_source(thing)]
@@ -88,6 +88,15 @@ def computed(*deps):
         wrapper.__name__ = f.__name__
         return wrapper
     return _computed
+
+class GraphRepository:
+    def __init__(self):
+        self.repository = {}
+
+    def add_graph(self, graph):
+        self.repository[graph.lookup_key()] = graph
+
+repo = GraphRepository()
 
 class DependenceGraph:
     def __init__(self):
@@ -110,8 +119,6 @@ class DependenceGraph:
 
     def draw(self, filename):
         graph_drawer.draw(self, filename)
-
-
 
 if __name__ == '__main__':
     g = DependenceGraphExample()
