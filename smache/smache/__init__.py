@@ -1,5 +1,5 @@
 import copy
-import dagger
+import graph_drawer
 
 class Node:
     def __init__(self, id):
@@ -109,49 +109,10 @@ class DependenceGraph:
         return source.value
 
     def draw(self, filename):
-        GraphDrawer().draw(self, filename)
+        graph_drawer.draw(self, filename)
 
 
-class GraphDrawer:
-    def draw(self, graph, filename):
-        dag = dagger.dagger()
-        self.recursive_add(dag, graph.sources)
-        dag.run()
-        dot_filename = "{}.dot".format(filename)
-        dag.dot(dot_filename)
-
-    def recursive_add(self, dag, nodes):
-        for node in nodes:
-            parent_values = [parent.id for parent in node._parents]
-            dag.add(node.id, parent_values)
-            self.recursive_add(dag, node._parents)
-
-class DependenceGraphExample(Graph):
-    number = SourceNode("Number")
-
-    @computed(number)
-    def f1(self, x):
-        if x is None:
-            return None
-        return x + 1
-
-    @computed(number)
-    def f2(self, y):
-        if y is None:
-            return None
-        return y + 1
-
-    @computed(f1, f2)
-    def total(self, x, y):
-        if x is None or y is None:
-            return None
-        return y + x
 
 if __name__ == '__main__':
     g = DependenceGraphExample()
-
-    g.set_value("Number", 5)
-    print g.get_value("Number")
-
-    print g.get_value("total")
     g.draw('hello')
