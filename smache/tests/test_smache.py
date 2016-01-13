@@ -1,7 +1,7 @@
 import sys
 sys.path.append('../smache')
 
-from smache import DependenceGraph, SourceNode
+from smache import DependenceGraph, SourceNode, computed
 
 class DependenceGraphExample(DependenceGraph):
     number = SourceNode("Number")
@@ -23,7 +23,6 @@ class DependenceGraphExample(DependenceGraph):
         if x is None or y is None:
             return None
         return y + x
-
 
 def test_it_works():
     g = DependenceGraphExample()
