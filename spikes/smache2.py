@@ -1,30 +1,31 @@
 import copy
 import dagger
 
-DEBUG = False
+class Node:
+    def __init__(self, id):
+        self.id = id
+        self._parents = []
 
-def debug(message):
-    if DEBUG == True:
-        print message
 
 class SourceNode:
     def __init__(self, id, value = None):
         self.id       = id
-        self._parents = []
         self.value    = value
+        self._parents = []
 
     def get_value(self):
         return self._value
 
     def set_value(self, new_value):
-        debug("Updating source value {}".format(new_value))
         self.value = new_value
-        for parent in self._parents:
-            debug("Cascaded updating parent {}".format(parent.id))
-            parent.update()
+        self._update_parents()
 
-    def set_parent(self, new_parent):
+    def add_parent(self, new_parent):
         self._parents.append(new_parent)
+
+    def _update_parents(self):
+        for parent in self._parents:
+            parent.update()
 
 class ComputedNode:
     def __init__(self, id, action, graph, *dependencies):
@@ -39,12 +40,9 @@ class ComputedNode:
         self.update()
 
     def update(self):
-        debug("Updating myself %s" % self.id)
         values = [node.value for node in self._dependencies]
         self.value = self.evaluate(*values)
-        for parent in self._parents:
-            debug("Cascaded updating parent {}".format(parent.id))
-            parent.update()
+        self._update_parents()
 
     def evaluate(self, *input):
         if self._action:
@@ -56,10 +54,14 @@ class ComputedNode:
     def _set_dependencies(self, dependencies):
         self._dependencies = dependencies
         for dependency in dependencies:
-            dependency.set_parent(self)
+            dependency.add_parent(self)
 
-    def set_parent(self, new_parent):
+    def add_parent(self, new_parent):
         self._parents.append(new_parent)
+
+    def _update_parents(self):
+        for parent in self._parents:
+            parent.update()
 
 def computed_functions(cls):
     return [(name, thing) for name, thing in cls.__dict__.iteritems()
