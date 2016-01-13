@@ -89,7 +89,7 @@ def computed(*deps):
         return wrapper
     return _computed
 
-class Graph:
+class DependenceGraph:
     def __init__(self):
         sources = find_sources(self.__class__)
         computed_funs = computed_functions(self.__class__)
@@ -126,8 +126,7 @@ class GraphDrawer:
             dag.add(node.id, parent_values)
             self.recursive_add(dag, node._parents)
 
-
-class Hello(Graph):
+class DependenceGraphExample(Graph):
     number = SourceNode("Number")
 
     @computed(number)
@@ -149,7 +148,7 @@ class Hello(Graph):
         return y + x
 
 if __name__ == '__main__':
-    g = Hello()
+    g = DependenceGraphExample()
 
     g.set_value("Number", 5)
     print g.get_value("Number")
