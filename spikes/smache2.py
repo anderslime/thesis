@@ -110,8 +110,6 @@ class Graph:
         GraphDrawer().draw(self, filename)
 
 
-from subprocess import call
-
 class GraphDrawer:
     def draw(self, graph, filename):
         dag = dagger.dagger()
