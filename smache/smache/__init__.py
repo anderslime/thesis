@@ -82,7 +82,7 @@ class DependenceGraph:
         computed_nodes = []
         self.sources = [copy.deepcopy(source) for source in sources]
         for source in self.sources:
-            source.set_graph(self)
+            source.subscribe_to_source_changes()
         for name, computed_fun in computed_funs:
             dependencies = [dependency(self, computed_nodes, obj) for obj in computed_fun.dependencies]
             computed_nodes.append(ComputedNode(name, computed_fun, self, *dependencies))

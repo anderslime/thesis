@@ -5,11 +5,9 @@ class MongoSourceNode(SourceNode):
     def __init__(self, document_class, **kwargs):
         SourceNode.__init__(self, document_class.__name__)
         self.document_class = document_class
-        self.graph          = None
         self.kwargs         = kwargs
 
-    def set_graph(self, graph):
-        self.graph = graph
+    def subscribe_to_source_changes(self):
         self._hook_into_mongoengine()
 
     def _hook_into_mongoengine(self):

@@ -9,9 +9,9 @@ from fake_documents import Answer, Question, ReportGrade
 db = connect('testdb', host='localhost', port=27017,)
 
 class AnswerScoreGraph(DependenceGraph):
-    answer = MongoSourceNode(Answer)
-    question = MongoSourceNode(Question, from_model=Answer)
-    report_grade = MongoSourceNode(ReportGrade, from_model=Answer)
+    answer       = MongoSourceNode(Answer)
+    question     = MongoSourceNode(Question)
+    report_grade = MongoSourceNode(ReportGrade)
 
     def __init__(self, source_id):
         DependenceGraph.__init__(self)
