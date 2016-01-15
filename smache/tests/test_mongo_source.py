@@ -22,11 +22,27 @@ class AnswerScoreGraph(DependenceGraph):
         self.set_value('ReportGrade', report_grade)
         self.set_value('Question', question)
 
-    @computed(report_grade)
-    def score(self, report_grade):
-        if report_grade is None:
+    @computed(answer, report_grade, question)
+    def score(self, answer, r, q):
+        if answer is None or r is None or q is None:
             return None
-        return report_grade.feedback_grade * 0.5
+        q_score = 0.0
+        if q.question_type == 'numerical':
+            q_score = float(answer.numerical_answer - min(map(int, q.numericalAnswers.keys()))) / max(map(int, q.numericalAnswers.keys()))
+        elif q.question_type == 'boolean':
+            q_score = (1.0 if answer.boolean_answer else 0.0)
+        return float("{0:.2f}".format(q_score))
+
+    @computed(question)
+    def max_score(self, q):
+        if q is None:
+            return None
+        elif q.question_type == 'numerical':
+            return 1.0
+        elif q.question_type == 'boolean':
+            return 1.0
+        else:
+            return 0.0
 
     @computed(score, question)
     def weighted_score(self, score, question):
@@ -36,37 +52,37 @@ class AnswerScoreGraph(DependenceGraph):
 
 
 def test_it_works():
-    report_grade = ReportGrade(feedback_grade=5)
+    report_grade = ReportGrade()
     report_grade.save()
 
-    question = Question(text='hello', question_type='score', weight=4)
+    question = Question(text='hello', question_type='numerical', weight=4)
     question.save()
 
-    answer = Answer(report_grade=report_grade, question=question)
+    answer = Answer(numerical_answer='3', report_grade=report_grade, question=question)
     answer.save()
 
     graph = AnswerScoreGraph(answer.id)
 
-    assert graph.get_value("score") == 2.5
-    assert graph.get_value("weighted_score") == 10.0
+    assert graph.get_value("score") == 1.0
+    assert graph.get_value("weighted_score") == 4.0
 
 def test_it_updates_values_when_source_changes():
-    report_grade = ReportGrade(feedback_grade=5)
+    report_grade = ReportGrade()
     report_grade.save()
 
-    question = Question(text='hello', question_type='score', weight=4)
+    question = Question(text='hello', question_type='numerical', weight=4)
     question.save()
 
-    answer = Answer(report_grade=report_grade, question=question)
+    answer = Answer(numerical_answer=3, report_grade=report_grade, question=question)
     answer.save()
 
     graph = AnswerScoreGraph(answer.id)
 
-    report_grade.feedback_grade = 10
-    report_grade.save()
+    answer.numerical_answer = 1
+    answer.save()
 
-    question.weight = 5
+    question.weight = 3
     question.save()
 
-    assert graph.get_value("score") == 5.0
-    assert graph.get_value("weighted_score") == 25.0
+    assert graph.get_value("score") == 0.33
+    assert graph.get_value("weighted_score") == 0.99
