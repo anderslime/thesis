@@ -1,79 +1,72 @@
 import sys
 sys.path.append('../smache')
 
-from smache import DependenceGraph, SourceNode, computed
+from smache import DependenceGraph, SourceNode, computed, MongoSourceNode
 
-from mongoengine import Document, connect, signals, StringField
+from mongoengine import connect
+from fake_documents import Answer, Question, ReportGrade
 
 db = connect('testdb', host='localhost', port=27017,)
 
-class User(Document):
-    student_id = StringField()
-    name = StringField()
+class AnswerScoreGraph(DependenceGraph):
+    answer = MongoSourceNode(Answer)
+    question = MongoSourceNode(Question, from_model=Answer)
+    report_grade = MongoSourceNode(ReportGrade, from_model=Answer)
 
-import redis
-import json
-from datadiff import diff
+    def __init__(self, source_id):
+        DependenceGraph.__init__(self)
+        answer = self.source('Answer').document_class.objects(id=source_id).first()
+        question = answer.question
+        report_grade = answer.report_grade
+        self.set_value('Answer', answer)
+        self.set_value('ReportGrade', report_grade)
+        self.set_value('Question', question)
 
-rediscon = redis.from_url('redis://localhost:6379')
-
-def user_modified(sender, document, **kwargs):
-    json_doc = json.loads(document.to_json())
-    redis_id = "Assignment/%s" % json_doc['_id']['$oid']
-    old_doc = rediscon.get(redis_id)
-    if old_doc:
-        old_doc = json.loads(redis_result)
-        non_equal_diffs = filter(lambda x: x[0] == 'insert', diff(old_doc, json_doc).diffs)
-        for _, mydiff in non_equal_diffs:
-            key = mydiff[0][0]
-            new_value = mydiff[0][1]
-            print "Assignment changed %s from '%s' to '%s'" % (key, str(json_doc[key]), new_value)
-    rediscon.set(redis_id, json.dumps(json_doc))
-
-
-class MongoSourceNode(SourceNode):
-    def __init__(self, document_class, id_attribute):
-        SourceNode.__init__(self, document_class.__name__)
-        self.document_class = document_class
-        self.id_attribute   = id_attribute
-        self._hook_into_mongoengine(document_class)
-
-    def _hook_into_mongoengine(self, document_class):
-        signals.post_save.connect(self._after_save, sender=document_class)
-
-    def _after_save(self, sender, document, **kwargs):
-        print "AFTER SAVE"
-        print kwargs
-        print document[self.id_attribute]
-        # if 'created' in kwargs:
-            # smache.repo.add_graph(
-
-class DependenceGraphExample(DependenceGraph):
-    def _sources(self):
-        return {
-            'user': MongoSourceNode(User, 'id')
-        }
-
-    def lookup_key(self):
-        return '/'.join([self.__class__.__name__, self.user.id])
-
-    @computed(user)
-    def name(self, user):
-        if user is None:
+    @computed(report_grade)
+    def score(self, report_grade):
+        if report_grade is None:
             return None
-        return user.name
+        return report_grade.feedback_grade * 0.5
+
+    @computed(score, question)
+    def weighted_score(self, score, question):
+        if score is None or question is None:
+            return None
+        return score * question.weight
+
 
 def test_it_works():
-    dg = DependenceGraphExample()
+    report_grade = ReportGrade(feedback_grade=5)
+    report_grade.save()
 
-    user = User(name='Hello')
-    user.save()
+    question = Question(text='hello', question_type='score', weight=4)
+    question.save()
 
-    assert dg.lookup(user.id).get_value("name") == "Hello"
+    answer = Answer(report_grade=report_grade, question=question)
+    answer.save()
 
-    user.name = 'Hello2'
-    user.save()
+    graph = AnswerScoreGraph(answer.id)
 
-    assert dg.lookup(user.id).get_value("name") == "Hello2"
+    assert graph.get_value("score") == 2.5
+    assert graph.get_value("weighted_score") == 10.0
 
-    assert False
+def test_it_updates_values_when_source_changes():
+    report_grade = ReportGrade(feedback_grade=5)
+    report_grade.save()
+
+    question = Question(text='hello', question_type='score', weight=4)
+    question.save()
+
+    answer = Answer(report_grade=report_grade, question=question)
+    answer.save()
+
+    graph = AnswerScoreGraph(answer.id)
+
+    report_grade.feedback_grade = 10
+    report_grade.save()
+
+    question.weight = 5
+    question.save()
+
+    assert graph.get_value("score") == 5.0
+    assert graph.get_value("weighted_score") == 25.0

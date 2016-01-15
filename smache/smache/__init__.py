@@ -1,31 +1,8 @@
 import copy
 import graph_drawer
+from mongo_source import *
+from source_node import SourceNode
 
-class Node:
-    def __init__(self, id):
-        self.id = id
-        self._parents = []
-
-
-class SourceNode:
-    def __init__(self, id, value = None):
-        self.id       = id
-        self.value    = value
-        self._parents = []
-
-    def get_value(self):
-        return self._value
-
-    def set_value(self, new_value):
-        self.value = new_value
-        self._update_parents()
-
-    def add_parent(self, new_parent):
-        self._parents.append(new_parent)
-
-    def _update_parents(self):
-        for parent in self._parents:
-            parent.update()
 
 class ComputedNode:
     def __init__(self, id, action, graph, *dependencies):
@@ -104,18 +81,22 @@ class DependenceGraph:
         computed_funs = computed_functions(self.__class__)
         computed_nodes = []
         self.sources = [copy.deepcopy(source) for source in sources]
+        for source in self.sources:
+            source.set_graph(self)
         for name, computed_fun in computed_funs:
             dependencies = [dependency(self, computed_nodes, obj) for obj in computed_fun.dependencies]
             computed_nodes.append(ComputedNode(name, computed_fun, self, *dependencies))
         self.nodes = tuple(self.sources) + tuple(computed_nodes)
 
     def set_value(self, source_id, value):
-        source = next(source for source in self.sources if source.id == source_id)
-        source.set_value(value)
+        self.source(source_id).set_value(value)
 
     def get_value(self, source_id):
         source = next(source for source in self.nodes if source.id == source_id)
         return source.value
+
+    def source(self, source_id):
+        return next(source for source in self.sources if source.id == source_id)
 
     def draw(self, filename):
         graph_drawer.draw(self, filename)
