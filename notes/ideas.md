@@ -9,3 +9,8 @@
   changes in the underlying data/data source/input. A change is identified
   by a unique node_id and an instance_key (strings)
   -> When a change i received, the node is looked up in the graph with thec
+
+
+# On out-of-memory:
+
+- Evict values of lowest priority
