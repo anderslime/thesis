@@ -84,5 +84,5 @@ def test_it_updates_values_when_source_changes():
     question.weight = 3
     question.save()
 
-    assert graph.get_value("score") == 0.33
-    assert graph.get_value("weighted_score") == 0.99
+    assert graph.score == 0.33
+    assert graph.weighted_score == 0.99

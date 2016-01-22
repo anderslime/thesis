@@ -19,6 +19,7 @@ class ComputedNode:
     def update(self):
         values = [node.value for node in self._dependencies]
         self.value = self.evaluate(*values)
+        self._graph.update_computed_value(self.id, self.value)
         self._update_parents()
 
     def evaluate(self, *input):
