@@ -1,107 +1,128 @@
-import copy
-import graph_drawer
-from mongo_source import *
-from source_node import SourceNode
+# class TopologicalOrder:
+#     def find(self, sources):
+#         L = []
+#         S = [node for node in nodes if node.__class__.__name__ == "SourceNode"]
+#         removed_edges = set()
+#         while len(S) > 0:
+#             current_node = S.pop()
+#             L.append(current_node)
+#             for parent in current_node.parents:
+#                 removed_edges.add(sorted(parent.node_id, current_node.node_id))
+#                 if parent.kj
+#
+from collections import deque
+
+GRAY, BLACK = 0, 1
+
+class TopologicalSort:
+    @classmethod
+    def sort(cls, nodes):
+        graph = cls.graph_from_nodes(nodes)
+        order, state = deque(), {}
+        enter = set(graph)
+
+        def dfs(node_id):
+            state[node_id] = GRAY
+            (node, parents) = graph.get(node_id)
+            for k in parents:
+                sk = state.get(k.node_id, None)
+                if sk == GRAY: raise ValueError("cycle")
+                if sk == BLACK: continue
+                enter.discard(k.node_id)
+                dfs(k.node_id)
+            order.appendleft(node)
+            state[node_id] = BLACK
+
+        while enter: dfs(enter.pop())
+        return order
+
+    @classmethod
+    def graph_from_nodes(cls, nodes):
+        graph = dict()
+        for node in nodes:
+            graph[node.node_id] = (node, node.parents)
+        return graph
+
+
+
+class Scheduler:
+    def __init__(self, sources):
+        self._sources = sources
+        self._sorted_nodes = self._topologically_sorted_nodes(sources)
+
+    def update_dirty_nodes(self):
+        for node in self._sorted_nodes:
+            self._update_dirty_nodes(node.parents)
+
+    def _topologically_sorted_nodes(self, sources):
+        nodes = self._all_nodes(sources)
+        return TopologicalSort.sort(nodes)
+
+    def _all_nodes(self, sources, nodes = set()):
+        for node in sources:
+            nodes.add(node)
+            self._all_nodes(node.parents, nodes)
+        return nodes
+
+    def _add_nodes(self, node_set, node):
+        node.add(node)
+        for parent in node.parents:
+            self._add_nodes(node_set, parent)
+
+    def _update_dirty_nodes(self, nodes):
+        for node in nodes:
+            if node.is_dirty:
+                node.update_value()
+                self._update_dirty_nodes(node.parents)
 
 
 class ComputedNode:
-    def __init__(self, id, action, graph, *dependencies):
-        self.id            = id
-        self._value        = None
-        self._dependencies = []
-        self._parents      = []
-        self._action       = action
-        self._graph        = graph
+    def __init__(self, node_id, action, *dependencies):
+        self.node_id      = node_id
+        self._action      = action
+        self.dependencies = dependencies
+        self.value        = None
+        self.is_dirty     = True
+        self.parents     = []
+        self._add_dependencies(dependencies)
 
-        self._set_dependencies(dependencies)
-        self.update()
-
-    def update(self):
-        values = [node.value for node in self._dependencies]
+    def update_value(self):
+        values = [node.value for node in self.dependencies]
         self.value = self.evaluate(*values)
-        self._graph.update_computed_value(self.id, self.value)
-        self._update_parents()
+        self.is_dirty = False
+        return self.value
+
+    def mark_as_dirty(self):
+        self.is_dirty = True
+        self._mark_parents_as_dirty()
 
     def evaluate(self, *input):
-        if self._action:
-            return self._action(self._graph, *input)
-        raise NotImplementedError(
-            "{} does not implement evaluate".format(self.__class__.__name__)
-        )
+        return self._action(*input)
 
-    def _set_dependencies(self, dependencies):
-        self._dependencies = dependencies
+    def add_parent(self, parent):
+        self.parents.append(parent)
+
+    def _add_dependencies(self, dependencies):
         for dependency in dependencies:
             dependency.add_parent(self)
 
-    def add_parent(self, new_parent):
-        self._parents.append(new_parent)
+    def _mark_parents_as_dirty(self):
+        for parent in self.parents:
+            parent.mark_as_dirty()
 
-    def _update_parents(self):
-        for parent in self._parents:
-            parent.update()
+class SourceNode:
+    def __init__(self, node_id):
+        self.node_id  = node_id
+        self.value    = None
+        self.parents = []
 
-def computed_functions(cls):
-    return [(name, thing) for name, thing in cls.__dict__.iteritems()
-            if hasattr(thing, 'computed') and getattr(thing, 'computed') == True]
+    def set_value(self, new_value):
+        self.value = new_value
+        self._mark_parents_as_dirty()
 
-def is_source(obj):
-    return type(obj).__name__ == 'instance' and issubclass(obj.__class__, SourceNode)
+    def add_parent(self, parent):
+        self.parents.append(parent)
 
-def find_sources(cls):
-    return [thing for name, thing in cls.__dict__.iteritems() if is_source(thing)]
-
-def dependency(graph, computed_nodes, dependency):
-    if is_source(dependency):
-        return next(source for source in graph.sources if dependency.id == source.id)
-    else:
-        return next(node for node in computed_nodes if dependency.__name__ == node.id)
-
-def computed(*deps):
-    def _computed(f):
-        def wrapper(self, *args):
-            return f(self, *args)
-        wrapper.computed = True
-        wrapper.dependencies = deps
-        wrapper.__name__ = f.__name__
-        return wrapper
-    return _computed
-
-class GraphRepository:
-    def __init__(self):
-        self.repository = {}
-
-    def add_graph(self, graph):
-        self.repository[graph.lookup_key()] = graph
-
-repo = GraphRepository()
-
-class DependenceGraph:
-    def __init__(self):
-        sources = find_sources(self.__class__)
-        computed_funs = computed_functions(self.__class__)
-        computed_nodes = []
-        self.sources = [copy.deepcopy(source) for source in sources]
-        for source in self.sources:
-            source.subscribe_to_source_changes()
-        for name, computed_fun in computed_funs:
-            dependencies = [dependency(self, computed_nodes, obj) for obj in computed_fun.dependencies]
-            computed_nodes.append(ComputedNode(name, computed_fun, self, *dependencies))
-        self.nodes = tuple(self.sources) + tuple(computed_nodes)
-
-    def set_value(self, source_id, value):
-        self.source(source_id).set_value(value)
-
-    def get_value(self, source_id):
-        source = next(source for source in self.nodes if source.id == source_id)
-        return source.value
-
-    def source(self, source_id):
-        return next(source for source in self.sources if source.id == source_id)
-
-    def draw(self, filename):
-        graph_drawer.draw(self, filename)
-
-if __name__ == '__main__':
-    g = DependenceGraphExample()
-    g.draw('hello')
+    def _mark_parents_as_dirty(self):
+        for parent in self.parents:
+            parent.mark_as_dirty()
