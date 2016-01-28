@@ -1,4 +1,5 @@
 from smache import SourceNode, ComputedNode, Scheduler, topological_sort
+from smache.topological_sort import topological_sort
 
 assignment = SourceNode("Assignment")
 user       = SourceNode("User")
