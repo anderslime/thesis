@@ -20,7 +20,7 @@ user_ass_grade = ComputedNode("user_ass_grade",
 
 
 def test_topological_order():
-    nodes = [assignment, user, grade, user_grade, user_ass_grade]
+    nodes = [user_ass_grade, assignment, user_grade, grade, user]
     ordered_nodes = topological_sort(nodes)
     ordered_node_ids = [node.node_id for node in ordered_nodes]
     assert ordered_node_ids == [

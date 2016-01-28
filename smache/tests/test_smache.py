@@ -25,6 +25,7 @@ def test_all_is_dirty_from_init():
     assert user_grade.is_dirty
     assert user_ass_grade.is_dirty
 
+
 def test_computed_values_are_not_computed_lazily():
     assignment.set_value("ASS_VALUE")
     user.set_value("USER_VALUE")
