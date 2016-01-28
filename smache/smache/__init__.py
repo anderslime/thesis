@@ -1,15 +1,3 @@
-# class TopologicalOrder:
-#     def find(self, sources):
-#         L = []
-#         S = [node for node in nodes if node.__class__.__name__ == "SourceNode"]
-#         removed_edges = set()
-#         while len(S) > 0:
-#             current_node = S.pop()
-#             L.append(current_node)
-#             for parent in current_node.parents:
-#                 removed_edges.add(sorted(parent.node_id, current_node.node_id))
-#                 if parent.kj
-#
 from collections import deque
 
 GRAY, BLACK = 0, 1

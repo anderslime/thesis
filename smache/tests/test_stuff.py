@@ -20,8 +20,6 @@ user_ass_grade = ComputedNode("user_ass_grade",
 # grade      /
 
 
-from collections import deque
-
 def test_topological_order():
     nodes = [assignment, user, grade, user_grade, user_ass_grade]
     ordered_nodes = TopologicalSort.sort(nodes)
