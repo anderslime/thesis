@@ -1,4 +1,4 @@
-from smache import SourceNode, ComputedNode, Scheduler, TopologicalSort
+from smache import SourceNode, ComputedNode, Scheduler
 
 
 assignment = SourceNode("Assignment")
@@ -20,17 +20,6 @@ user_ass_grade = ComputedNode("user_ass_grade",
 # grade      /
 
 
-def test_topological_order():
-    nodes = [assignment, user, grade, user_grade, user_ass_grade]
-    ordered_nodes = TopologicalSort.sort(nodes)
-    ordered_node_ids = [node.node_id for node in ordered_nodes]
-    assert ordered_node_ids == [
-        "User",
-        "Assignment",
-        "Grade",
-        "user_grade",
-        "user_ass_grade"
-    ]
 
 def test_all_is_dirty_from_init():
     assert user_grade.is_dirty

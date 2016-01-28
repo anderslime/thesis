@@ -1,37 +1,4 @@
-from collections import deque
-
-GRAY, BLACK = 0, 1
-
-class TopologicalSort:
-    @classmethod
-    def sort(cls, nodes):
-        graph = cls.graph_from_nodes(nodes)
-        order, state = deque(), {}
-        enter = set(graph)
-
-        def dfs(node_id):
-            state[node_id] = GRAY
-            (node, parents) = graph.get(node_id)
-            for k in parents:
-                sk = state.get(k.node_id, None)
-                if sk == GRAY: raise ValueError("cycle")
-                if sk == BLACK: continue
-                enter.discard(k.node_id)
-                dfs(k.node_id)
-            order.appendleft(node)
-            state[node_id] = BLACK
-
-        while enter: dfs(enter.pop())
-        return order
-
-    @classmethod
-    def graph_from_nodes(cls, nodes):
-        graph = dict()
-        for node in nodes:
-            graph[node.node_id] = (node, node.parents)
-        return graph
-
-
+from topological_sort import topological_sort
 
 class Scheduler:
     def __init__(self, sources):
@@ -44,7 +11,7 @@ class Scheduler:
 
     def _topologically_sorted_nodes(self, sources):
         nodes = self._all_nodes(sources)
-        return TopologicalSort.sort(nodes)
+        return topological_sort(nodes)
 
     def _all_nodes(self, sources, nodes = set()):
         for node in sources:
