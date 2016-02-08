@@ -118,9 +118,9 @@ ud(grade) ------------------------------/
 def estimated_grade(assignment)
   return assignment.awesomeness * assignment.average
 
-@computed(grade, assignment, estimated_grade)
+@computed(grade, assignment, deps=(estimated_grade))
 def grade_precision(grade, assignment)
-  return grade.value - assignment.count
+  return grade.value - estimated_grade(assignment)
 
 
 

@@ -34,6 +34,7 @@ class ComputedNode:
         for parent in self.parents:
             parent.mark_as_dirty()
 
+
 class SourceNode:
     def __init__(self, node_id):
         self.node_id  = node_id

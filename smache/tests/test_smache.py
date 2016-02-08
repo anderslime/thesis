@@ -19,7 +19,7 @@ user_ass_grade = ComputedNode("user_ass_grade",
 #              user_grade ---/
 # grade      /
 
-
+# We need some root!!!
 
 def test_all_is_dirty_from_init():
     assert user_grade.is_dirty

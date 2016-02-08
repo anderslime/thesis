@@ -2,11 +2,11 @@ ud(assignment) --> c(estimated_grade) --\
                                          c(grad_precision)
 ud(grade) ------------------------------/
 
-                 c(estimated_grade)
-                /
-ud(assignment) /---\c(grad_precision)
 
-ud(grade) -----------/
+
+ud(assignment) ---\
+  \                c(grad_precision)
+   ud(grade) -----/
 
 - On grade update:
   -> We receive grade_id
@@ -18,3 +18,10 @@ ud(grade) -----------/
 - Query:
   - Map from node to other node based on function.
 
+@computed(assignment)
+def estimated_grade(assignment):
+  return assignment.awesomeness * assignment.average
+
+@computed(grade, assignment, deps=(estimated_grade))
+def grade_precision(grade, assignment):
+  return grade.value - estimated_grade(assignment)
