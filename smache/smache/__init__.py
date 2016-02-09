@@ -10,6 +10,12 @@ class ComputedNode:
         self.parents     = []
         self._add_dependencies(dependencies)
 
+    def get_value(self, *input):
+        if self._is_fresh():
+            return self.value
+        else:
+            return self.evaluate(*input)
+
     def update_value(self):
         values = [node.value for node in self.dependencies]
         self.value = self.evaluate(*values)
@@ -29,6 +35,9 @@ class ComputedNode:
     def _add_dependencies(self, dependencies):
         for dependency in dependencies:
             dependency.add_parent(self)
+
+    def _is_fresh(self):
+        return not self.is_dirty
 
     def _mark_parents_as_dirty(self):
         for parent in self.parents:

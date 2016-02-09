@@ -130,8 +130,9 @@ def grade_precision(grade_id, assignment_id):
   grade = Grade.find(grade_id)
   retur my_grade_precision(grade, assignment_id)
 
-def my_grade_precision(grade, assignment_id)
-  return grade.value - estimated_grade(assignment_id)
+@depends_on(grade, assignment)
+def my_grade_precision(grade, assignment)
+  return grade.value - grade_precision(assignment)
 
 ### Update
 - estimated_grade updates on assignment
