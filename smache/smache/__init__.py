@@ -86,6 +86,7 @@ class DataSource:
     def did_update(self, entity_id):
         self.subscriber(self, entity_id)
 
+
 class Node:
     def __init__(self, node_id, parents = []):
         self.node_id = node_id
@@ -94,9 +95,27 @@ class Node:
     def add_parent(self, parent_node):
         self.parents.append(parent_node)
 
+class RedisDependencyGraph:
+    def __init__(self, redis_con):
+        self.redis_con = redis_con
+
+    def add_dependency(self, data_source_id, entity_id, dep_key):
+        key = self._entity_key(data_source_id, entity_id)
+        self.redis_con.sadd(key, dep_key)
+
+    def add_data_source_dependency(self, data_source_id, dep_key):
+        self.add_dependency(data_source_id, 'all', dep_key)
+
+    def values_depending_on(self, data_source_id, entity_id):
+        entity_key = self._entity_key(data_source_id, entity_id)
+        all_key = self._entity_key(data_source_id, 'all')
+        return self.redis_con.sunion(entity_key, all_key)
+
+    def _entity_key(self, data_source_id, entity_id):
+        return '/'.join([data_source_id, str(entity_id)])
 
 
-class DependencyGraph:
+class InMemoryDependencyGraph:
     def __init__(self):
         self._dependencies = {}
 
@@ -122,7 +141,7 @@ class CacheManager:
     def __init__(self, fun_store, store, dep_graph):
         self.fun_store        = fun_store
         self.store            = store
-        self.dep_graph = dep_graph
+        self.dep_graph        = dep_graph
         self._data_sources    = []
         self._computed_funs   = {}
 
@@ -198,7 +217,7 @@ class CacheManager:
 
 redis_con = redis.StrictRedis(host='localhost', port=6379, db=0)
 
-dep_graph = DependencyGraph()
+dep_graph = RedisDependencyGraph(redis_con)
 store     = RedisStore(redis_con)
 fun_store = FunctionStore()
 smache    = CacheManager(fun_store, store, dep_graph)

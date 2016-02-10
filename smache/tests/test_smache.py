@@ -1,7 +1,8 @@
-from smache import smache, RedisStore
+from smache import smache, RedisStore, RedisDependencyGraph
 from smache.graph_drawer import draw
 
 from collections import namedtuple
+import pytest
 
 import redis
 
@@ -23,13 +24,13 @@ def f(a, b, c):
     return a.value * h(b, c)
 
 # Tests
-
 Entity = namedtuple('Entity', ['id', 'value'])
 redis_con = redis.StrictRedis(host='localhost', port=6379, db=0)
 
-def setup_module(module):
+@pytest.yield_fixture(autouse=True)
+def flush_before_each_test_case():
     redis_con.flushall()
-
+    yield
 
 
 def test_cache():
@@ -76,3 +77,16 @@ def test_redis():
     store.mark_as_stale(key)
 
     assert store.is_fresh(key) == False
+
+
+def test_source_deps():
+    deps = RedisDependencyGraph(redis_con)
+    deps.add_dependency('A', '1', 'hello/world')
+    deps.add_dependency('A', '1', 'foo/bar')
+    deps.add_dependency('A', '2', 'soo/tar')
+    deps.add_dependency('B', '1', 'lalala')
+    deps.add_data_source_dependency('A', 'full')
+
+    assert deps.values_depending_on('A', '1') == set(['hello/world', 'foo/bar', 'full'])
+    assert deps.values_depending_on('A', '2') == set(['soo/tar', 'full'])
+    assert deps.values_depending_on('B', '1') == set(['lalala'])
