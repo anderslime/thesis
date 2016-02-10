@@ -1,8 +1,6 @@
-class CacheResult:
-    def __init__(self, value, is_fresh):
-        self.value    = value
-        self.is_fresh = is_fresh
+from collections import namedtuple as struct
 
+CacheResult = struct("CacheResult", ["value", "is_fresh"])
 
 class Store:
     def __init__(self):
