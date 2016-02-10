@@ -152,10 +152,10 @@ class CacheManager:
 
 
 data_source_deps = DataSourceDependencies()
-dep_graph = DependencyGraph()
-store = Store()
-fun_store = FunctionStore()
-cache_manager = CacheManager(fun_store, store, dep_graph, data_source_deps)
+dep_graph        = DependencyGraph()
+store            = Store()
+fun_store        = FunctionStore()
+cache_manager    = CacheManager(fun_store, store, dep_graph, data_source_deps)
 
 def computed(*deps, **kwargs):
     def _computed(fun):
@@ -177,6 +177,26 @@ b = DataSource('B')
 c = DataSource('C')
 
 cache_manager.add_sources(a, b, c)
+
+@aggregate(assignment_source)
+class AssignmentAggregate:
+    def __init__(self, assignment):
+        self.assignment = assignment
+
+    @relation(handing_source)
+    def handins(self):
+        return Handin.objects(assignment=assignment)
+
+    @relation(answer_source)
+    def answers(self):
+        return self.assignment.answers
+
+
+@computed(assignment_aggregate)
+def score(ass):
+    handins = ass.handins()
+    answers = ass.answers()
+    return (len(handins) + len(answers)) * ass.assignment.weight
 
 @computed(b, c)
 def h(b, c):
