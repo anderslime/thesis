@@ -11,21 +11,25 @@ def test_nocache():
 
     assert f(ax, bx, cx) == 50
     assert h(bx, cx) == 5
+    assert score(ax)
 
-    a.did_update(1)
+    assert store.is_fresh('score/1') == True
 
-    assert store.is_fresh('f/1/2/3') == False
-    assert store.is_fresh('h/2/3') == True
+    b.did_update(0)
+
+    assert store.is_fresh('score/1') == False
+
+    assert False
 
 
+def test_source_deps():
+    deps = DataSourceDependencies()
+    deps.add_dependency('A', '1', 'hello/world')
+    deps.add_dependency('A', '1', 'foo/bar')
+    deps.add_dependency('A', '2', 'soo/tar')
+    deps.add_dependency('B', '1', 'lalala')
+    deps.add_data_source_dependency('A', 'full')
 
-# def test_source_deps():
-#     deps = DataSourceDependencies()
-#     deps.add_dependency('A', '1', 'hello/world')
-#     deps.add_dependency('A', '1', 'foo/bar')
-#     deps.add_dependency('A', '2', 'soo/tar')
-#     deps.add_dependency('B', '1', 'lalala')
-#
-#     assert deps.values_depending_on('A', '1') == set(['hello/world', 'foo/bar'])
-#     assert deps.values_depending_on('A', '2') == set(['soo/tar'])
-#     assert deps.values_depending_on('B', '1') == set(['lalala'])
+    assert deps.values_depending_on('A', '1') == set(['hello/world', 'foo/bar', 'full'])
+    assert deps.values_depending_on('A', '2') == set(['soo/tar', 'full'])
+    assert deps.values_depending_on('B', '1') == set(['lalala'])
