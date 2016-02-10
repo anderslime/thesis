@@ -166,7 +166,6 @@ cache_manager.add_sources(a, b, c)
 
 @computed(a, sources=(b, c))
 def score(a):
-    print "UPDATE SCORE"
     return a.value + 5 + 10
 
 @computed(b, c)
