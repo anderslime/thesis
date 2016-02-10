@@ -1,8 +1,3 @@
-# HELLO
-
-import hashlib
-from topological_sort import topological_sort
-
 class CacheResult:
     def __init__(self, value, is_fresh):
         self.value    = value
