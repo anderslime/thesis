@@ -76,31 +76,10 @@ class DataSourceDependencies:
     def _data_key(self, data_source_id, entity_id):
         return '/'.join([data_source_id, str(entity_id)])
 
-class DependencyGraph:
-    def __init__(self):
-        self._nodes = {}
-
-    def add_node(self, node_id, dependency_node_ids):
-        node = Node(node_id, [])
-        self._set_node(node_id, node)
-        for dependency_node_id in dependency_node_ids:
-            self._get_node(dependency_node_id).add_parent(node)
-
-    def parents(self, node_id):
-        return self._get_node(node_id).parents
-
-    def _get_node(self, node_id):
-        return self._nodes[node_id]
-
-    def _set_node(self, node_id, node):
-        self._nodes[node_id] = node
-
-
 class CacheManager:
-    def __init__(self, fun_store, store, dep_graph, data_source_deps):
+    def __init__(self, fun_store, store, data_source_deps):
         self.fun_store        = fun_store
         self.store            = store
-        self.dep_graph        = dep_graph
         self.data_source_deps = data_source_deps
         self._data_sources    = []
         self._computed_funs   = {}
@@ -119,15 +98,9 @@ class CacheManager:
     def add_sources(self, *data_sources):
         for data_source in data_sources:
             self._data_sources.append(data_source)
-            self.dep_graph.add_node(data_source.data_source_id, [])
             data_source.subscribe(self._on_data_source_update)
 
     def add_computed(self, fun, data_source_deps, kwargs):
-        computed_deps = self.parse_deps(kwargs.get('deps', ()))
-        computed_dep_ids = [f.__name__ for f in computed_deps]
-        data_source_dep_ids = [node.data_source_id for node in data_source_deps]
-        dependency_ids = computed_dep_ids + data_source_dep_ids
-        self.dep_graph.add_node(fun.__name__, dependency_ids)
         self._computed_funs[fun.__name__] = (fun.__name__, data_source_deps)
 
     def _add_data_source_dependencies(self, fun, args, key):
@@ -152,10 +125,9 @@ class CacheManager:
 
 
 data_source_deps = DataSourceDependencies()
-dep_graph        = DependencyGraph()
 store            = Store()
 fun_store        = FunctionStore()
-cache_manager    = CacheManager(fun_store, store, dep_graph, data_source_deps)
+cache_manager    = CacheManager(fun_store, store, data_source_deps)
 
 def computed(*deps, **kwargs):
     def _computed(fun):
@@ -178,25 +150,9 @@ c = DataSource('C')
 
 cache_manager.add_sources(a, b, c)
 
-@aggregate(assignment_source)
-class AssignmentAggregate:
-    def __init__(self, assignment):
-        self.assignment = assignment
-
-    @relation(handing_source)
-    def handins(self):
-        return Handin.objects(assignment=assignment)
-
-    @relation(answer_source)
-    def answers(self):
-        return self.assignment.answers
-
-
-@computed(assignment_aggregate)
-def score(ass):
-    handins = ass.handins()
-    answers = ass.answers()
-    return (len(handins) + len(answers)) * ass.assignment.weight
+@computed(a, sources=(b, c))
+def score(a):
+    return a.weight + 5 + 10
 
 @computed(b, c)
 def h(b, c):

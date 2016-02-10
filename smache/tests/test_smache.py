@@ -16,3 +16,16 @@ def test_nocache():
 
     assert store.is_fresh('f/1/2/3') == False
     assert store.is_fresh('h/2/3') == True
+
+
+
+# def test_source_deps():
+#     deps = DataSourceDependencies()
+#     deps.add_dependency('A', '1', 'hello/world')
+#     deps.add_dependency('A', '1', 'foo/bar')
+#     deps.add_dependency('A', '2', 'soo/tar')
+#     deps.add_dependency('B', '1', 'lalala')
+#
+#     assert deps.values_depending_on('A', '1') == set(['hello/world', 'foo/bar'])
+#     assert deps.values_depending_on('A', '2') == set(['soo/tar'])
+#     assert deps.values_depending_on('B', '1') == set(['lalala'])
