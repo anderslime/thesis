@@ -5,9 +5,13 @@ from collections import namedtuple
 Entity = namedtuple('Entity', ['id', 'value'])
 
 def test_nocache():
-    a = Entity(1, 10)
-    b = Entity(2, 2)
-    c = Entity(3, 3)
+    ax = Entity(1, 10)
+    bx = Entity(2, 2)
+    cx = Entity(3, 3)
 
-    assert f(a, b, c) == 50
-    assert h(b, c) == 5
+    assert f(ax, bx, cx) == 50
+    assert h(bx, cx) == 5
+
+    a.did_update()
+
+    assert False
