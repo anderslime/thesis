@@ -142,7 +142,6 @@ class CacheManager:
         self.fun_store        = fun_store
         self.store            = store
         self.dep_graph        = dep_graph
-        self._data_sources    = []
         self._computed_funs   = {}
 
     def cache_function(self, fun, *args, **kwargs):
@@ -173,7 +172,6 @@ class CacheManager:
 
     def add_sources(self, *data_sources):
         for data_source in data_sources:
-            self._data_sources.append(data_source)
             data_source.subscribe(self._on_data_source_update)
 
     def add_computed(self, fun, entity_deps, kwargs):
