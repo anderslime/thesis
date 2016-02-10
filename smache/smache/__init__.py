@@ -173,6 +173,6 @@ def score(a):
 def h(b, c):
     return b.value + c.value
 
-@computed(a, b, c, deps=(h))
+@computed(a, b, c)
 def f(a, b, c):
     return a.value * h(b, c)
