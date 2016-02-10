@@ -151,7 +151,6 @@ class CacheManager:
 
     def _on_data_source_update(self, data_source, entity_id):
         depending_keys = self.data_source_deps.values_depending_on(data_source.data_source_id, entity_id)
-        print depending_keys
         for key in depending_keys:
             self.store.mark_as_stale(key)
 
@@ -161,4 +160,4 @@ class CacheManager:
 data_source_deps = DataSourceDependencies()
 store            = Store()
 fun_store        = FunctionStore()
-cm               = CacheManager(fun_store, store, data_source_deps)
+smache           = CacheManager(fun_store, store, data_source_deps)
