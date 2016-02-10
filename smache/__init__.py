@@ -36,8 +36,12 @@ class DataSource:
     def __init__(self, data_source_id):
         self.data_source_id = data_source_id
 
+class CacheManager:
+
+
 store = Store()
 fun_store = FunctionStore(store)
+cache_manager = CacheManager(fun_store)
 
 def computed(*deps, **kwargs):
     def _computed(fun):
@@ -64,6 +68,3 @@ def h(b, c):
 @computed(a, b, c, deps=(h))
 def f(a, b, c):
     return a.value * h(b, c)
-
-
-
