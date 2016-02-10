@@ -1,5 +1,7 @@
 # How do we record dependency between one computed instance that calls another?
 
+This is not useful in our case. Maybe with another solution
+
 ## Example:
 def h(a, b):
   return a + b
@@ -23,7 +25,7 @@ b --/
 
 - Works assuming that k is pure
 
-## The simple and manual one - Defining deps
+## The simple one - Defining deps
 @computed(a, b)
 def h(a, b):
   return a + b

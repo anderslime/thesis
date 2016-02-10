@@ -23,12 +23,14 @@ class Store:
             raw_cache_result.get('is_fresh', False)
         )
 
-    def mark_as_dirty(self, key):
+    def is_fresh(self, key):
+        return self._data.get(key, {}).get('is_fresh', None)
+
+    def mark_as_stale(self, key):
         old_value = self._data.get(key, None)
         if old_value is not None:
-            old_value['is_fresh'] = True
+            old_value['is_fresh'] = False
             self._data[key] = old_value
-
 
 class FunctionStore:
     def fun_key(self, fun, *args):
@@ -44,8 +46,8 @@ class DataSource:
     def subscribe(self, fun):
         self.subscriber = fun
 
-    def did_update(self):
-        self.subscriber(self)
+    def did_update(self, entity_id):
+        self.subscriber(self, entity_id)
 
 
 class Node:
@@ -55,6 +57,24 @@ class Node:
 
     def add_parent(self, parent_node):
         self.parents.append(parent_node)
+
+class DataSourceDependencies:
+    def __init__(self):
+        self._data_source_dependencies = {}
+
+    def add_dependency(self, data_source_id, entity_id, cached_value_key):
+        key = self._data_key(data_source_id, entity_id)
+        entity_deps = self._data_source_dependencies.get(key, None)
+        if entity_deps == None:
+            self._data_source_dependencies[key] = set()
+        self._data_source_dependencies[key].add(cached_value_key)
+
+    def values_depending_on(self, data_source_id, entity_id):
+        key = self._data_key(data_source_id, entity_id)
+        return self._data_source_dependencies.get(key, set())
+
+    def _data_key(self, data_source_id, entity_id):
+        return '/'.join([data_source_id, str(entity_id)])
 
 class DependencyGraph:
     def __init__(self):
@@ -77,15 +97,17 @@ class DependencyGraph:
 
 
 class CacheManager:
-    def __init__(self, fun_store, store, dep_graph):
-        self.fun_store      = fun_store
-        self.store          = store
-        self.dep_graph       = dep_graph
-        self._data_sources  = []
-        # self._computed_funs = []
+    def __init__(self, fun_store, store, dep_graph, data_source_deps):
+        self.fun_store        = fun_store
+        self.store            = store
+        self.dep_graph        = dep_graph
+        self.data_source_deps = data_source_deps
+        self._data_sources    = []
+        self._computed_funs   = {}
 
     def cache_function(self, fun, *args, **kwargs):
         key = self.fun_store.fun_key(fun, *args)
+        self._add_data_source_dependencies(fun, args, key)
         cache_result = self.store.lookup(key)
         if cache_result.is_fresh:
             return cache_result.value
@@ -106,6 +128,16 @@ class CacheManager:
         data_source_dep_ids = [node.data_source_id for node in data_source_deps]
         dependency_ids = computed_dep_ids + data_source_dep_ids
         self.dep_graph.add_node(fun.__name__, dependency_ids)
+        self._computed_funs[fun.__name__] = (fun.__name__, data_source_deps)
+
+    def _add_data_source_dependencies(self, fun, args, key):
+        data_source_deps = self._computed_funs[fun.__name__][1]
+        for data_source, data_source_entity in zip(data_source_deps, args):
+            self.data_source_deps.add_dependency(
+                data_source.data_source_id,
+                data_source_entity.id,
+                key
+            )
 
     def parse_deps(self, value):
         if isinstance(value, tuple):
@@ -113,17 +145,17 @@ class CacheManager:
         else:
             return (value,)
 
-    def _on_data_source_update(self, data_source):
-        pass
-        # TODO:
-        #   1. Get get key for all parents of the data source instance
-        #   2. Mark the parent instances as dirty
+    def _on_data_source_update(self, data_source, entity_id):
+        depending_keys = self.data_source_deps.values_depending_on(data_source.data_source_id, entity_id)
+        for key in depending_keys:
+            self.store.mark_as_stale(key)
 
 
+data_source_deps = DataSourceDependencies()
 dep_graph = DependencyGraph()
 store = Store()
 fun_store = FunctionStore()
-cache_manager = CacheManager(fun_store, store, dep_graph)
+cache_manager = CacheManager(fun_store, store, dep_graph, data_source_deps)
 
 def computed(*deps, **kwargs):
     def _computed(fun):

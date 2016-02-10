@@ -12,6 +12,7 @@ def test_nocache():
     assert f(ax, bx, cx) == 50
     assert h(bx, cx) == 5
 
-    a.did_update()
+    a.did_update(1)
 
-    assert False
+    assert store.is_fresh('f/1/2/3') == False
+    assert store.is_fresh('h/2/3') == True
