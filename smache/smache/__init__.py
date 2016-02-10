@@ -1,8 +1,50 @@
 from collections import namedtuple as struct
+import redis
+import json
 
 CacheResult = struct("CacheResult", ["value", "is_fresh"])
 
-class Store:
+class RedisStore:
+    def __init__(self, redis_con):
+        self.redis_con = redis_con
+
+    def store(self, key, value):
+        self._store_entry(key, value, 'True')
+
+    def lookup(self, key):
+        raw_cache_result = self._get_all(key) or {}
+        return CacheResult(
+            self._deserialize_json(raw_cache_result.get('value')),
+            self._deserialize_bool(raw_cache_result.get('is_fresh'))
+        )
+
+    def is_fresh(self, key):
+        return self._get_field(key, 'is_fresh') == 'True'
+
+    def mark_as_stale(self, key):
+        self.redis_con.hset(key, 'is_fresh', 'False')
+
+    def _deserialize_bool(self, boolean):
+        return boolean == 'True'
+
+    def _deserialize_json(self, value):
+        if value is None:
+            return None
+        return json.loads(value)
+
+    def _store_entry(self, key, value, is_fresh):
+        pipe = self.redis_con.pipeline()
+        pipe.hset(key, 'value', json.dumps(value))
+        pipe.hset(key, 'is_fresh', is_fresh)
+        pipe.execute()
+
+    def _get_all(self, key):
+        return self.redis_con.hgetall(key)
+
+    def _get_field(self, key, field):
+        return self.redis_con.hget(key, field)
+
+class InMemoryStore:
     def __init__(self):
         self._data = {}
 
@@ -25,11 +67,13 @@ class Store:
             old_value['is_fresh'] = False
             self._data[key] = old_value
 
+
 class FunctionStore:
     def fun_key(self, fun, *args, **kwargs):
         fun_name_key = fun.__name__
         args_key = '/'.join(str(arg.id) for arg in args)
         return '/'.join([fun_name_key, args_key])
+
 
 class DataSource:
     def __init__(self, data_source_id):
@@ -42,7 +86,6 @@ class DataSource:
     def did_update(self, entity_id):
         self.subscriber(self, entity_id)
 
-
 class Node:
     def __init__(self, node_id, parents = []):
         self.node_id = node_id
@@ -51,9 +94,11 @@ class Node:
     def add_parent(self, parent_node):
         self.parents.append(parent_node)
 
-class DataSourceDependencies:
+
+
+class DependencyGraph:
     def __init__(self):
-        self._dependencies= {}
+        self._dependencies = {}
 
     def add_dependency(self, data_source_id, entity_id, dep_key):
         data_source_deps = self._dependencies.get(data_source_id, {})
@@ -74,10 +119,10 @@ class DataSourceDependencies:
 
 
 class CacheManager:
-    def __init__(self, fun_store, store, data_source_deps):
+    def __init__(self, fun_store, store, dep_graph):
         self.fun_store        = fun_store
         self.store            = store
-        self.data_source_deps = data_source_deps
+        self.dep_graph = dep_graph
         self._data_sources    = []
         self._computed_funs   = {}
 
@@ -126,7 +171,7 @@ class CacheManager:
     def _add_data_source_dependencies(self, fun, key):
         data_source_deps = self._computed_funs[fun.__name__][2]
         for data_source_dep in data_source_deps:
-            self.data_source_deps.add_data_source_dependency(
+            self.dep_graph.add_data_source_dependency(
                 data_source_dep.data_source_id,
                 key
             )
@@ -134,7 +179,7 @@ class CacheManager:
     def _add_entity_dependencies(self, fun, args, key):
         entity_deps = self._computed_funs[fun.__name__][1]
         for data_source, data_source_entity in zip(entity_deps, args):
-            self.data_source_deps.add_dependency(
+            self.dep_graph.add_dependency(
                 data_source.data_source_id,
                 data_source_entity.id,
                 key
@@ -147,11 +192,13 @@ class CacheManager:
             return (value,)
 
     def _on_data_source_update(self, data_source, entity_id):
-        depending_keys = self.data_source_deps.values_depending_on(data_source.data_source_id, entity_id)
+        depending_keys = self.dep_graph.values_depending_on(data_source.data_source_id, entity_id)
         for key in depending_keys:
             self.store.mark_as_stale(key)
 
-data_source_deps = DataSourceDependencies()
-store            = Store()
-fun_store        = FunctionStore()
-smache           = CacheManager(fun_store, store, data_source_deps)
+redis_con = redis.StrictRedis(host='localhost', port=6379, db=0)
+
+dep_graph = DependencyGraph()
+store     = RedisStore(redis_con)
+fun_store = FunctionStore()
+smache    = CacheManager(fun_store, store, dep_graph)

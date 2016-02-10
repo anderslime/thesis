@@ -1,6 +1,9 @@
-from smache import smache
+from smache import smache, RedisStore
+from smache.graph_drawer import draw
 
 from collections import namedtuple
+
+import redis
 
 # Definitions
 a = smache.data_source('A')
@@ -22,6 +25,12 @@ def f(a, b, c):
 # Tests
 
 Entity = namedtuple('Entity', ['id', 'value'])
+redis_con = redis.StrictRedis(host='localhost', port=6379, db=0)
+
+def setup_module(module):
+    redis_con.flushall()
+
+
 
 def test_cache():
     ax = Entity(1, 10)
@@ -53,3 +62,17 @@ def test_cache():
     assert smache.is_fun_fresh(score, ax) == False
     assert smache.is_fun_fresh(f, ax, bx, cx) == False
     assert smache.is_fun_fresh(h, bx, cx) == False
+
+def test_redis():
+    key = 'hello_world'
+    value = {'key': 'muthafucka'}
+
+    store = RedisStore(redis_con)
+    store.store(key, value)
+
+    assert store.lookup(key).value == value
+    assert store.is_fresh(key) == True
+
+    store.mark_as_stale(key)
+
+    assert store.is_fresh(key) == False
