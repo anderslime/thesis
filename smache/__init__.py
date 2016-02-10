@@ -19,20 +19,24 @@ class FunctionStore:
 
     def upsert(self, fun, *args, **kwargs):
         fun_key = self._fun_key(fun, *args)
+        print fun_key
         result = store.lookup(fun_key)
         if result is not None:
-            print "CACHE HIT"
             return result
         else:
-            print "CACHE MISS"
             computed_value = fun(*args)
             store.store(fun_key, computed_value)
             return computed_value
 
     def _fun_key(self, fun, *args):
         fun_name_key = fun.__name__
-        args_key = '/'.join(str(arg) for arg in args)
+        args_key = '/'.join(str(arg.id) for arg in args)
         return '/'.join([fun_name_key, args_key])
+
+class DataSource:
+    def __init__(self, data_source_id):
+        self.data_source_id = data_source_id
+
 
 
 store = Store()
@@ -52,15 +56,17 @@ def computed(*deps, **kwargs):
 #        h --/
 # c ----/
 
-@computed()
-def h(b, c):
-    print "CALLING H"
-    return b + c
+a = DataSource('A')
+b = DataSource('B')
+c = DataSource('C')
 
-@computed(deps=(h))
+@computed(b, c)
+def h(b, c):
+    return b.value + c.value
+
+@computed(a, b, c, deps=(h))
 def f(a, b, c):
-    print "CALLING F"
-    return a * h(b, c)
+    return a.value * h(b, c)
 
 
 
