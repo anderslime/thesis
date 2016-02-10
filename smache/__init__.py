@@ -19,7 +19,6 @@ class FunctionStore:
 
     def upsert(self, fun, *args, **kwargs):
         fun_key = self._fun_key(fun, *args)
-        print fun_key
         result = store.lookup(fun_key)
         if result is not None:
             return result
@@ -36,8 +35,6 @@ class FunctionStore:
 class DataSource:
     def __init__(self, data_source_id):
         self.data_source_id = data_source_id
-
-
 
 store = Store()
 fun_store = FunctionStore(store)
