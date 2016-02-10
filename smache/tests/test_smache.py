@@ -32,24 +32,24 @@ def test_cache():
     assert h(bx, cx) == 5
     assert score(ax)
 
-    assert smache.is_fresh('score/1') == True
-    assert smache.is_fresh('f/1/2/3') == True
-    assert smache.is_fresh('h/2/3') == True
+    assert smache.is_fun_fresh(score, ax) == True
+    assert smache.is_fun_fresh(f, ax, bx, cx) == True
+    assert smache.is_fun_fresh(h, bx, cx) == True
 
     b.did_update(0)
 
-    assert smache.is_fresh('score/1') == False
-    assert smache.is_fresh('f/1/2/3') == True
-    assert smache.is_fresh('h/2/3') == True
+    assert smache.is_fun_fresh(score, ax) == False
+    assert smache.is_fun_fresh(f, ax, bx, cx) == True
+    assert smache.is_fun_fresh(h, bx, cx) == True
 
     a.did_update(1)
 
-    assert smache.is_fresh('score/1') == False
-    assert smache.is_fresh('f/1/2/3') == False
-    assert smache.is_fresh('h/2/3') == True
+    assert smache.is_fun_fresh(score, ax) == False
+    assert smache.is_fun_fresh(f, ax, bx, cx) == False
+    assert smache.is_fun_fresh(h, bx, cx) == True
 
     b.did_update(2)
 
-    assert smache.is_fresh('score/1') == False
-    assert smache.is_fresh('f/1/2/3') == False
-    assert smache.is_fresh('h/2/3') == False
+    assert smache.is_fun_fresh(score, ax) == False
+    assert smache.is_fun_fresh(f, ax, bx, cx) == False
+    assert smache.is_fun_fresh(h, bx, cx) == False

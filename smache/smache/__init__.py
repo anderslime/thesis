@@ -26,7 +26,7 @@ class Store:
             self._data[key] = old_value
 
 class FunctionStore:
-    def fun_key(self, fun, *args):
+    def fun_key(self, fun, *args, **kwargs):
         fun_name_key = fun.__name__
         args_key = '/'.join(str(arg.id) for arg in args)
         return '/'.join([fun_name_key, args_key])
@@ -82,7 +82,7 @@ class CacheManager:
         self._computed_funs   = {}
 
     def cache_function(self, fun, *args, **kwargs):
-        key = self.fun_store.fun_key(fun, *args)
+        key = self.fun_store.fun_key(fun, *args, **kwargs)
         self._add_entity_dependencies(fun, args, key)
         self._add_data_source_dependencies(fun, key)
         cache_result = self.store.lookup(key)
@@ -119,6 +119,10 @@ class CacheManager:
     def is_fresh(self, key):
         return self.store.is_fresh(key)
 
+    def is_fun_fresh(self, fun, *args, **kwargs):
+        key = self.fun_store.fun_key(fun, *args, **kwargs)
+        return self.store.is_fresh(key)
+
     def _add_data_source_dependencies(self, fun, key):
         data_source_deps = self._computed_funs[fun.__name__][2]
         for data_source_dep in data_source_deps:
@@ -146,9 +150,6 @@ class CacheManager:
         depending_keys = self.data_source_deps.values_depending_on(data_source.data_source_id, entity_id)
         for key in depending_keys:
             self.store.mark_as_stale(key)
-
-
-
 
 data_source_deps = DataSourceDependencies()
 store            = Store()
