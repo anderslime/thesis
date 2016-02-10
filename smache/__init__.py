@@ -42,14 +42,10 @@ class CacheManager:
         key = self.fun_store.fun_key(fun, *args)
         cache_result = self.store.lookup(key)
         if cache_result.is_fresh:
-            print "FRESH"
-            print cache_result.value
             return cache_result.value
         else:
             computed_value = fun(*args)
             self.store.store(key, computed_value)
-            print "STALE"
-            print computed_value
             return computed_value
 
 store = Store()
@@ -60,7 +56,6 @@ def computed(*deps, **kwargs):
     def _computed(fun):
         def wrapper(*args, **kwargs):
             return cache_manager.cache_function(fun, *args, **kwargs)
-        wrapper.computed = True
         return wrapper
     return _computed
 

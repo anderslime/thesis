@@ -11,5 +11,3 @@ def test_nocache():
 
     assert f(a, b, c) == 50
     assert h(b, c) == 5
-    #
-    # assert False
