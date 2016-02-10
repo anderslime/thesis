@@ -79,6 +79,7 @@ class DataSourceDependencies:
     def _entity_key(self, data_source_id, entity_id):
         return '/'.join([data_source_id, str(entity_id)])
 
+
 class CacheManager:
     def __init__(self, fun_store, store, data_source_deps):
         self.fun_store        = fun_store
@@ -99,6 +100,20 @@ class CacheManager:
             self.store.store(key, computed_value)
             return computed_value
 
+    def computed(self, *deps, **kwargs):
+        def _computed(fun):
+            def wrapper(*args, **kwargs):
+                return self.cache_function(fun, *args, **kwargs)
+            self.add_computed(fun, deps, kwargs)
+            wrapper.__name__ = fun.__name__
+            return wrapper
+        return _computed
+
+    def data_source(self, data_source_id):
+        data_source = DataSource(data_source_id)
+        self.add_sources(data_source)
+        return data_source
+
     def add_sources(self, *data_sources):
         for data_source in data_sources:
             self._data_sources.append(data_source)
@@ -107,6 +122,9 @@ class CacheManager:
     def add_computed(self, fun, entity_deps, kwargs):
         data_source_deps = kwargs.get('sources', ())
         self._computed_funs[fun.__name__] = (fun.__name__, entity_deps, data_source_deps)
+
+    def is_fresh(self, key):
+        return self.store.is_fresh(key)
 
     def _add_data_source_dependencies(self, fun, key):
         data_source_deps = self._computed_funs[fun.__name__][2]
@@ -138,40 +156,9 @@ class CacheManager:
             self.store.mark_as_stale(key)
 
 
+
+
 data_source_deps = DataSourceDependencies()
 store            = Store()
 fun_store        = FunctionStore()
-cache_manager    = CacheManager(fun_store, store, data_source_deps)
-
-def computed(*deps, **kwargs):
-    def _computed(fun):
-        def wrapper(*args, **kwargs):
-            return cache_manager.cache_function(fun, *args, **kwargs)
-        cache_manager.add_computed(fun, deps, kwargs)
-        wrapper.__name__ = fun.__name__
-        return wrapper
-    return _computed
-
-# a ----------\
-#              f
-# b ----\     /
-#        h --/
-# c ----/
-
-a = DataSource('A')
-b = DataSource('B')
-c = DataSource('C')
-
-cache_manager.add_sources(a, b, c)
-
-@computed(a, sources=(b, c))
-def score(a):
-    return a.value + 5 + 10
-
-@computed(b, c)
-def h(b, c):
-    return b.value + c.value
-
-@computed(a, b, c)
-def f(a, b, c):
-    return a.value * h(b, c)
+cm               = CacheManager(fun_store, store, data_source_deps)

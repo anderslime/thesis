@@ -1,6 +1,26 @@
-from smache import *
+from smache import cm
 
 from collections import namedtuple
+
+# Definitions
+
+a = cm.data_source('A')
+b = cm.data_source('B')
+c = cm.data_source('C')
+
+@cm.computed(a, sources=(b, c))
+def score(a):
+    return a.value + 5 + 10
+
+@cm.computed(b, c)
+def h(b, c):
+    return b.value + c.value
+
+@cm.computed(a, b, c)
+def f(a, b, c):
+    return a.value * h(b, c)
+
+# Tests
 
 Entity = namedtuple('Entity', ['id', 'value'])
 
@@ -13,23 +33,8 @@ def test_nocache():
     assert h(bx, cx) == 5
     assert score(ax)
 
-    assert store.is_fresh('score/1') == True
+    assert cm.is_fresh('score/1') == True
 
     b.did_update(0)
 
-    assert store.is_fresh('score/1') == False
-
-    assert False
-
-
-def test_source_deps():
-    deps = DataSourceDependencies()
-    deps.add_dependency('A', '1', 'hello/world')
-    deps.add_dependency('A', '1', 'foo/bar')
-    deps.add_dependency('A', '2', 'soo/tar')
-    deps.add_dependency('B', '1', 'lalala')
-    deps.add_data_source_dependency('A', 'full')
-
-    assert deps.values_depending_on('A', '1') == set(['hello/world', 'foo/bar', 'full'])
-    assert deps.values_depending_on('A', '2') == set(['soo/tar', 'full'])
-    assert deps.values_depending_on('B', '1') == set(['lalala'])
+    assert cm.is_fresh('score/1') == False
