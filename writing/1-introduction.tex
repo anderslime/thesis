@@ -1,0 +1,39 @@
+\chapter{Introduction}
+
+Peergrade.io is a platform for facilitating peer-evaluation in university and high school courses. Currently the platforms serves multiple institutions and hundreds of students. A large part of the platform is calculation of various statistics about the courses run on the platform - calculations which take up a large amount of time and are to be recalculated due to small changes.
+
+Peergradeio.io among other web application wants to achieve a great user experience, which require fast presentation of content to the user. One strategy to achieve fast presentation is caching. Current caching systems use a pull based caching strategy, where a value is computed when requested if the value is not present in the cache. These system uses a simple caching system (such as memcached or redis) that supports storing and looking up values by a key. Where most primary databases need to support complex queries and structuring of data, key-value stores such as memcached and redis only need to lookup keys and therefore allows data to be collected and presented fast. Furthermore these systems can be configured to only store data in memory to allow all lookups to be even fast.
+
+Depending on the freshness requirements for a given value, the cache needs to be invalidated. When the freshness requirement is not strict, the cached content can be invalidated after some time period. Another technique is to include some value in the cache key that is known to change when update when the underlying model changes.
+Problem
+Existing caching solutions are based on pull based caching strategy, which is based on a simple model, but it only updates the cache “after-the-fact”. This means the first user that requests the value after the cached value has expired will be presented with either stale data or have to wait for the computation to run. This problems presents two challenges, which will be addressed in this thesis.
+
+Caching long running computations. With a pull-based strategy where the content is cached “after-the-fact”, the first user requesting a given version of an object has to wait for the computation to finish. In some cases the computations takes a long time to compute leaving the user waiting and affecting user experience. In these cases the value has to be precomputed before the first user requests the content. This leads to challenges on how to ensure the values are recomputed when the source code changes and how to compute the values efficiently without recomputing values unnecessarily and compute the values as soon as possible.
+
+Cache Invalidation. Beside knowing how to precompute the values, it is also necessary to know when the values needs to be precomputed. Most computations rely on underlying data from a storage system and possibly other cached computations. When the underlying data changes, the depending computations becomes stale and they need to be recomputed. The task of manually managing cache invalidation places a burden on the developer and leads to errors.
+
+\section{Architecture and Model}
+The system designed in this thesis consider the environment as the one illustrated in figure (Insert figure please). We assume the system consists of one or more applications servers that interact with a database system. The web application serves request from the client (i.e. user through browsers and other services using the web application through an API).
+
+In order to achieve a flexible system, the design of the system will mostly be in the application layer through a caching library used in the web application. This will be designed with as few assumptions about the cache and database as possible. This way the system is able to use multiple types of caches and storage systems. The assumptions made about the cache system is that it should work as a key-value store that supports LOOKUP(key) and STORE(key, value). The system will be designed to work with commonly used storage systems used in web applications and implemented using a MongoDB database as storage system.
+
+\section{Requirements}
+
+The requirement for the system are based on real-life examples from Peergrade.io, where a lot of them can be related to common web applications. The system must support the architecture described and must be able to persist the cached values (such that they are not swiped on memory-overload etc.). The system will be designed from the following non-functional requirements:
+
+\textbf{Software design:} Must be designed to be maintainable such that the developer that uses the caching system understands how it works from using it and has the ability to extend it. The design of the system should also be flexible to support multiple storage systems and caches.
+
+\textbf{Scalability:} Should be designed for scalability in the sense that the design should still be correct when the amount of underlying data for the web application rises or when the web application is scaled horizontally.
+
+\textbf{Efficiency:} Should be efficient with relation to performance such that it does not make existing operations of the systems significantly slower. It should also be efficient with relation to the system load such that it does not use more computational power than necessary to achieve the goal of the system.
+
+\textbf{Adaptability:} Should be convenient and easy to adapt into existing systems.
+
+\textbf{Fault-Tolerance:} Should be designed with considerations on reliability, availability, integrity and maintainability.
+
+\section{Contributions}
+This thesis addresses challenges described in section (ref. to problem section) in the context of an application-level cache system. The result will be a design of a cache system solving those challenges based on the requirements. The design will be implemented in Python and made available as open source to learn about and extend in further research. The implementation will therefore also have a focus on providing well-designed and modular libraries that solves the problem.
+
+The rest of this text should probably be written when we’re further in the process and knows more about the result.
+
+
