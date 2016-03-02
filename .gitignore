@@ -6,3 +6,10 @@
 *.egg-info
 __pycache__
 *.pyc
+*.blg
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
