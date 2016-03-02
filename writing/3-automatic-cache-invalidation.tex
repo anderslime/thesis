@@ -1,5 +1,100 @@
 \chapter{Automatic Cache Invalidation}
 \label{subsec:automatic_cache_invalidation}
 
+- Seperate static and dynamic "state"
+  - Static: only changes when new versions of the code base is deployed
+  - Dynamic: changes after deployment - often initiated by changes to the
+             underlying data
+  - Static state is preferred since it it's easier to test and has not 'state'
+
+- Static data now:
+  - The computed functions:
+    - find functions from its id
+    - find depending relations from other entities
+
+- Dynamic data now:
+  - The dynamic functions:
+    - Dependency graph stuff
+    - The stored cache elements
+
+- How it could work:
+  - When calling the cached function (fun instance registration):
+    - When a given computed fun is executed we will serialize the arguments the following way:
+      - Raw values (that can be json) is just serialized into json
+      - Underlying data (entities) are serialized by their entity id and instance id
+    - We can then cache the given value under a unique identifier given by concatenation
+      - A unique id for the fun (python: module + fun name)
+      - The serialized arguments
+    - From the entity arguments we store a reference from the entity instance to the computed fun instance
+      - This is stored in the "dependency graph"
+    - The next time the function is called with the same argument, it will be fetched from the cache
+  - When underlying data changes:
+    - If the data is corresponding to an (entity) argument of the function
+      - We lookup the dependency graph for all the computed funs affected by the entity
+      - These computed funs are then marked as stale and/or written throug/updated
+  - TODO: describe relation updates
+
+- Operations needed to be supported:
+  - When the data is fetched:
+    - Lookup cache to see if value is fresh
+    - (Computed and) Store cached value
+  - When underlying data changes:
+    - Find computed functions depending on the given entity instance
+      - Both:
+        - directly (through arguments)
+        - related (through relations)
+    - Set cached value as stale
+    - Update cached value
+
+- Data structures introduces:
+  - Find affected computed fun instances from given relation
+    - Subproblems:
+      - Find underlying data identifier from relation instance
+        - Done using a relation-function defined by the developer. This
+          function is executed every time the query is executed.
+      - Find affected for computed fun instances from underlying data identifier and given computed fun
+        - Using dictionary (redis) with
+          - key: underlying data identtifier
+          - value: computed fun identifier
+        - Record stored when a new function instance is executed
+  - Find affected computed fun instances from direct underlying data
+    - Using dictionary (key-value store/redis) with:
+      - key: underlying data instance id
+      - value: computed fun identifier
+    - Record (also) stored when a new function instance is executed
+
+- DS Example:
+
+-- Static dep graph:
+
+prof -\
+       score
+user -/
+
+prof -\
+       hello
+user -/
+
+-- Data Structure:
+- Given instances:
+prof/1 -\
+         score/1/2
+user/2 -/
+
+prof/1 -\
+         hello/1/5
+user/5 -/
+
+- Find all funs affected by underlying data:
+prof/1 => [score1/2, hello/1/5]
+user/2 => [score/1/2]
+user/5 => [hello/1/5]
+
+- Find all funs of a given kind affected by underlying data (for relations)
+score.prof/1 => [score/1/2]
+hello.prof/1 => [hello/1/5]
+score.user/2 => [score/1/2]
+hello.user/5 => [hello/1/5]
+
 % chapter automatic_cache_invalidation end
 
