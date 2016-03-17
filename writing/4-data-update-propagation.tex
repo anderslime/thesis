@@ -1,5 +1,21 @@
 \chapter{Data Update Propagation}
 \label{subsec:data_update_propagation}
 
+## Consistency/Integrity
+- One problem that neither automatic cache invalidation nor current
+  pull based cache invalidation takes care of is the potential race conditions
+  on data update. Consider e.g. the following events:
+
+- Request made
+- Cache not fresh
+- Start calculating new cache value (f1)
+- f1: Fetch newest data from primary db
+- Data updated => cache invalidated
+- f1: write cached value
+
+In this case, the data update invalidates the cached value based on data
+that is a later version than the data f1 used to update the cache. This would
+result in the cache having a value based on old data => Inconsistent
+
 % chapter data_update_propagation end
 
