@@ -20,4 +20,52 @@
 % that is a later version than the data f1 used to update the cache. This would
 % result in the cache having a value based on old data => Inconsistent
 %
+
+
+% ### Updating
+
+Since we need to be able to handle multiple web servers, we need to consider
+the system as a concurrent system.
+
+The problem is basically that the key of the cached content is the same, which
+means that we do not have any accounting of which update are allowed to
+overwrite others. E.g. if two updates u1 and u2 happens right after each other
+and executes a write through update with relevant data, where u2 will produce
+a fresh result and u1 will not. If u2 is fast at computing and u1 is slow then
+u2 will start by writing the fresh cache value, and u1 will overwrite the
+fresh one with a stale result.
+
+In this problem we need a mechanism such that u1 does not overwrite u2.
+
+% #### Using lock
+
+One solution is to use locks such that only one update can be computed per
+key in a given moment. In the given case u2 would be locked until u1 has
+finished and written to the cache.
+
+The downside of this method is that the result can in staleness of time t(u1) + t(u2) - 1.
+
+% #### Using timestamps
+
+Another solution is to use timestamps. When u1 is scheduled, it fetches a
+timestamp from resource (redis incremental). This timestamp is then submitted
+when the cached value is written. In the given example u1 would get one
+timestamp $t$ and u2 will then get $t + 1$. u2 will then submit a cached value
+with timestamp $t + 1$ and afterwards u1 will try to submit a stale cached value
+with timestamp $t$, but since a newer version has been written it would be ignored.
+
+NOTE: This method is also mentioned in the IBM paper as amount of times a given
+value has been written.
+
+The downside of this method is that we need some kind of centralized timestamp
+generator, which will then become a single point of failure of the system.
+Theoretically this could be solved in a proper manner using a distributed
+and replicated timestamp generator (ETCD maybe).
+
+% ### Propagation
+
+When one value is updated, we need to propagate the update. Since we do not
+want to calculate an entry more than once, we need to do it in topological
+order.
+
 % % chapter data_update_propagation end
