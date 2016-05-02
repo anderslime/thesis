@@ -62,10 +62,97 @@ generator, which will then become a single point of failure of the system.
 Theoretically this could be solved in a proper manner using a distributed
 and replicated timestamp generator (ETCD maybe).
 
+We need to assign timestamp in the execution. If we assigned timestamps before
+we inserted into the queue and we retried a job, then it would be fair to
+assume that the retried job had the newest data and therefore has to be able
+to write to the cache.
+
+
+% #### Better timestamp solution
+
+We want the properties:
+
+* Liveness: a given function is executed after finite time. In this case it
+  means that if we have any set of updates $U$ that results in the global state
+  $s$ and we have a cached value $C(f, s)$ that is the cached result
+  of function $f$ for state $s$, then we know that at some point in time after
+  the events in $U$ have occured, we must have stored $C(f, s)$ or $C(f, s')$
+  where $s \rightarrow s'$.
+
+If we used a naive algorithm, where a given update invokes an update execution
+that then computes the value and updates the cache, we would have potential
+race conditions and not ensure liveness. This could happen in the simple case
+
+u => f
+
+with event order:
+
+* u1: u is updated => global state s
+* f is invoked for worker w1 with state s
+* u2: u is updated => global state s'
+* f is invoked for worker w2 with state s'
+* worker w2 finishes and updates f with the cached value C(f, s')
+* worker w1 finishes and updates f with the cached value C(f, s)
+
+In this case, the resulting value would be C(f, s) which would contract
+liveness since we have a set of updates $U = {u1, u2}$ that gives the global
+state $s'$, where the cached value $C(f, s')$ is never stored.
+
+To solve this we can use timestamps:
+
+Instead of incrementing timestamp as above, we use the notion of state timestamp
+and value timestamp. There is one state and value timestamp for each cached
+value. These are defined as:
+
+* state timestamp: the amount of times the underlying data/state has been
+  updated. When some underlying data is updated, this number is updated for
+  all affected computed nodes.
+* value timestamp: the state timestamp which the last update was based on.
+
+The system should then do as following:
+
+* R1 (value update): Right before the state input is fetched $cst_i$ and the function is executed,
+  the state timestamp for the cached value is taken an called $ft_i = cst_i$. When the function
+  has finished and wants to store the cached value, it need to ensure that
+  the current value timestamp for the cached value $cvt_i$ holds: $cvt_i < ft_i$.
+  If this holds, the cached value is written and $cvt_i := ft_i$. This is done
+  atomically.
+* R2 (freshness): When a cached value is written, We also set the cached value as fresh
+  ($cf_i = True$) iff the current $cst_i = cvt_i$, else we set $cf_i = False$.
+
+
 % ### Propagation
 
 When one value is updated, we need to propagate the update. Since we do not
 want to calculate an entry more than once, we need to do it in topological
 order.
+
+Another thing is:
+- What if a function instance is set to be executed a lot of times?
+  - Here we would like the topmost instance to be executed, because it
+    means that it's siblings will be cached. Alternatively if only the
+    topmost was executed, we could risk that some siblings are not updated,
+    if e.g. there is a condition which removes the relation. Phew...
+  - We also don't want to risk starvation, ie we want to ensure the instance
+    is executed at some (fair) point in the future. If we e.g. removed every
+    instance except the topmost a lot of times, it would result in starvation.
+
+% #### Truncating the queue periodically
+
+One solution would be to truncate the queue when a new job comes in (or periodically).
+
+This would need some kind of algorithm to control and remove duplicate jobs:
+One way would be to remove every duplicate job except for the first and last in line.
+This would avoid starvation since the first job in line will never be removed, and
+it will ensure that we eventually will calculate the newest entry. This assumes
+that the queue will be finished in a fair amount of time. For example if 100
+jobs with including the same function would be enqueued then it would mean we probably
+mean that the truncated job would have a 97 jobs in between.
+
+% #### Truncating the queue when inserting
+
+
+
+% #### Just don't execute jobs, where the value is already fresh
 
 % % chapter data_update_propagation end
