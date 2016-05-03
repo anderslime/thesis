@@ -1,2 +1,6 @@
 #!/usr/bin/env bash
-pdflatex thesis.tex && bibtex thesis && pdflatex thesis.tex && pdflatex thesis.tex
+local latexA
+function compile_latex {
+  pdflatex -shell-escape thesis.tex
+}
+compile_latex && bibtex thesis && compile_latex && compile_latex

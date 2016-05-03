@@ -1,39 +1,74 @@
 \chapter{Introduction}
 
-Peergrade.io is a platform for facilitating peer-evaluation in university and high school courses. Currently the platforms serves multiple institutions and hundreds of students. A large part of the platform is calculation of various statistics about the courses run on the platform - calculations which take up a large amount of time and are to be recalculated due to small changes.
+\emph{``There are only two hard things in Computer Science: cache invalidation and naming things.''} \vspace{-1cm}
+\begin{flushright}-- Phil Karlton\end{flushright}
 
-Peergradeio.io among other web application wants to achieve a great user experience, which require fast presentation of content to the user. One strategy to achieve fast presentation is caching. Current caching systems use a pull based caching strategy, where a value is computed when requested if the value is not present in the cache. These system uses a simple caching system (such as memcached or redis) that supports storing and looking up values by a key. Where most primary databases need to support complex queries and structuring of data, key-value stores such as memcached and redis only need to lookup keys and therefore allows data to be collected and presented fast. Furthermore these systems can be configured to only store data in memory to allow all lookups to be even fast.
+Web applications are becoming more dynamic and personalized content that often requires complex data queries or computations based on large amounts of data. For some cases the content does not need to be strict up to date, but there are also cases where the result of these computations have to be ready as soon as possible.
 
-Depending on the freshness requirements for a given value, the cache needs to be invalidated. When the freshness requirement is not strict, the cached content can be invalidated after some time period. Another technique is to include some value in the cache key that is known to change when update when the underlying model changes.
+The performance of these computations can often be optimized by profiling and analyzing the exact code, but in some cases the complexity or amount of data used makes it difficult to address. Caching is a popular solution for improving the performance and scalability in these cases since it allows for a simple, scalable and generic way of addressing bottlenecks in the web applications.
+
+Although it sounds like a silver bullet it also places a burden on the developer that must locate and update the cached values while preserving consistency guarantees. This challenge is for example seen in an outage of the whole Facebook system due to improper cache invalidation:
+
+\begin{quote}
+  The intent of the automated system is to check for configuration values that are invalid in the cache and replace them with updated values from the persistent store. This works well for a transient problem with the cache, but it doesn’t work when the persistent store is invalid.
+
+  Today we made a change to the persistent copy of a configuration value that was interpreted as invalid. This meant that every single client saw the invalid value and attempted to fix it. Because the fix involves making a query to a cluster of databases, that cluster was quickly overwhelmed by hundreds of thousands of queries a second.
+\begin{flushright}Robert Johnson~\cite{facebook_outage}\end{flushright}
+\end{quote}
+
+This outage shows how critical the caching system can be and the importance of correctness. This thesis will address this issue by researching the latest caching technique proposed in research and used in practice and contribute with a design and implementation of a caching system in the Python programming language.
 
 \section{Problem}
-Existing caching solutions are based on pull based caching strategy that is based on a simple model, but it only updates the cache “after-the-fact”. This means the first user requesting a cached value will either stale data or have to wait for the computation to run. This problems presents two challenges, which will be addressed in this thesis.
 
-\textbf{Cache Invalidation.} Beside knowing how to precompute the values, it is also necessary to know when the values needs to be precomputed. Most computations rely on underlying data from a storage system and possibly other cached computations. When the underlying data changes, the depending computations becomes stale and they need to be recomputed. The task of manually managing cache invalidation places a burden on the developer and leads to errors.
+Most of the existing caching solutions are based on a pull based caching strategy, where the computation runs and the cached value is stored when the client requests the cached value. After the result has been computed and cached, the client will be presented with the cached value until the it is invalidated. Using a pull based caching system has the advantage that we only have to cache content that is being used, but it also means that the first time a client asks for the value, it has to wait for the computation to finish. This is not optimal with relation to user experience since the user has to wait in order to be presented with the requested content. To solve this problem we have to precompute the cached values. This presents two major challenges, which will be addressed in this thesis.
 
-\textbf{Caching long running computations.} With a pull-based strategy where the content is cached “after-the-fact”, the first user requesting a given version of an object has to wait for the computation to finish. In some cases the computations takes a long time to compute leaving the user waiting and affecting user experience. In these cases the value has to be precomputed before the first user requests the content. This leads to challenges on how to ensure the values are recomputed when the source code changes and how to compute the values efficiently without recomputing values unnecessarily and compute the values as soon as possible.
+\textbf{Cache Management.}
 
-\section{Architecture and Model}
+The first challenge of cache management is faced in any caching system. The developer has to manage the caching system by assigning identifiers to the cached value and keeping it up to date such that the user is not presented with unexpected content.
 
-The system designed in this thesis consider the environment as the one illustrated in figure (Insert figure please). We assume the system consists of one or more applications servers that interact with a database system. The web application serves request from the client (i.e. user through browsers and other services using the web application through an API).
+One particular challenge within cache management is \emph{cache invalidation} since it require the developer to identify every underlying data that affects the given cached value. The developer then has to declare a way for the cached value to be invalidated when any of the underlying data changes. This analysis is difficult since it require global reasoning about how the underlying data changes in the web application and which computations are cached. Furthermore if the computation behind the cached value is altered to depend on new underlying data, the cache invalidation also has to change, making the cache prone to errors if the latter is forgotten.
 
-In order to achieve a flexible system, the design of the system will mostly be in the application layer through a caching library used in the web application. This will be designed with as few assumptions about the cache and database as possible. This way the system is able to use multiple types of caches and storage systems. The assumptions made about the cache system is that it should work as a key-value store that supports LOOKUP(key) and STORE(key, value). The system will be designed to work with commonly used storage systems used in web applications and implemented using a MongoDB database as storage system.
+We discuss this more in chapter~\ref{cha:caching_approaches} and~\ref{cha:automatic_cache_invalidation}.
+
+\textbf{Data Update Propagation}
+
+The second challenge is related to the task of efficiently keeping the cached values up to date and ensure the consistency between the cache and the storage system. At first, if we need to support the web application to be scalable, we need multiple web application processes. This means we run the cache updates in parallel and we therefore need to prevent concurrency bugs and ensure liveness and correctness of the solution.
 
 \section{Requirements}
+\label{sec:requirements}
 
-The requirement for the system are based on real-life examples from Peergrade.io, where a lot of them can be related to common web applications. The system must support the architecture described and must be able to persist the cached values (such that they are not swiped on memory-overload etc.). The system will be designed from the following non-functional requirements:
+The final solution addressing the problems described, will be designed with the following non-functional requirements:
 
 \textbf{Software design:} Must be designed to be maintainable such that the developer that uses the caching system understands how it works from using it and has the ability to extend it. The design of the system should also be flexible to support multiple storage systems and caches.
 
-\textbf{Scalability:} Should be designed for scalability in the sense that the design should still be correct when the amount of underlying data for the web application rises or when the web application is scaled horizontally.
+\textbf{Adaptability:} Should be convenient and easy to adapt into existing systems.
 
 \textbf{Efficiency:} Should be efficient with relation to performance such that it does not make existing operations of the systems significantly slower. It should also be efficient with relation to the system load such that it does not use more computational power than necessary to achieve the goal of the system.
 
-\textbf{Adaptability:} Should be convenient and easy to adapt into existing systems.
+\textbf{Scalability:} Should be designed for scalability in the sense that the design should still be correct when the amount of underlying data for the web application rises or when the web application is scaled horizontally.
 
 \textbf{Fault-Tolerance:} Should be designed with considerations on reliability, availability, integrity and maintainability.
 
+% section requirements end
+
+\section{Context / Running Example}
+\label{sec:context}
+
+The challenge of caching is a general problem in computer science, and to include a practical example to motivate the design of the system, the thesis will be developed in collaboration with Peergrade.io.
+
+Peergrade.io is a platform for facilitating peer-evaluation in university and high school courses. Currently the platforms serves multiple institutions and thousands of students. One of the key parts of the platform is showing various statistics about the performance of the students in a course. The statistics are based on advanced calculations which take up a large amount of time and needs to be recalculated on small changes to the underlying data.
+
+To relate the solution to a practical example, the thesis will use the following code as a running example:
+
+\input{code/introduction/running_example.py}
+% section context end
+
 \section{Contributions}
-This thesis addresses challenges described in section (ref. to problem section) in the context of an application-level cache system. The result will be a design of a cache system solving those challenges based on the requirements. The design will be implemented in Python and made available as open source to learn about and extend in further research. The implementation will therefore also have a focus on providing well-designed and modular libraries that solves the problem.
+\label{sec:contributions}
+
+This thesis addresses challenges described in section (ref. to problem section) in the context of a caching system. The result will be a design of a cache system solving those challenges based on the requirements. The design will be implemented in Python and made available as open source to learn about and extend in further research. The implementation will therefore also have a focus on providing well-designed and modular libraries that solves the problem.
 
 The rest of this text should probably be written when we’re further in the process and knows more about the result.
+
+% section contributions end
+
