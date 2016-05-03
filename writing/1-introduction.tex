@@ -19,6 +19,7 @@ Although it sounds like a silver bullet it also places a burden on the developer
 This outage shows how critical the caching system can be and the importance of correctness. This thesis will address this issue by researching the latest caching technique proposed in research and used in practice and contribute with a design and implementation of a caching system in the Python programming language.
 
 \section{Problem}
+\label{sec:problem}
 
 Most of the existing caching solutions are based on a pull based caching strategy, where the computation runs and the cached value is stored when the client requests the cached value. After the result has been computed and cached, the client will be presented with the cached value until the it is invalidated. Using a pull based caching system has the advantage that we only have to cache content that is being used, but it also means that the first time a client asks for the value, it has to wait for the computation to finish. This is not optimal with relation to user experience since the user has to wait in order to be presented with the requested content. To solve this problem we have to precompute the cached values. This presents two major challenges, which will be addressed in this thesis.
 
@@ -33,6 +34,8 @@ We discuss this more in chapter~\ref{chapter:caching} and~\ref{chapter:invalidat
 \textbf{Data Update Propagation}
 
 The second challenge is related to the task of efficiently keeping the cached values up to date and ensure the consistency between the cache and the storage system. At first, if we need to support the web application to be scalable, we need multiple web application processes. This means we run the cache updates in parallel and we therefore need to prevent concurrency bugs and ensure liveness and correctness of the solution.
+
+% section problem end
 
 \section{Requirements}
 \label{sec:requirements}

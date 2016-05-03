@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-local latexA
 function compile_latex {
   pdflatex -shell-escape thesis.tex
 }
