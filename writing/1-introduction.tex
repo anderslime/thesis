@@ -28,7 +28,7 @@ The first challenge of cache management is faced in any caching system. The deve
 
 One particular challenge within cache management is \emph{cache invalidation} since it require the developer to identify every underlying data that affects the given cached value. The developer then has to declare a way for the cached value to be invalidated when any of the underlying data changes. This analysis is difficult since it require global reasoning about how the underlying data changes in the web application and which computations are cached. Furthermore if the computation behind the cached value is altered to depend on new underlying data, the cache invalidation also has to change, making the cache prone to errors if the latter is forgotten.
 
-We discuss this more in chapter~\ref{cha:caching_approaches} and~\ref{cha:automatic_cache_invalidation}.
+We discuss this more in chapter~\ref{chapter:caching} and~\ref{chapter:invalidation}.
 
 \textbf{Data Update Propagation}
 
@@ -61,12 +61,15 @@ Peergrade.io is a platform for facilitating peer-evaluation in university and hi
 To relate the solution to a practical example, the thesis will use the following code as a running example:
 
 \input{code/introduction/running_example.py}
+
+In this example we have a function \verb$course_score$ that computes the average score in a given course by fetching the participants from the primary data store and through iterations of each participant calculate the average score using the function \verb$participant_score$ that calculates the score of a single participant using a long running external method.
+
 % section context end
 
 \section{Contributions}
 \label{sec:contributions}
 
-This thesis addresses challenges described in section (ref. to problem section) in the context of a caching system. The result will be a design of a cache system solving those challenges based on the requirements. The design will be implemented in Python and made available as open source to learn about and extend in further research. The implementation will therefore also have a focus on providing well-designed and modular libraries that solves the problem.
+This thesis addresses challenges described in section~\ref{sec:problem} and requirements in section~\ref{sec:requirements} in the context of a caching system. The result will be a design of a cache system solving those challenges based on the requirements. The design will be implemented in Python and made available as open source to learn about and extend in further research. The implementation will therefore also have a focus on providing well-designed and modular libraries that solves the problem.
 
 The rest of this text should probably be written when we’re further in the process and knows more about the result.
 

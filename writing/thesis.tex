@@ -32,17 +32,6 @@
 %===============================================================================
 \renewcommand{\theFancyVerbLine}{
   \sffamily\textcolor[rgb]{0.5,0.5,0.5}{\scriptsize\arabic{FancyVerbLine}}}
-\newcommand{\pythoncode}[1] {
-	\begin{minted}[mathescape,
-								linenos,
-								numbersep=5pt,
-								gobble=2,
-								frame=lines,
-								framesep=2mm]{csharp}
-		#1
-	\end{minted}
-}
-
 %===============================================================================
 % THESIS PROPERTIES (Modifiy these fields with your details)
 %===============================================================================
@@ -101,10 +90,10 @@
 \mainmatter
 \include{1-introduction}
 \include{2-caching-approaches}
-\include{3-automatic-cache-invalidation}
-\include{4-data-update-propagation}
-\include{5-persistent-cache}
-\include{6-cachable-functions}
+\include{3-cachable-functions}
+\include{4-automatic-cache-invalidation}
+\include{5-data-update-propagation}
+\include{6-persistent-cache}
 \include{7-results-evaluation}
 \include{8-conclusion}
 \appendix

@@ -1,4 +1,4 @@
-\begin{minted}{python}
+\begin{minted}[linenos]{python}
 def course_score(course)
 	participants = ParticipantDB.find_by_course(course)
 	total_score = 0
