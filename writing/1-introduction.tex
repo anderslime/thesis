@@ -3,25 +3,33 @@
 \emph{``There are only two hard things in Computer Science: cache invalidation and naming things.''} \vspace{-1cm}
 \begin{flushright}-- Phil Karlton\end{flushright}
 
-Web applications are becoming more dynamic and personalized content that often requires complex data queries or computations based on large amounts of data. For some cases the content does not need to be strict up to date, but there are also cases where the result of these computations have to be ready as soon as possible.
+Web applications are becoming more and more dynamic with more personalized content that often requires complex data queries or computations based on large amounts of data. These computations can become a performance bottleneck in the application, which leads to slow response times and poor user experience for the users.
 
-The performance of these computations can often be optimized by profiling and analyzing the exact code, but in some cases the complexity or amount of data used makes it difficult to address. Caching is a popular solution for improving the performance and scalability in these cases since it allows for a simple, scalable and generic way of addressing bottlenecks in the web applications.
+The performance can often be optimized by profiling and analyzing the code behind the computation, but this often not the easiest solution and in some cases the complexity or amount of data used makes it difficult achieve a satisfactory performance. Caching is a popular solution for improving the performance and scalability in these cases since it allows for a simple, scalable and generic way of addressing bottlenecks in the web applications.
 
-Although it sounds like a silver bullet it also places a burden on the developer that must locate and update the cached values while preserving consistency guarantees. This challenge is for example seen in an outage of the whole Facebook system due to improper cache invalidation:
+Although it sounds like a silver bullet it also places a burden on the developer that must locate and update the cached values while preserving consistency guarantees. This challenge is for example seen in an outage of the whole Facebook system:
 
 \begin{quote}
   The intent of the automated system is to check for configuration values that are invalid in the cache and replace them with updated values from the persistent store. This works well for a transient problem with the cache, but it doesn’t work when the persistent store is invalid.
 
-  Today we made a change to the persistent copy of a configuration value that was interpreted as invalid. This meant that every single client saw the invalid value and attempted to fix it. Because the fix involves making a query to a cluster of databases, that cluster was quickly overwhelmed by hundreds of thousands of queries a second.
+ Today we made a change to the persistent copy of a configuration value that was interpreted as invalid. This meant that every single client saw the invalid value and attempted to fix it. Because the fix involves making a query to a cluster of databases, that cluster was quickly overwhelmed by hundreds of thousands of queries a second.
 \begin{flushright}Robert Johnson~\cite{facebook_outage}\end{flushright}
 \end{quote}
 
-This outage shows how critical the caching system can be and the importance of correctness. This thesis will address this issue by researching the latest caching technique proposed in research and used in practice and contribute with a design and implementation of a caching system in the Python programming language.
+This example shows how critical the caching system can be and the importance of correctness.
+
+This thesis will address this issue by researching the latest caching technique proposed in research and used in practice and contribute with a design and implementation of a caching system in the Python programming language.
 
 \section{Problem}
 \label{sec:problem}
 
-Most of the existing caching solutions are based on a pull based caching strategy, where the computation runs and the cached value is stored when the client requests the cached value. After the result has been computed and cached, the client will be presented with the cached value until the it is invalidated. Using a pull based caching system has the advantage that we only have to cache content that is being used, but it also means that the first time a client asks for the value, it has to wait for the computation to finish. This is not optimal with relation to user experience since the user has to wait in order to be presented with the requested content. To solve this problem we have to precompute the cached values. This presents two major challenges, which will be addressed in this thesis.
+Most of the existing caching solutions are based on a pull based caching strategy, where the computation runs and the cached value is stored when the client requests the cached value. After the result has been computed and cached, the client will be presented with the cached value until the it is invalidated.
+
+The pull based caching strategy has the advantage that we only have to cache content that is being used, but it also means that the first time a client asks for the value, it has to wait for the computation to finish. This is not optimal with relation to user experience since the user has to wait in order to be presented with the requested content. To solve this problem we have to precompute the cached values such that the user is presented with content as soon as it is requested.
+
+Besides the performance problem on the initial request, existing caching solutions leaves responsibility for the developers to maintain the cache in order ensure consistency and an appropriate level of freshness.
+
+These problems with existing caching solutions, presents two major challenges:
 
 \textbf{Cache Management.}
 
@@ -34,6 +42,8 @@ We discuss this more in chapter~\ref{chapter:caching} and~\ref{chapter:invalidat
 \textbf{Data Update Propagation}
 
 The second challenge is related to the task of efficiently keeping the cached values up to date and ensure the consistency between the cache and the storage system. At first, if we need to support the web application to be scalable, we need multiple web application processes. This means we run the cache updates in parallel and we therefore need to prevent concurrency bugs and ensure liveness and correctness of the solution.
+
+This challenge will be covered in chapter~\ref{cahpter:update_propagation}.
 
 % section problem end
 
@@ -57,7 +67,7 @@ The final solution addressing the problems described, will be designed with the 
 \section{Context / Running Example}
 \label{sec:context}
 
-The challenge of caching is a general problem in computer science, and to include a practical example to motivate the design of the system, the thesis will be developed in collaboration with Peergrade.io.
+The problem and requirements are based on a running web applications - the Peergrade.io-platform to ensure that the system is also designed, implemented and tested to be used in practice.
 
 Peergrade.io is a platform for facilitating peer-evaluation in university and high school courses. Currently the platforms serves multiple institutions and thousands of students. One of the key parts of the platform is showing various statistics about the performance of the students in a course. The statistics are based on advanced calculations which take up a large amount of time and needs to be recalculated on small changes to the underlying data.
 
