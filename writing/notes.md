@@ -5,28 +5,41 @@
   - Peergrade.io
   - formal stuff
 
-- Caching approaches
-  - Caching granularity
-  - Cache invalidations
-  - Approaches / Techniques
+- Some theory: maybe same chapter, but different sections. Depends on length.
+- Caching Architecture
+- Caching model
+  - Evaluating caching technique
+    - Freshness
+    - Consistency
+    - Ease of management (invalidation)
+    - Have to wait for computation?
+  - Granularity
+
+- Existing caching approaches
+  - Invalidation techniques
+    - Expiration based invalidation
     - Key-based invalidation
     - Trigger-based invalidation
-    - Expiration based invalidation
-    - Caching db queries
-      => Materialized views
-      => ORM-query caching
-    - Function caching
+    - Automatic invalidation
+  - Updating the cache
+    - Pull vs. push-based cache update
+      - Pull:
+        - Update the cache when value is requested
+        - Return the latest computed value and update cache in background
+      - Push:
+        - Update the cache when underlying data changes + return latest computed value
+    - Data update propagation
+  - Caching techniques in web development
+    - DB Query caching
+      - Materialized views
+      - ORM-query caching
     - HTTP response caching
-    - Automatic Cache invalidation
   - Discussion/Comparison
-    => Compare current solutions to the requirements + problem
+    - Compare current solutions to the requirements + problem
     - State the problem of using the solutions (move as much of this to the respective technique)
-  - The new solution (Maybe move this the next chapter?)
-    => State the goal of what we need + image of our suggested solution
-    => Each part of the image are described in that and that chapter
 
 - Cachable functions
-  - Analysis:
+  - Analysis (requirements => our solution)
     - of the requirements
       - How do we get easy invalidations for the developer?
         - Automatic cache invalidation
@@ -40,9 +53,15 @@
       - Limitations
   - Design
     - Architecture and model
-      - Something about the caching architecture
-        => Application-layer library, application-worker that updates values
-      - Updater process
+      - Figure showing the parts of the solution
+        - Web Application:
+          - Cachable function
+        - Update Worker
+        - Cache Database
+        - Storage + Wrapper
+        - Something about the caching architecture
+          => Application-layer library, application-worker that updates values
+        - Updater process
     - How does the cachable function look like by design?
     - How do we identify a cached value?
       => Key identifier/name
