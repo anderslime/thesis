@@ -11,23 +11,21 @@ are able to retrieve it fast, such that it is possible to get the result fast
 instead of recomputing it. This basic algorithm is illustrated on
 figure~\ref{fig:basic-caching} and can be described as following:
 
-\begin{enumerate}
-  \item The result $v$ of a computation $f$ is requested.
-  \item We check if $v$ is cached and is valid.
-    \begin{itemize}
-      \item[2a] If $v$ is cached and valid, we return $v$ and terminate.
-      \item[2b] Else we compute $f$
-    \end{itemize}
-  \item The new value $v'$ is stored in the cache.
-  \item $v'$ is returned.
-\end{enumerate}
-
 \begin{figure*}[ht!]
   \centering
-  \includegraphics[width=0.5\linewidth]{figures/basic-caching-figure.png}
+  \includegraphics[width=0.6\linewidth]{figures/basic-caching-figure.pdf}
+  \begin{enumerate}
+    \item The result $v$ of a computation $f$ is requested.
+    \item If $v$ is cached and is valid, we go to 5 with $v'=v$. Else we continue.
+    \item We run the computation $f$
+    \item The new result $v'$ of $f$ is stored in the cache.
+    \item $v'$ is returned.
+  \end{enumerate}
   \caption{The flow of basic caching}
   \label{fig:basic-caching}
 \end{figure*}
+
+In some cases, where the client is not allowed to wait for the computation to run, step 3-4 are replaced by a step that simply returns an empty value.
 
 If we look at the cached value from an abstract point of view, we can see it
 as a \emph{result of a function} given certain \emph{inputs}. Sometimes the
@@ -39,28 +37,29 @@ In order for the algorithm to work, we need to be sure that when we store
 the cached value it has to be uniquely identified by some key such that when
 we lookup the value as in step 2 of the algorithm, we always locate $v$. This
 presents one of the challenges of cache management, which is in many cases
-closely related to cache invalidation (one of the two hard things in computer science\footnote{At least a favorite saying of Martin Fowler and quote by Phil Karlton}).
+closely related to cache invalidation (one of the two hard things in computer science\footnote{Not scientifically, but at least a favorite saying of Martin Fowler and quote by Phil Karlton}).
 
 In the algorithm cache invalidation is simply described as a \emph{check}, but
 in reality this is the hard challenge of caching. The \emph{check} could be
 a precomputed indicator from earlier triggers, it could be based on a key
 derived from the underlying data or some timestamp. These cache invalidation
-approaches will be described more in
-
-
-
-
-
-
-% Introduce how caching works
-% How does caching work?
-%
+approaches will be described more in section~\ref{sec:invalidation_techniques}.
 
 \subsection{Architecture}
 \label{subsec:architecture}
 
-% Show the architecture of a web application with a cache
-%   This figure should be used to describe architecture specific techniques
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=0.5\linewidth]{figures/architecture.pdf}
+  \caption{The assumed architecture of the system}
+  \label{fig:caching-basics-architecture}
+\end{figure*}
+
+The architecture of the web application in which the cache is used is important to how the cache system. We assume that the architecture of the system is a common web application architecture as illustrated in figure~\ref{fig:caching-basics-architecture} consisting of a web application that serves HTTP-requests from the client (represented by the user) and interacts with a primary storage database to store and load data. To store and fetch the cached content we introduce a cache database. This could easily be the same unit as the primary storage database, but we separate them for better clarification.
+
+Most modern web applications needs to serve multiple users at the same time, which means the web application must run on multiple processes\footnote{This is processes as an abstract term used in distributed systems. If we need to be implementation specific this could just as well be threads.} either on a single or multiple machines. We will therefore treat the web application as a distributed system.
+
+A popular choice for cache databases are key-value stores such as Redis~\footnote{http://redis.io/} and Memcached~\footnote{https://memcached.org/} since they are simple distributed key-value stores that lives in memory and therefore allows for scalability and high-performance operations. In order to support most practical web applications, we will therefore make the assumption that the cache database has the same functionality: it should be possible to store arbitrary content for a given key. Furthermore the final solution of this thesis require the cache database to support atomic transactions for a given key, which are supported in Memcached using the CAS command~\cite{docs:memcached-protocol} and in Redis using the \verb$WATCH$-command~\cite{docs:redis-transactions}. The reasons behind this assumption will be explained more in chapter~\ref{chapter:update_propagation}.
 
 % subsection architecture end
 

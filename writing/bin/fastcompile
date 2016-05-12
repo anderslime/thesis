@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+function compile_latex {
+  pdflatex -shell-escape thesis.tex
+}
+compile_latex

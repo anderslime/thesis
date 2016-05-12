@@ -17,6 +17,7 @@
         - (Pull-based, pull-based) - maybe wait until next chapter
     - Architecture
       - Tell something about asynchronous/concurrent
+      -
   - Evaluating caching technique
     - Goals of caching
     - Criteria
@@ -25,6 +26,7 @@
       - Ease of management (invalidation)
       - Cache hit rate / Have to wait for computation?
       - Granularity
+
 
 - Existing caching approaches
   - Intro:
@@ -36,6 +38,7 @@
     - Expiration based invalidation
     - Key-based invalidation
     - Trigger-based invalidation
+      - Just invalidate or write through
     - Automatic invalidation
   - Updating the cache
     - Solutions within pull and push-based
