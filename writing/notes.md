@@ -5,29 +5,40 @@
   - Peergrade.io
   - formal stuff
 
-- Some theory: maybe same chapter, but different sections. Depends on length.
-- Caching Architecture
-- Caching model
+- Caching Model
+  - Intro:
+    - Goals of caching (maybe make this a section of its own - look at length)
+    - Present chapter
+  - Caching basics
+    - Terminology
+      - Registration
+      - Invalidation
+      - Updating the cache
+        - (Pull-based, pull-based) - maybe wait until next chapter
+    - Architecture
+      - Tell something about asynchronous/concurrent
   - Evaluating caching technique
-    - Freshness
-    - Consistency
-    - Ease of management (invalidation)
-    - Have to wait for computation?
-  - Granularity
+    - Goals of caching
+    - Criteria
+      - Freshness
+      - Consistency
+      - Ease of management (invalidation)
+      - Cache hit rate / Have to wait for computation?
+      - Granularity
 
 - Existing caching approaches
+  - Intro:
+    - Solutions within invalidation + cache update + general approaches in web dev
+      - We evaluate the overall approaches based on criteria from last chapter
+      - + evaluate the concrete solutions based on requirements of the system
+    - We discuss + evaluate based on criteria from last chapter.
   - Invalidation techniques
     - Expiration based invalidation
     - Key-based invalidation
     - Trigger-based invalidation
     - Automatic invalidation
   - Updating the cache
-    - Pull vs. push-based cache update
-      - Pull:
-        - Update the cache when value is requested
-        - Return the latest computed value and update cache in background
-      - Push:
-        - Update the cache when underlying data changes + return latest computed value
+    - Solutions within pull and push-based
     - Data update propagation
   - Caching techniques in web development
     - DB Query caching
@@ -37,6 +48,8 @@
   - Discussion/Comparison
     - Compare current solutions to the requirements + problem
     - State the problem of using the solutions (move as much of this to the respective technique)
+    - Problems to be solved:
+      - Potential consistency problem when cache takes a long time to be computed
 
 - Cachable functions
   - Analysis (requirements => our solution)
