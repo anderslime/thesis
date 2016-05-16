@@ -6,10 +6,7 @@ In order to get a common understanding of caching and the terminology related to
 \section{Caching Basics}
 \label{sec:caching_basics}
 
-In general caching is about storing the result of a computation at a where you
-are able to retrieve it fast, such that it is possible to get the result fast
-instead of recomputing it. This basic algorithm is illustrated on
-figure~\ref{fig:basic-caching} and can be described as following:
+In general caching is about storing the result of a computation at a where you are able to retrieve it fast, such that it is possible to get the result fast instead of recomputing it. This basic algorithm is illustrated on figure~\ref{fig:basic-caching} and can be described as following:
 
 \begin{figure*}[ht!]
   \centering
@@ -27,23 +24,11 @@ figure~\ref{fig:basic-caching} and can be described as following:
 
 In some cases, where the client is not allowed to wait for the computation to run, step 3-4 are replaced by a step that simply returns an empty value.
 
-If we look at the cached value from an abstract point of view, we can see it
-as a \emph{result of a function} given certain \emph{inputs}. Sometimes the
-inputs are data from a storage system, sometimes it's the result of an API call
-to some external resource, sometimes it's global variables in the code. These
-\emph{inputs} we from now on be referred to as \emph{underlying data}.
+If we look at the cached value from an abstract point of view, we can see it as a \emph{result of a function} given certain \emph{inputs}. Sometimes the inputs are data from a storage system, sometimes it's the result of an API call to some external resource, sometimes it's global variables in the code. These \emph{inputs} we from now on be referred to as \emph{underlying data}.
 
-In order for the algorithm to work, we need to be sure that when we store
-the cached value it has to be uniquely identified by some key such that when
-we lookup the value as in step 2 of the algorithm, we always locate $v$. This
-presents one of the challenges of cache management, which is in many cases
-closely related to cache invalidation (one of the two hard things in computer science\footnote{Not scientifically, but at least a favorite saying of Martin Fowler and quote by Phil Karlton}).
+In order for the algorithm to work, we need to be sure that when we store the cached value it has to be uniquely identified by some key such that when we lookup the value as in step 2 of the algorithm, we always locate $v$. This presents one of the challenges of cache management, which is in many cases closely related to cache invalidation (one of the two hard things in computer science\footnote{Not scientifically, but at least a favorite saying of Martin Fowler and quote by Phil Karlton}).
 
-In the algorithm cache invalidation is simply described as a \emph{check}, but
-in reality this is the hard challenge of caching. The \emph{check} could be
-a precomputed indicator from earlier triggers, it could be based on a key
-derived from the underlying data or some timestamp. These cache invalidation
-approaches will be described more in section~\ref{sec:invalidation_techniques}.
+In the algorithm cache invalidation is simply described as a \emph{check}, but in reality this is the hard challenge of caching. The \emph{check} could be a precomputed indicator from earlier triggers, it could be based on a key derived from the underlying data or some timestamp. These cache invalidation approaches will be described more in section~\ref{sec:invalidation_techniques}.
 
 \subsection{Architecture}
 \label{subsec:architecture}
@@ -66,13 +51,38 @@ A popular choice for cache databases are key-value stores such as Redis~\footnot
 \subsection{Timeline Model}
 \label{subsec:timeline_model}
 
-% Show the timeline model
-% Introduce terminology:
+As with the algorithm on figure~\ref{fig:basic-caching}, caching can be described by a series of events. The ordering of events decides whether the cached content or a fresh computation is presented to the client. To describe the different caching techniques, we will use a timeline model with a stream of events. One timeline describes the events occurring in a single process. We can therefore assume that there exists a total ordering of events for a single timeline. To be able to describe the caching techniques explained in this thesis, we will define the following events:
+
+\begin{itemize}
+  \item \textbf{Requested} is the event occurring when a client requests a given cached value
+  \item \textbf{Computation Started} is when the computations is started
+  \item \textbf{Computation Finished} is when the computation is finished and a result is returned
+  \item \textbf{Stored} is happening when a given is stored in the cache database on a given key
+  \item \textbf{UD Updated} is when the underlying data has been updated
+  \item \textbf{Invalidated} is when the system has invalidated a cached value
+\end{itemize}
+
+To show how the timeline model works, we will give an example involving the different events:
+
+\begin{example}
+\label{example:timeline-model}
+We will give an example using the basic caching algorithm described on figure~\ref{fig:basic-caching}. Consider the case illustrated on figure~\ref{fig:timeline-example}, where a client requests a value $v$ that at first isn't cached. This means the system will execute the function $f$, which returns the value instance $v_1$ and stores it in the caching database. After this some underlying data involving the computation of $v$ is updated and after the update, the client makes another request for $v$. At this point $v_1$ is not fresh since the execution of $f$ would result in another value. Therefore $v$ is invalidated by the system after which we recompute $f$ and stores the resulting value $v_2$ in the cache database.
+
+\begin{figure*}{ht!]
+  \centering
+  \includegraphics{width=1.0\linewidth]{figures/timeline-example.pdf}
+  \caption{Example of the timeline model}
+  \label{fig:timeline-example}
+\end{figure*}
+
+\end{example}
+
+% Introduce the timeline and relevant events:
 %   - Value registration
 %   - Invalidation
 %   - Cache update
 %   - Value request
-% As example:
+% Concurrent Timelines:
 %   - Show that we when we have the given architecture, we have
 %     multiple concurrent timelines running as in a distributed system
 %     => We can assume that each timeline is a process
