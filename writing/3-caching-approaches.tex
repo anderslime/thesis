@@ -16,6 +16,8 @@ One of the challenges of cache management is to maintain proper consistency betw
 \subsection{Expiration-based Invalidation}
 \label{subsec:expiration_based_invalidation}
 
+The requirement for strong consistency introduces complexity as seen with the trigger-based and key-based cache invalidation. Some objects can be cached with weak consistency, which allows much simpler caching techniques. One method is to assign a TTL (Time to Live) to the cached value. At some point when the TTL has expired, the cached object is invalidated. The invalidation can be enforced by the cache database (Redis and Memcached supports this - TODO: include references) or as part of the protocol between the client and server as with HTTP-caching explained in section~?~\cite{paper:web_caching_schemes}.
+
 % subsection expiration_based_invalidation end
 
 \subsection{Key-based invalidation}
