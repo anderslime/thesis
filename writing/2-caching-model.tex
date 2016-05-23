@@ -26,6 +26,8 @@ In some cases, where the client is not allowed to wait for the computation to ru
 
 If we look at the cached value from an abstract point of view, we can see it as a \emph{result of a function} given certain \emph{inputs}. Sometimes the inputs are data from a storage system, sometimes it's the result of an API call to some external resource, sometimes it's global variables in the code. These \emph{inputs} we from now on be referred to as \emph{underlying data}.
 
+% TODO: Also mention 'locality' here
+
 In order for the algorithm to work, we need to be sure that when we store the cached value it has to be uniquely identified by some key such that when we lookup the value as in step 2 of the algorithm, we always locate $v$. This presents one of the challenges of cache management, which is in many cases closely related to cache invalidation (one of the two hard things in computer science\footnote{Not scientifically, but at least a favorite saying of Martin Fowler and quote by Phil Karlton}).
 
 In the algorithm cache invalidation is simply described as a \emph{check}, but in reality this is the hard challenge of caching. The \emph{check} could be a precomputed indicator from earlier triggers, it could be based on a key derived from the underlying data or some timestamp. These cache invalidation approaches will be described more in section~\ref{sec:invalidation_techniques}.
@@ -45,6 +47,8 @@ The architecture of the web application in which the cache is used is important 
 Most modern web applications needs to serve multiple users at the same time, which means the web application must run on multiple processes\footnote{This is processes as an abstract term used in distributed systems. If we need to be implementation specific this could just as well be threads.} either on a single or multiple machines. We will therefore treat the web application as a distributed system.
 
 A popular choice for cache databases are key-value stores such as Redis~\footnote{http://redis.io/} and Memcached~\footnote{https://memcached.org/} since they are simple distributed key-value stores that lives in memory and therefore allows for scalability and high-performance operations. In order to support most practical web applications, we will therefore make the assumption that the cache database has the same functionality: it should be possible to store arbitrary content for a given key. Furthermore the final solution of this thesis require the cache database to support atomic transactions for a given key, which are supported in Memcached using the CAS command~\cite{docs:memcached-protocol} and in Redis using the \verb$WATCH$-command~\cite{docs:redis-transactions}. The reasons behind this assumption will be explained more in chapter~\ref{chapter:update_propagation}.
+
+% TODO: Maybe write about cleanup (removing unused values)
 
 % subsection architecture end
 
@@ -135,6 +139,8 @@ While the freshness describes what is expected behaviour with relation to the co
 In the basic caching algorithm described on figure~\ref{fig:basic-caching}, the computation has to run after it has been invalidated. If the caching technique runs this computation in the same process as the request from the client, the client has to wait for the computation to finish in order to show the content to the user. If the time taken to compute the value exceeds the accepted response time limits described above, it could become critical for the user experience. Based on this fact we will introduce the binary parameter of whether or not the client has to wait for the computation to finish after invalidation. The weight of this parameter is proportional to the cache miss rate since it's only requests, which results in a cache miss that are affected by the slow response time.
 
 %%%% AUTOMATIC UPDATE/INVALIDATION
+
+% TODO: Rename this to relaxed freshness
 
 It is not possible to both serve the cached values immediately and have strict freshness. This can be proved using the example where a cached value is invalidated just before it is requested. We can only start computing the value at the moment it has been invalidated and given that the time between the invalidation and the request is smaller than the time taken to compute the value, it is not possible.
 
