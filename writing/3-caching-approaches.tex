@@ -16,7 +16,7 @@ One of the challenges of cache management is to maintain proper consistency betw
 \subsection{Expiration-based Invalidation}
 \label{subsec:expiration_based_invalidation}
 
-The requirement for strong consistency introduces complexity as seen with the trigger-based and key-based cache invalidation. Some objects can be cached with weak consistency, which allows much simpler caching techniques. One method is to assign a TTL (Time to Live) to the cached value. At some point when the TTL has expired, the cached object is invalidated. The invalidation can be enforced by the cache database (Redis and Memcached supports this - TODO: include references) or as part of the protocol between the client and server as with HTTP-caching explained in section~?~\cite{paper:web_caching_schemes}.
+The requirement for strong consistency introduces complexity as seen with the trigger-based and key-based cache invalidation. Some objects can be cached with weak consistency, which allows much simpler caching techniques. One method is to assign a TTL (Time to Live) to the cached value. At some point when the TTL has expired, the cached object is invalidated. The invalidation can be enforced by the cache database (Redis and Memcached supports this - TODO: include references) or as part of the protocol between the client and server as with HTTP-caching explained in section~?~\cite{paper:web-caching-schemes}.
 
 % subsection expiration_based_invalidation end
 
@@ -54,7 +54,15 @@ On the other end of the granularity scale,~\cite{paper:db-driven-http} suggests 
 
 Jim Challenger et. al. has written multiple papers on the system used for the content management website in the Olympic Games in 1998 and 2000~\cite{paper:ibm, paper:ibm-extended}. The system is based on content that are all precomputed when served to the user, which resulted in a system that scaled for many users with content served fast since the web server only had to find the appropriate cached article when serving content. In order to allow editors to change articles and fragments, the system introduces the Data Update Propagation (DUP) algorithm. DUP uses an Object Dependence Graph (ODG) that describes the relationship between fragments using a Directed Acyclic Graph (DAG). The ODG describes both the relationships of how the fragments are embedded in each other and relationships describing the hypertext links between articles. To avoid race conditions and hypertext links to missing fragments, the fragments need to be updated in a specific order. More specific when a fragment f1 that embeds another fragment f2, the system need to update f2 before f1. Since the ODG is described DAG there is always a topological order of the nodes, which satisfies the described property for any node. The system runs using a CMS system, where the content is defined using a CMS system and not using functions from the source code. This simplifies the challenge of persisting the cached content since it does not change when a new version of the source code is deployed. It therefore leaves the challenge of updating cached content, when the definition of the computations changes.
 
+
 % subsection automatic_invalidation end
+
+\subsection{Hybrid Approaches}
+\label{subsec:hybrid_approaches}
+
+% TODO: Write something about combining different caching techniques to achieve satisfactory requirements
+
+% subsection hybrid_approaches end
 
 \section{Updating the Cache}
 \label{sec:updating_the_cache}
@@ -95,6 +103,7 @@ Caching database queries and materialized views allows for easy and transparent 
 
 % section caching_approaches_in_web_development end
 
+
 \subsection{Function Caching}
 
 % TODO: Find another place for this text, please.
@@ -107,8 +116,42 @@ The requirement for strong consistency introduces complexity as seen with the tr
 
 % subsection function_caching end
 
+\section{The Problem of Incorrect Write-Through}
+\label{sec:the_problem_of_incorrect_write_through}
+
+% TODO: Write this as a problem that is ignored in many existing caching solutions or maybe just traded off for simplicity. Describe how key-based invalidation ensures this and how all other could have this problem solved.
+
+At first we would like the caching to be correct. In the case of caching, we will define correctness in terms of liveness and safety: the caching system will update the cache when necessary and it will eventually return the most fresh value computed. That is if we have a computation $f$ that computes the value $v_1$ at time $t_1$ and $v_2$ at time $t_2$ then the cache store will eventually contain $v_2$ given that $t_2 > t_1$. Although this could be seen as a prerequisite for the caching system, most implementations ignore this fact to achieve a simpler cache system. Because when we want to keep the integrity between updates we need some kind of ordering for the updates that adds complexity to the system. The problem is also illustrated on figure~\ref{fig:incorrect-updates-analysis}.
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=1.0\linewidth]{figures/incorrect-update-analysis.pdf}
+  \caption{Showing how two concurrent caching updates from two different application servers results in an inconsistent state. We see that even though the request from \emph{Web 2} are based on data older than \emph{Web 1} it gets to write }
+  \label{fig:incorrect-updates-analysis}
+\end{figure*}
+
+% TODO: Analysis and argue why some of the solutions leads to inconsistent cached values and breaks the safety requirement.
+
+% section the_problem_of_incorrect_write_through end
+
+\section{The Trade-Off between Consistency, Freshness and Immediate Response}
+\label{sec:the_trade_off_between_consistency_freshness_and_immediate_response}
+
+% TODO: Write that you cannot have all three at the same time
+
+% Choosing: Consistency and Freshness:
+%   - Consider the following case:
+%     - A client makes a request that invalidates $v$ at time $t1$
+%     - Another client makes a request for getting value $v$ at time $t2$
+
+% section the_trade_off_between_consistency_freshness_and_immediate_response end
+
+
+
 \section{Choosing the right Caching Technique}
 \label{sec:choosing_the_right_caching_technique}
+
+% Write a lot about the trade-offs:
 
 The system need to cache the result of computations, which means it has to cache objects with a granularity more coarse than database queries. The HTTP protocol includes multiple features for cache management between the client and server, but it also makes the caching inflexible with relation to efficiency. In some situations HTTP responses includes shared fragments that need to be computed for each HTTP endpoint. Since the system expects long running computations, it would be more efficient to cache the result of those computations, meaning the system need to work on a granularity of fragments or functions. Since functions returns an output that could be considered a fragment, we will consider them as the same granularity.
 

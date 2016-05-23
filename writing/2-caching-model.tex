@@ -68,9 +68,9 @@ To show how the timeline model works, we will give an example involving the diff
 \label{example:timeline-model}
 We will give an example using the basic caching algorithm described on figure~\ref{fig:basic-caching}. Consider the case illustrated on figure~\ref{fig:timeline-example}, where a client requests a value $v$ that at first isn't cached. This means the system will execute the function $f$, which returns the value instance $v_1$ and stores it in the caching database. After this some underlying data involving the computation of $v$ is updated and after the update, the client makes another request for $v$. At this point $v_1$ is not fresh since the execution of $f$ would result in another value. Therefore $v$ is invalidated by the system after which we recompute $f$ and stores the resulting value $v_2$ in the cache database.
 
-\begin{figure*}{ht!]
+\begin{figure*}[ht!]
   \centering
-  \includegraphics{width=1.0\linewidth]{figures/timeline-example.pdf}
+  % \includegraphics{width=1.0\linewidth]{figures/timeline-example.pdf}
   \caption{Example of the timeline model}
   \label{fig:timeline-example}
 \end{figure*}
@@ -96,24 +96,25 @@ We will give an example using the basic caching algorithm described on figure~\r
 \section{Evaluating Caching Techniques}
 \label{sec:evaluating_caching_techniques}
 
-% Goals
-% - What are the goals of caching:
-% - We don't want the users to wait (/ performance)
-% - Use less CPU
+% Goals of caching
 
 To choose the correct caching technique for a given use case, we need to know the criteria for finally picking the best suited. The overall goal of caching in web development is to achieve a better user experience by getting a better performance and to save money by using less CPU power. If we assume that the cache system is able to retrieve cached values fast, the goals can be achieved by ``hitting the cache'' as often as possible. We can measure this using the metric \emph{cache hit rate}, which refers to the rate at which the cache is hit among the total number of requests for the cached value.
 
-% TODO: Move correctness somewhere else.
+%% END CORRECTNESS
 
-At first we would like the caching to be correct. In the case of caching, we will define correctness in terms of liveness and safety: the caching system will update the cache when necessary and it will eventually return the most fresh value computed. That is if we have a computation $f$ that computes the value $v_1$ at time $t_1$ and $v_2$ at time $t_2$ then the cache store will eventually contain $v_2$ given that $t_2 > t_1$.
+% Intro: from perspective of user
 
 To evaluate the caching technique for a given use case, we will see the situation from the perspective of the client (i.e. a user). The client makes a request for some content that is served by the web server. This content contains of one or more computations that can be cached individually.
+
+%%%% CONSISTENCY
 
 We will not make any assumptions about the content send by the server, which means the content could be the result of multiple cached computations. Each of these computations are based on some underlying data e.g. served from the primary store. In the case where some computations are based on the same data we have to keep the different results consistent. Furthermore the response might be based on both cached content and content loaded directly from the primary store in which case we have to keep the data consistent across the cache database and the primary storage. This issue leads to the criteria of the level of consistency.
 
 There exists multiple levels of consistency, but to keep it relevant and simple, we will evaluate the level of consistency using a binary value: either the caching technique ensures consistency with the data from the primary storage or else it doesn't.
 
-Another parameter is the freshness of the content returned by the cache. It is most desirable to have content that is as fresh as possible as oppose to having stale data, but in the end the goal is to make the served content make sense for the user. Consider example~\ref{example:peergrade-split-interface} of the Peergrade.io platform, where there is two types of users. If the teacher changed the description of an assignment and a student requested and read the description 1 min after then it would not be unexpected behaviour from the students point of view. On the other hand if the teacher changed the description of the assignment and a request 1 min after would respond with an old version, it would be unexpected behaviour, since the teacher would think the description hasn't been updated.
+%%%% FRESHNESS
+
+Another parameter is the freshness of the content returned by the cache. It is most desirable to have content that is as fresh as possible as oppose to having stale data, but in the end the goal is to make the served content make sense for the user. Consider example~\ref{example:peergrade-split-interface} of the Peergrade.io platform, where there are two types of users. If the teacher changed the description of an assignment and a student requested and read the description 1 min after then it would not be unexpected behaviour to show the old description from the students point of view. On the other hand if the teacher requested the description 1 min after, it would be unexpected behaviour to show the teacher an old version, since the teacher would think the description hasn't been updated. We will represent freshness as a binary parameter that we call ``Strict Freshness'', which evaluates whether a given cached value that is fetched is guaranteed to be fresh.
 
 \begin{example}
 \label{example:peergrade-split-interface}
@@ -121,43 +122,50 @@ At Peergrade.io the web application has a teacher and a student interface. Teach
 \end{example}
 
 
+%%%% WAITING TIME AFTER INVALIDATION
 
+While the freshness describes what is expected behaviour with relation to the content, there also exists time limits with relation to keeping the user focused on the task. Miller and Card et. al.~\cite{paper:miller-response-time-limit, paper:card-response-time-limit} describes these limits as:
 
+\begin{itemize}
+  \item When the response time is \textbf{0.1 second} the user feels that the system is \textbf{reacting instantaneously}.
+  \item A response time above \textbf{1 second} will \textbf{interrupt the user's flow of thought}.
+  \item \textbf{10 seconds} is limit related to \textbf{keeping the user's attention} on the given dialog.
+\end{itemize}
 
+In the basic caching algorithm described on figure~\ref{fig:basic-caching}, the computation has to run after it has been invalidated. If the caching technique runs this computation in the same process as the request from the client, the client has to wait for the computation to finish in order to show the content to the user. If the time taken to compute the value exceeds the accepted response time limits described above, it could become critical for the user experience. Based on this fact we will introduce the binary parameter of whether or not the client has to wait for the computation to finish after invalidation. The weight of this parameter is proportional to the cache miss rate since it's only requests, which results in a cache miss that are affected by the slow response time.
 
-% TODO: Write about that in some cases it is necessary, and sometimes it is not if we do not cover it in later chapters (we should actually)
+%%%% AUTOMATIC UPDATE/INVALIDATION
 
+It is not possible to both serve the cached values immediately and have strict freshness. This can be proved using the example where a cached value is invalidated just before it is requested. We can only start computing the value at the moment it has been invalidated and given that the time between the invalidation and the request is smaller than the time taken to compute the value, it is not possible.
 
+In cases where we choose immediate response time and we can tolerate serving cached values that are not strictly fresh, we might want to keep the cached values as up to date as possible. This means that we start computing the cached values as soon as they have been invalidated. In order to achieve this we need some mechanism that invalidates depending cached values when underlying data are updated. We will also represent ``Automatic Invalidation'' as a binary parameter.
 
+%%%% CACHE MANAGEMENT
 
-% From that desirable properties:
-% - Freshness
-%   - fresh is better, stale is worse
-% - Consistency
-%   - cached content should be as consistent with the rest of the system as possible
-% - Ease of management (for the developer)
-%   - The less effort (= code + thinking/complexity) to cache a given result, the better
-%   - We don't want errors, when the related code is changed/extended
-%     => E.g. if a new developer introduces a new data source, it should not break
-%     => Or at least it should be as easy to detect these things as possible
-% - Cache hit rate
-%   - This depends on the amount of updates to the underlying data
-%   - We can separate between:
-%     - The user (have to / does not have to) wait for a given computation every time it is updated
-%       => Have to: bad for cached content that is frequently updated + long running computations
-%       => Not have to: great for long computations
-%     -
+So far we've considered parameters from a user's perspective, but to evaluate the caching technique fully we also need to see it from the perspective of the developer since a big part of cache management is manually tracking dependencies between the cached content and the underlying data. We want the caching system to be transparent such that it is easy to add and remove caching from existing computations. Additionally we want the caching system to be robust such that when new code involving a cached computation is added, it should behave as expected without introducing errors. We cannot measure the level of robustness so we will therefore introduce the binary criteria: does the caching technique involve maintenance with relation to invalidation (shortened as invalidation maintenance)?
 
-% List how we evaluate the different caching techniques to find the right
-% technique for the given use case
+%%%% ADAPTABILITY
 
-% - Evaluating caching technique
-%   - Freshness
-%   - Consistency
-%   - Ease of management (invalidation)
-%   - Have to wait for computation?
+The last parameter we will introduce is also a requirement of the system: \emph{adaptability}. Since adaptability cannot be evaluated objectively we will introduce a scale of \emph{high}, \emph{medium} and \emph{low}, where high means that is adaptable to most systems and low means that it is adaptable to a few systems. We will define the scale as following:
 
-% section evaluating_caching_techniques end
+\begin{itemize}
+  \item \textbf{Low}: The technique has assumptions about the primary data store, cache database and/or application that means it cannot be applied to other common technologies.
+  \item \textbf{Medium}: The technique is advanced and requires a lot of implementation effort or external libraries/processes to work.
+  \item \textbf{Low}: The technique can easily be implemented and applied to existing applications.
+\end{itemize}
+
+The reason behind the \emph{Low} criteria is that when the technique has assumptions about the technology behind the application it means the system is tied to using specific technologies, which makes it difficult to change when the given technology is obsolete or the requirements of the system change. If this is not considered a problem \emph{Low} and \emph{Medium} can be considered the same level of adaptability.
+
+From this discussion, we can sum up the evaluation parameters as follows:
+
+\begin{itemize}
+  \item \textbf{Consistency}: The cached value must be consistent with the other data
+  \item \textbf{Strict Freshness}: The cached value must be as fresh as the state of the primary store when the value was requested
+  \item \textbf{Automatic Update}: The cached value is automatically updated after it has been invalidated
+  \item \textbf{Always Immediate Response}: The cached value must be served immediately after it has been requested
+  \item \textbf{Invalidation Management}: Whether the developer has the responsibility of maintaining the invalidation of the cached values
+  \item \textbf{Adaptability}: How adaptable the caching technique is to existing systems
+\end{itemize}
 
 % chapter caching_model end
 
