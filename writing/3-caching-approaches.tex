@@ -19,13 +19,52 @@ In cases where it is accepted to keep the cached values stale up to a given time
 
 The expiration-based invalidation works by assigning a TTL (Time to Live) to the cached value. At some point when the TTL has expired, the cached value is invalidated. The responsibility of invalidation cached values with TTL is often placed on the cached database by piggybacking the TTL to the cached value when it is stored. This is for example supported by Redis and Memcached.
 
+To give a sense of how the relation between when a cached value is considered valid (it is served from the cache) and when it is actually fresh, the timeline model has been applied to the expiration-based invalidation on figure~\ref{fig:timeline:expiration-based}.
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=1.0\linewidth]{figures/timeline/expiration-based.pdf}
+  \caption{The lifecycle of the expiration-based invalidation technique}
+  \label{fig:timeline:expiration-based}
+\end{figure*}
+
 % subsection expiration_based_invalidation end
 
 \subsection{Key-based invalidation}
 \label{subsec:key_based_invalidation}
 
-One method to achieve strong consistency is to use key-based invalidation when the cached value is requested. Key-based invalidation works by constructing the cache key from parts of the underlying data such that the when the cached object should change, then the key also changes.~\cite{blog:key-based-invalidation}. The cached content is considered immutable and only have to be written once. This simplifies version management from the perspective of cache storage since there is no chance you read stale values if the key is assumed to be derived from the most recent version of underlying data. The challenge of this method is to construct the key. In order for this caching method to work correctly, the developer must derive a cache key function f(x) such that the result of f(x) must be the same at any given time when given the same input x. In the web application framework, Ruby on Rails, the key construction is simplified by using a key that includes the timestamps of the last update on some underlying data. Although it simplifies the cache storage, the method also generates cache garbage, since old versions of a cached value are not removed. This means that the system relies on a cache database that is able to replace cache values using a proper policy such as replacing the Least Recently Used (LRU) or Least Frequently Used (LFU)~\cite{paper:web-caching-schemes}.
+When the cached values are required to be up to date with the primary storage, we must ensure that when underlying data is updated, the depending cached values must be recomputed before the cached value can be served. The key-based invalidation gives these guarantees by giving up immediate responses since the users have to wait for computations to finish if they request an invalidated cached value. As mentioned in section~\ref{sec:evaluating_caching_techniques} the impact of this trade-off is proportional to the cache miss rate. This means that the key-based invalidation will not be suitable in cases where the computation time is too long or in cases where the cached values are updated too frequently.
 
+Key-based invalidation works by constructing the cache key from parts of the underlying data such that the when the cached object should change, then the key also changes.~\cite{blog:key-based-invalidation}. The cached content is considered immutable and only have to be written once. This simplifies version management from the perspective of cache storage since there is no chance you read stale values if the key is assumed to be derived from the most recent version of underlying data.
+
+The challenge of this method is to construct the key. To use this technique correctly (i.e. obtain the guarantees promised) the developer must construct a key that is ensured to change when the cached value is considered stale. Furthermore to obtain a maximum hit rate, the key must not change when the cached value is fresh. Given that the key is optimally constructed, the timeline looks as on figure~\ref{fig:timeline:key-based}.
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=1.0\linewidth]{figures/timeline/key-based.pdf}
+  \caption{The lifecycle of the key-based invalidation technique}
+  \label{fig:timeline:key-based}
+\end{figure*}
+
+
+
+In the web application framework, Ruby on Rails, the key construction is simplified by using a key that includes the timestamps of the last update on some underlying data. An example of this technique can be seen in code example~\ref{code:key-based-invalidation}. In this example we use the type, id and update timestamp as parts of the key. This means that the cached value is considered invalid if it is called with an entity that has a different type, id or update timestamp. The intuition behind these components is that we want a unique cache value for each entity and we want the value to be recomputed when the entity is updated.
+
+\begin{figure}
+\input{code/key_based_invalidation.py}
+\caption{Example of the key-based invalidation technique}
+\label{code:key-based-invalidation}
+\end{figure}
+
+
+
+The key-based invalidation performs invalidation at the moment, the cached value is requested, but it is considered invalid at the moment after the cache key components are updated (e.g. the \emph{updated\_timestamp} in the code example). This means we get interval the value is considered value and fresh are always overlapping, which means we have consistency.
+
+A caveat of this method method is that it generates cache garbage since old versions of a cached value are not removed. To avoid the complexity of keeping track of the relations between the different, the responsibility for cleaning up is moved to the cache database. Fortunately cache databases (such as Redis and Memcached) implements different such cleanup algorithms that detects obsolete values based on some policy. One such policy called \emph{Least Recently Used (LRU)} removes the cached values that are least recently used by keeping a timestamp of when the cached values where accessed last. Another policy called \emph{Least Recently Used (LRU)} keeps track of the frequency in which the different values are accessed and removes the ones that are least frequently accessed.
+
+
+
+% TODO: Find litterature for these algorithms
 
 % subsection key_based_invalidation end
 
@@ -37,6 +76,10 @@ Instead of invalidating the cached value when requested, the cached values can b
 The simplest triggers are write-through updates, which are manual triggers inserted by the developer at places where the cached values should be invalidated. This require all developers to keep track of all places where underlying data changes, and furthermore be sure that the manual triggers are inserted when new code is introduced.
 
 In some architectures the changes to the system are based on triggers or events. One such architecture called Event Sourcing works by using Domain Events to describe the changes of the system instead of using database commands~\cite{blog:focusing-on-events}. Since these events are a natural part of the application, they can be used as invalidation triggers without further additions.
+
+% TODO: Write this as if trigger-based invalidation is the overvall theme
+% and then we have automatic invalidation that is a specialization of trigger-based invalidation
+% where the triggers are created automatically based on some information
 
 A lot of work has been put into using triggers from the database to invalidate cached data. \cite{paper:cache-genie} suggests a solution based on the Object Relational Mapper programming technique to capture relevant triggers. \cite{paper:deploy-time} also suggests using a database wrapper in the application-layer that captures and analyzes database commands and use them as triggers. TxCache suggested in~\cite{paper:liskov} uses daemon processes to monitor the database for relevant triggers. This method has the advantage that it allows multiple types of applications to manipulate the same database as opposed to~\cite{paper:cache-genie, paper:deploy-time}, where the triggers would not have been captured if the database command was made around the application. On the other hand it introduces complexity of running and monitoring the processes. With relation to database monitoring this introduces a trade-off between the complexity of the system and an assumption that multiple types of applications does not alter the same data.
 
