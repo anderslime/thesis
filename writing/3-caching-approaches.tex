@@ -74,9 +74,9 @@ Instead of invalidating the cached value when requested, the cached values can b
   \label{fig:timeline:trigger-based}
 \end{figure*}
 
-Where the key is used as an invalidation mechanism in key-based invalidation, the key is static for trigger-based invalidation i.e. the key for identifying a cached value does not change in its lifetime. The actual key becomes simpler since it is only responsible for uniquely identifying the cached value, but the localization is still complex since the key needs to be shared between the triggers and the places where the cached value is accessed. The responsibility of invalidating the keys are then moved to the definition of event triggers.
+Where the key is used as an invalidation mechanism in key-based invalidation, the key is static for trigger-based invalidation i.e. the key for identifying a cached value does not change in its lifetime. The actual key becomes simpler since it is only responsible for uniquely identifying the cached value, but the localization is still a challenge since the key needs to be shared between the triggers and the places where the cached value is accessed. The responsibility of invalidating the keys are then moved to the definition of event triggers.
 
-The simplest type of triggers are manually defined code that invalidates a given key. The code example seen on figure~\ref{code:manual-trigger-invalidation} illustrates how the manual triggers works. In practice the manual code triggers are often placed right after updates to the underlying data. Although this method is simple it often requires a lot of effort from the developer and is prone to errors since it requires global reasoning of the application to identify the places where underlying data is updated.
+The simplest type of triggers are manually defined code that invalidates a given key. A code snippet for a naive implementation of manual triggers can be seen in snippet~\ref{code:manual-trigger-invalidation}. In practice the manual code triggers are often placed right after updates to the underlying data. Although this method is simple it often requires a lot of effort from the developer and is prone to errors since it requires global reasoning of the application to identify the places where underlying data is updated.
 
 \begin{figure}
 \input{code/manual_trigger_invalidation.py}
@@ -84,10 +84,12 @@ The simplest type of triggers are manually defined code that invalidates a given
 \label{code:manual-trigger-invalidation}
 \end{figure}
 
-\section{Trigger-based Invalidation with Background Update}
-\label{sec:trigger_based_invalidation_with_background_update}
+Having a static key also introduces a challenge related to concurrency since we assume that there are multiple application servers. The challenge origins from the problem illustrated on figure~\ref{fig:trigger-based-concurrency-challenge}, where an update to the underlying happens during the computation of a cached value. When the computation has finished it will incorrectly mark the cached value as fresh even though it is based on an old version of the underlying data, which makes it stale.
 
-Since the key for a cached value is static in trigger-based invalidation we can always locate the old/stale value after invalidation. Using this information we can extend the trigger-based invalidation technique serve the old value while computing the new and thereby ensure that the system always responds immediately by giving up strict freshness and consistency. To give this guarantee fully the user have to wait for the computation the first time the value is requested if the application haven't `'pre-heated'` the cache i.e. included a build step before deployment that computes all cached values.
+\subsection{Trigger-based Invalidation with Background Update}
+\label{subsec:trigger-based-invalidation-with-background-update}
+
+Although having a static key for a cached value as in trigger-based invalidation comes with challenges, there is also the advantage that we can locate the old/stale value after invalidation as oppose to key-based invalidation where there is no relation between the versions of cached values. Using this information we can extend the trigger-based invalidation technique serve the old value while computing the new and thereby ensure that the system always responds immediately by giving up strict freshness and consistency. To give this guarantee fully the user have to wait for the computation the first time the value is requested if the application haven't `'pre-heated'` the cache i.e. included a build step before deployment that computes all cached values.
 
 The timeline of this extension is as on figure~\ref{fig:timeline:trigger-based-with-background-update}. A naive implementation of this technique would be as the trigger-based seen in code snippet~\ref{code:manual-trigger-invalidation} with the modification that the system updates the value asynchronously instead of synchronously if no fresh value is found in the cache. The snippet for this can be found in appendix~\ref{appendix:code:trigger-based-invalidation-with-background-update}.
 
@@ -98,7 +100,7 @@ The timeline of this extension is as on figure~\ref{fig:timeline:trigger-based-w
   \label{fig:timeline:trigger-based-with-background-update}
 \end{figure*}
 
-% section trigger_based_invalidation_with_background_update end
+% subsection trigger-based-invalidation-with-background-update end
 
 % TODO: Tell about how we can track whether a key is valid.
 %  - We can use meta-information?
