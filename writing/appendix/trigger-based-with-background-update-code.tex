@@ -1,3 +1,6 @@
+\section{Code Snippet for Trigger-based Invalidation with Background Update}
+\label{appendix:code:trigger-based-invalidation-with-background-update}
+
 \begin{minted}[linenos]{python}
 def time_consuming_participant_score(participant):
     return numpy.advanced_statistical_method(participant)
@@ -16,27 +19,33 @@ def cached_time_consuming_function(participant):
     if is_fresh_in_cache(cache_key):
         return fetch_from_cache(cache_key)
     else:
-        result = time_consuming_participant_score(participant)
-        set_cached_value(cache_key, result)
-        return result
+        update_cache_async(
+          time_consuming_participant_score,
+          participant
+        )
+        return fetch_from_cache(cache_key)
 
 # Load the participant from the primary storage
 participant = ParticipantDB.load_one_from_database
 
 # Call the cached version of the time_consuming_participant_score
+# Since there is currently no value in the cache it returns nothing
 print cached_participant_score(participant)
 
-# This second time it is called, the return value for
-# the time_consuming_participant_score is cached, which means it
-# returns the value from the cache
+# sleep for 5 seconds to wait for the computation to finish
+sleep(5)
+
+# This time we get an immediate response since the result is
+# cached from the asynchronous update
 print cached_participant_score(participant)
 
 # Now we invalidate the cached value
 cache_key = cache_key_for_participant_score(participant)
 invalidate_cached_value(cache_key)
 
-# Since the value has been invalidated
-# the cached_time_consuming_function will recalculate
-# the result when called at this point
+# This time we serve the same value as when it was called
+# previously, but now it is stale
 print cached_participant_score(participant)
 \end{minted}
+
+% section code_snippet_for_trigger_based_invalidation_with_background_update end
