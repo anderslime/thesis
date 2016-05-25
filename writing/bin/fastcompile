@@ -2,4 +2,4 @@
 function compile_latex {
   pdflatex -shell-escape thesis.tex
 }
-compile_latex
+compile_latex && compile_latex
