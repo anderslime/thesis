@@ -70,11 +70,13 @@ Instead of invalidating the cached value when requested, the cached values can b
 \begin{figure*}[ht!]
   \centering
   \includegraphics[width=1.0\linewidth]{figures/timeline/trigger-based.pdf}
-  \caption{The lifecycle of the expiration-based invalidation technique}
+  \caption{The lifecycle of the trigger-based invalidation technique}
   \label{fig:timeline:trigger-based}
 \end{figure*}
 
 Where the key is used as an invalidation mechanism in key-based invalidation, the key is static for trigger-based invalidation i.e. the key for identifying a cached value does not change in its lifetime. The actual key becomes simpler since it is only responsible for uniquely identifying the cached value, but the localization is still a challenge since the key needs to be shared between the triggers and the places where the cached value is accessed. The responsibility of invalidating the keys are then moved to the definition of event triggers.
+
+Having a static key also has the advantage that we can locate the old/stale value after invalidation as oppose to key-based invalidation where there is no relation between the versions of cached values. Using this information we can extend the technique to be more fault-tolerant by serving a stale value in the case where a computation fails\footnote{Here we assume that the application provides more value to the client by serving a stale value compared to serving an error or nothing}. We can also extend the technique to be more flexible with relation to the properties as explained in section~\ref{subsec:trigger-based-invalidation-with-asynchronous-update} and section~\ref{subsec:write_through_invalidation}.
 
 The simplest type of triggers are manually defined code that invalidates a given key. A code snippet for a naive implementation of manual triggers can be seen in snippet~\ref{code:manual-trigger-invalidation}. In practice the manual code triggers are often placed right after updates to the underlying data. Although this method is simple it often requires a lot of effort from the developer and is prone to errors since it requires global reasoning of the application to identify the places where underlying data is updated.
 
@@ -84,54 +86,55 @@ The simplest type of triggers are manually defined code that invalidates a given
 \label{code:manual-trigger-invalidation}
 \end{figure}
 
-Having a static key also introduces a challenge related to concurrency since we assume that there are multiple application servers. The challenge origins from the problem illustrated on figure~\ref{fig:trigger-based-concurrency-challenge}, where an update to the underlying happens during the computation of a cached value. When the computation has finished it will incorrectly mark the cached value as fresh even though it is based on an old version of the underlying data, which makes it stale.
+% TODO: Consider moving the concurrency analysis to "Updating the cache" since it's related to that
 
-\subsection{Trigger-based Invalidation with Background Update}
-\label{subsec:trigger-based-invalidation-with-background-update}
-
-Although having a static key for a cached value as in trigger-based invalidation comes with challenges, there is also the advantage that we can locate the old/stale value after invalidation as oppose to key-based invalidation where there is no relation between the versions of cached values. Using this information we can extend the trigger-based invalidation technique serve the old value while computing the new and thereby ensure that the system always responds immediately by giving up strict freshness and consistency. To give this guarantee fully the user have to wait for the computation the first time the value is requested if the application haven't `'pre-heated'` the cache i.e. included a build step before deployment that computes all cached values.
-
-The timeline of this extension is as on figure~\ref{fig:timeline:trigger-based-with-background-update}. A naive implementation of this technique would be as the trigger-based seen in code snippet~\ref{code:manual-trigger-invalidation} with the modification that the system updates the value asynchronously instead of synchronously if no fresh value is found in the cache. The snippet for this can be found in appendix~\ref{appendix:code:trigger-based-invalidation-with-background-update}.
+Having a static key also introduces a challenge related to concurrency since we assume that there are multiple application servers. The challenge origins from the problem illustrated on figure~\ref{fig:trigger-based-concurrency-problem}, where an update to the underlying happens during the computation of a cached value. When the computation has finished it will incorrectly mark the cached value as fresh even though it is based on an old version of the underlying data, which makes it stale.
 
 \begin{figure*}[ht!]
   \centering
-  \includegraphics[width=1.0\linewidth]{figures/timeline/trigger-based-with-background-update.pdf}
-  \caption{The lifecycle of the trigger-based invalidation technique where the value is updated in the background}
-  \label{fig:timeline:trigger-based-with-background-update}
+  \includegraphics[width=1.0\linewidth]{figures/trigger-based-concurrency-problem.pdf}
+  \caption{A scenario of the trigger-based invalidation that results in a race condition, where the cached value are being incorrectly marked as valid even though it is storing a stale value.}
+  \label{fig:trigger-based-concurrency-problem}
 \end{figure*}
 
-% subsection trigger-based-invalidation-with-background-update end
+% subsection trigger_based_invalidation end
 
-% TODO: Tell about how we can track whether a key is valid.
-%  - We can use meta-information?
-%  - But then what about race-conditions? Where to place this chapter?
+\subsection{Trigger-based Invalidation with Asynchronous Update}
+\label{subsec:trigger-based-invalidation-with-asynchronous-update}
 
-Identifying the locations of these triggers is a challenge, but the trigger based invalidation has the advantage that it allows the caching system to react to the invalidation events.
+We can extend the trigger-based invalidation and update the cached value asynchronously and serve an old/stale value while computing the new. This way we always get an immediate response by giving up strict freshness and consistency. To give this guarantee fully the user have to wait for the computation the first time the value is requested if the application haven't `'pre-heated'` the cache i.e. included a build step before deployment that computes all cached values.
+
+The timeline of this extension is as on figure~\ref{fig:timeline:trigger-based-with-asynchronous-update}. A naive implementation of this technique would be as the trigger-based seen in code snippet~\ref{code:manual-trigger-invalidation} with the modification that the system updates the value asynchronously instead of synchronously if no fresh value is found in the cache. The snippet for this can be found in appendix~\ref{appendix:code:trigger-based-invalidation-with-asynchronous-update}.
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=1.0\linewidth]{figures/timeline/trigger-based-with-asynchronous-update.pdf}
+  \caption{The lifecycle of the trigger-based invalidation technique where the value is updated in the asynchronous}
+  \label{fig:timeline:trigger-based-with-asynchronous-update}
+\end{figure*}
+
+% subsection trigger-based-invalidation-with-asynchronous-update end
 
 \subsection{Write-Through Invalidation}
 \label{subsec:write_through_invalidation}
 
-The trigger based invalidation technique can be extended to \emph{Write-through invalidation}, where the cached values are updated as they are invalidated.
+Write-through invalidation is also an extension to the trigger-based invalidation method, but instead of updating the cached values when the value is requested, the value is updated in the moment after it has been invalidated. This way we invalidate by writing through the existing version in the cache. The timeline model of this technique seen on figure~\ref{fig:timeline:write-through} is similar to the asynchronous update extension, but the time interval in which it serves a stale value is only as long as the time taken to compute the value.
 
-
-
-
-% TODO: Write this as if trigger-based invalidation is the overvall theme
-% and then we have automatic invalidation that is a specialization of trigger-based invalidation
-% where the triggers are created automatically based on some information
-
-
-
-% TODO: Write about: Fault-Tolerance since: what if the computation suddenly fails: then we can serve the old value.
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=1.0\linewidth]{figures/timeline/write-through.pdf}
+  \caption{The lifecycle of the write-through invalidation technique}
+  \label{fig:timeline:write-through}
+\end{figure*}
 
 % subsection write_through_invalidation end
-
-
-% subsection trigger_based_invalidation end
 
 \subsection{Automatic Invalidation}
 \label{subsec:automatic_invalidation}
 
+% TODO: Write this as if trigger-based invalidation is the overvall theme
+% and then we have automatic invalidation that is a specialization of trigger-based invalidation
+% where the triggers are created automatically based on some information
 
 
 
