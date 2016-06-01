@@ -102,7 +102,7 @@ Having a static key also introduces a challenge related to concurrency since we 
 \subsection{Trigger-based Invalidation with Asynchronous Update}
 \label{subsec:trigger-based-invalidation-with-asynchronous-update}
 
-We can extend the trigger-based invalidation and update the cached value asynchronously and serve an old/stale value while computing the new. This way we always get an immediate response by giving up strict freshness and consistency. To give this guarantee fully the user have to wait for the computation the first time the value is requested if the application haven't `'pre-heated'` the cache i.e. included a build step before deployment that computes all cached values.
+We can extend the trigger-based invalidation by always serving the newest value from the cache and afterwards update the value asynchronously if it is stale. This way we always get an immediate response by giving up strict freshness and consistency. To give this guarantee fully the user have to wait for the computation the first time the value is requested if the application haven't `'pre-heated'` the cache i.e. included a build step before deployment that computes all cached values.
 
 The timeline of this extension is as on figure~\ref{fig:timeline:trigger-based-with-asynchronous-update}. A naive implementation of this technique would be as the trigger-based seen in code snippet~\ref{code:manual-trigger-invalidation} with the modification that the system updates the value asynchronously instead of synchronously if no fresh value is found in the cache. The snippet for this can be found in appendix~\ref{appendix:code:trigger-based-invalidation-with-asynchronous-update}.
 
