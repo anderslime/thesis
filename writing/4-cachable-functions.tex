@@ -1,15 +1,34 @@
 \chapter{Smache: Cachable Functions}
 \label{chapter:smache-cachable-functions}
 
+The goal of this thesis is to present a caching solution that is able to handle long running computations by presenting content to the user fast while addressing the challenges of cache management and efficient update propagation. Based on the overview of existing caching solutions introduces in the last chapter, we will present a solution that solves the problem for the context of the this thesis.
+
+% TODO: Present the content of this chapter
+%   - Present that the requirements
 
 % Structure:
 % - Existing approaches does not solve our problem optimally
 % - Smache: Programming Model for Cachable Functions
 
-\section{Existing Approaches Does Not Solve Our Problem Optimally}
-\label{sec:existing_approaches_does_not_solve_our_problem_optimally}
+\section{Existing Approaches are Not Sufficient}
+\label{sec:existing-approaches-are-not-sufficient}
 
 % TODO: Find shorter title for this section
+
+In the primary use case of the context in this thesis (described in section~\ref{sec:context}), the platform presents statistical information based on some advanced computation that takes a long time to compute ($>\text{ 10 sec.}$). If we want to keep the teacher's attention to the platform, we need to find a caching technique that is not depending on the time taken to compute the information. Furthermore we want to keep the information as fresh as possible.
+
+If we consider the overview on figure~\ref{fig:existing-solutions-comparison}, we want the approach that has a high adaptability, which was stated as one of the requirements of the system. From the approaches with high adaptability that has a response time that does not depend on the time of computation, are \emph{expiration-based} and \emph{manual trigger-based invalidation with asynchronous updates}.
+
+From these approaches the expiration-based invalidation technique has the advantage that it doesn't require invalidation management, but it has the limitation that all cached values of the same kind are invalidated and updated at the same frequency.
+
+If we consider use case example~\ref{example:assignment-computations}, the statistical information of current assignments are updated at the same frequency as the closed assignments, and if we want to keep the cached values for the current information up to date, we also need to update all non current information. This is not desirable with relation to efficiency since the CPU will be busy in time proportional to the time of the computing the statistical information for the assignment and the total number of assignments on the platform. In other words the number of CPU's we need to occupy for this job can be calculated by $\frac{\Delta t_c \cdot n_c \cdot u_c}{t_d}$, where $\Delta t_c$ is the time of the computation, $n_c$ is the number of computations, $\Delta u_c$ is the number of updates per 24 hours and $\Delta t_d$ is the number of seconds per 24 hours. Considering the example - if we have 500 assignments on the platform and we want to update the information every 10 minutes with a computation time of 30 seconds each, then we occupy a CPU in $\frac{60 \cdot 500 \cdot \frac{10 \cdot 60}{60 \cdot 60 \cdot 24}}{60 \cdot 60 \cdot 24}\text{ occupied CPU's} = 50\text{ occupied CPU's}$. If the amount of computational power isn't a problem, the expiration-based approach would be the best solution, but that is not the case of this thesis, where efficiency is a requirement.
+
+
+\begin{example}
+\label{example:assignment-computations}
+On the Peergrade.io platform the teacher is presented with statistical information about the grades given by the students for a given assignment. These assignments are often current at specific time interval after which the assignment becomes ``closed'' and the statistical information are not updated.
+\end{example}
+
 
 %   - State what we would like
 %   - Not solved by the Deploy-Time method:
@@ -29,16 +48,23 @@
 %           - Future:
 %             - Expiration-based caching
 
-% section existing_approaches_does_not_solve_our_problem_optimally end
+% section existing-approaches-are-not-sufficient end
 
 \section{The Cachable Function Model}
 \label{sec:the_cachable_function_model}
 
 % Introduce the caching function and explain why it's THE solution
-%   - Show a diagram with the architecture of the solution
-%     => Two diagrams:
-%       - request cycle
-%       - invalidation + update cycle
+% - Alternative solutions
+%   - Deploy-time:
+%     - No write-through - if write-through => not fault-tolerant or performant
+%   - Transactional Cons:
+%     - Complexity in different daemons
+%     - Not adaptable (would probably require a different solutions for a non-acid database such as MongoDB)
+%   - IBM: Only for declared content
+% - Show a diagram with the architecture of the solution
+%   => Two diagrams:
+%     - request cycle
+%     - invalidation + update cycle
 
 \begin{figure*}[ht!]
   \centering
