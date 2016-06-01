@@ -1,5 +1,104 @@
-\chapter{Cachable Functions}
-\label{chapter:functions}
+\chapter{Smache: Cachable Functions}
+\label{chapter:smache-cachable-functions}
 
-% chapter cachable_functions end
 
+% Structure:
+% - Existing approaches does not solve our problem optimally
+% - Smache: Programming Model for Cachable Functions
+
+\section{Existing Approaches Does Not Solve Our Problem Optimally}
+\label{sec:existing_approaches_does_not_solve_our_problem_optimally}
+
+% TODO: Find shorter title for this section
+
+%   - State what we would like
+%   - Not solved by the Deploy-Time method:
+%     - Lack of fault-tolerance
+%   - Dan Ports neither:
+%     - Made for PostgreSQL (makes it difficoult to use other databases)
+%   - IBM:
+%     - Supports write-through, BUT it is made for published content, not functions
+%   - Conclusion:
+%     - We need a system that lies THERE!:
+%       - Medium adaptable (= easy to adapt to new technologies)
+%       - Supports Write-Through
+%       - Flexible:
+%         - Default: immediate response + relaxed freshness
+%         - Other:
+%           - Strict freshness + automatic invalidation + update in background
+%           - Future:
+%             - Expiration-based caching
+
+% section existing_approaches_does_not_solve_our_problem_optimally end
+
+\section{The Cachable Function Model}
+\label{sec:the_cachable_function_model}
+
+% Introduce the caching function and explain why it's THE solution
+%   - Show a diagram with the architecture of the solution
+%     => Two diagrams:
+%       - request cycle
+%       - invalidation + update cycle
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=1.0\linewidth]{figures/cachable-function-control-flow.pdf}
+  \caption{The control flow during a call to a function cached through Smache}
+  \label{fig:cachable-function-control-flow}
+\end{figure*}
+
+
+%   - Application-layer definition
+%   - Automatic Cache Invalidation (with listener)
+%   - Data Update Propagation (with worker)
+
+% - Definition of cachable function (taken from Dan Ports)
+
+\subsection{Restricted to Pure Functions}
+\label{subsec:restricted_to_pure_functions}
+
+% TODO: Write about how the solution is restricted to pure functions,
+%   - copy-paste pretty much (AND REFERENCE Dan Ports)
+
+% subsection restricted_to_pure_functions end
+
+\subsection{Making Functions Cachable}
+\label{subsec:making_functions_cachable}
+
+% TODO: Write about how the functions are converted to be cachable
+%   - copy-paste pretty much (AND REFERENCE Dan Ports)
+
+% subsection making_functions_cachable end
+
+\subsection{Automatic Cache Invalidation}
+\label{subsec:automatic_cache_invalidation}
+
+% subsection automatic_cache_invalidation end
+
+\subsection{Data Update Propagation}
+\label{subsec:model_data_update_propagation}
+
+% subsection data_update_propagation end
+
+\section{Implementing Cachable Functions in Python}
+\label{sec:implementing_cachable_functions_in_python}
+
+\subsection{Defining the Cachable Functions}
+\label{subsec:defining_the_cachable_functions}
+
+% subsection defining_the_cachable_functions end
+
+% section implementing_cachable_functions_in_python end
+
+%   - Discussion about guarantees (where does it lie in the comparison mode)
+%   - MAYBE wait until final discussion
+%     - Configurations:
+%       - Always Immediate Response + Relaxed Freshness
+%       - Strict Freshness
+%   - Python Implementation:
+%     - Introduce decorators
+%     - Show me the code - specifically use the running example!
+
+% section the_cachable_function_model end
+
+% chapter smache-cachable-functions end

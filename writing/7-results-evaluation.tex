@@ -10,13 +10,19 @@ To prove efficiency:
   - Test that functions are not executed more times than necessary
 - Show that caching improves performance:
   - Examples where caching improves performance
-- Test the 'warmup'
+- Test the 'warm up'
 
 Maybe not to be tested, but to be argued:
 - Software design:
   - Defend the library and how it's used
-- Adaptablity
-  - Defend the
+- Adaptability
+  - Discuss that the definition is could be improved, but fits evaluation in the cases we have
+% Fault-Tolerance:
+%  - If the cache is not reachable:
+%    - If computation time > 10s: should return no result
+%    - If computation time < 10s
+%      - Should be computed
+%      - BUT: Be aware of (accidental) DOS (all web requests are hold up by long running computations)
 
 % chapter results_and_evaluation end
 

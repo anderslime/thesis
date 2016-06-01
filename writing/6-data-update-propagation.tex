@@ -1,6 +1,39 @@
 \chapter{Data Update Propagation}
 \label{chapter:update_propagation}
 
+\section{Updating the Cache}
+\label{sec:updating_the_cache}
+
+
+\subsection{Data Update Propagation}
+\label{subsec:data_update_propagation}
+
+% TODO: Detailed explanation of the IBM update algorithm
+% TODO: Consider if this should be postponed to the Data Update Propagation Chapter
+
+% subsection data_update_propagation end
+
+\subsection{Consistent Concurrent Write-Through}
+\label{subsec:consistent_concurrent_write_through}
+
+% TODO: Write this as a problem that is ignored in many existing caching solutions or maybe just traded off for simplicity. Describe how key-based invalidation ensures this and how all other could have this problem solved.
+
+At first we would like the caching to be correct. In the case of caching, we will define correctness in terms of liveness and safety: the caching system will update the cache when necessary and it will eventually return the most fresh value computed. That is if we have a computation $f$ that computes the value $v_1$ at time $t_1$ and $v_2$ at time $t_2$ then the cache store will eventually contain $v_2$ given that $t_2 > t_1$. Although this could be seen as a prerequisite for the caching system, most implementations ignore this fact to achieve a simpler cache system. Because when we want to keep the integrity between updates we need some kind of ordering for the updates that adds complexity to the system. The problem is also illustrated on figure~\ref{fig:incorrect-updates-analysis}.
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=1.0\linewidth]{figures/incorrect-update-analysis.pdf}
+  \caption{Showing how two concurrent caching updates from two different application servers results in an inconsistent state. We see that even though the request from \emph{Web 2} are based on data older than \emph{Web 1} it gets to write }
+  \label{fig:incorrect-updates-analysis}
+\end{figure*}
+
+% TODO: Analysis and argue why some of the solutions leads to inconsistent cached values and breaks the safety requirement.
+
+% subsection consistent_concurrent_write_through end
+
+% section updating_the_cache end
+
+
 % ## Consistency/Integrity
 % BOTTOM: NOT TRUE FOR KEY-BASED
 % WE CALCULATE AND STORE THE VALUE FOR THE GIVEN KEY, WE DO NOT HAVE STATE
