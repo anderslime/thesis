@@ -24,25 +24,29 @@
 %===============================================================================
 \usepackage{LukeThesis}                             %Import Thesis base style
 
-% Sourc Code
-\usepackage{minted}
-
 %===============================================================================
 % SOURCE CODE
 %===============================================================================
+\usepackage{minted}
 \renewcommand{\theFancyVerbLine}{
   \sffamily\textcolor[rgb]{0.5,0.5,0.5}{\scriptsize\arabic{FancyVerbLine}}}
+
+%===============================================================================
+% QUOTES
+%===============================================================================
+\newcommand{\myquote}[1]{\emph{``#1''}}
+
 %===============================================================================
 % THESIS PROPERTIES (Modifiy these fields with your details)
 %===============================================================================
 \def\thesisauthor{Anders Emil Nielsen}                     %Author
 \def\thesistitle{}               %Title
-\def\thesishandin{01-January}                       %Submission date (Day-Month}
+\def\thesishandin{04-July}                       %Submission date (Day-Month}
 \def\thesisdegree{M.Sc.}                              %Degree ('B.Eng', 'B.Sc.', 'M.Sc.' or 'PhD')
 \def\thesisyear{2016}                               %Submission year
 \def\thesisnumber{????}                             %DTU-IMM Serial number (do not include year)
 \def\thesisISSN{0000-0000}                          %ISSN number
-\def\thesiskeywords{application-layer, caching, consistency}  %PDF keywords
+\def\thesiskeywords{application-layer, caching, consistency, automatic invalidation, data update propagation}  %PDF keywords
 \derivethesisprops                                  %Derive dependent properties
 %
 %===============================================================================

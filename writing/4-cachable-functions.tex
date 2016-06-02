@@ -15,66 +15,39 @@ The goal of this thesis is to present a caching solution that is able to handle 
 
 % TODO: Find shorter title for this section
 
+% TODO: Consider moving this to the last chapter?
+
 In the primary use case of the context in this thesis (described in section~\ref{sec:context}), the platform presents statistical information based on some advanced computation that takes a long time to compute ($>\text{ 10 sec.}$). If we want to keep the teacher's attention to the platform, we need to find a caching technique that is not depending on the time taken to compute the information. Furthermore we want to keep the information as fresh as possible.
 
-If we consider the overview on figure~\ref{fig:existing-solutions-comparison}, we want the approach that has a high adaptability, which was stated as one of the requirements of the system. From the approaches with high adaptability that has a response time that does not depend on the time of computation, are \emph{expiration-based} and \emph{manual trigger-based invalidation with asynchronous updates}.
+If we consider the overview on figure~\ref{fig:existing-solutions-comparison}, we can already leave out caches that optimizes DB-queries and declared content since they do not solve the problem of caching advanced statistical computations. The solution proposed by IBM is made for declared HTML-content and not on computations based on data from a storage system. This leaves the set of approaches that are able to cache arbitrary content and HTTP-responses, but given caching arbitrary content has less assumptions, they are more attractive.
+
+From the approaching caching arbitrary content it is desirable to have an approach with high adaptability, which was stated as one of the requirements of the system. From the approaches with high adaptability that has a response time that does not depend on the time of computation, are \emph{expiration-based} and \emph{manual trigger-based invalidation with asynchronous updates}.
 
 From these approaches the expiration-based invalidation technique has the advantage that it doesn't require invalidation management, but it has the limitation that all cached values of the same kind are invalidated and updated at the same frequency.
 
 If we consider use case example~\ref{example:assignment-computations}, the statistical information of current assignments are updated at the same frequency as the closed assignments, and if we want to keep the cached values for the current information up to date, we also need to update all non current information. This is not desirable with relation to efficiency since the CPU will be busy in time proportional to the time of the computing the statistical information for the assignment and the total number of assignments on the platform. In other words the number of CPU's we need to occupy for this job can be calculated by $\frac{\Delta t_c \cdot n_c \cdot u_c}{t_d}$, where $\Delta t_c$ is the time of the computation, $n_c$ is the number of computations, $\Delta u_c$ is the number of updates per 24 hours and $\Delta t_d$ is the number of seconds per 24 hours. Considering the example - if we have 500 assignments on the platform and we want to update the information every 10 minutes with a computation time of 30 seconds each, then we occupy a CPU in $\frac{60 \cdot 500 \cdot \frac{10 \cdot 60}{60 \cdot 60 \cdot 24}}{60 \cdot 60 \cdot 24}\text{ occupied CPU's} = 50\text{ occupied CPU's}$. If the amount of computational power isn't a problem, the expiration-based approach would be the best solution, but that is not the case of this thesis, where efficiency is a requirement.
 
-The alternative with high adaptability is to use manually placed asynchronous invalidation triggers. This approach has the advantage that the values are only invalidated (and thereby recomputed) when a trigger is invoked, which means the developer has the opportunity to optimize the approach to only invalidate when it is relevant to the user e.g. when the cached value are supposed to change. Although this can be seen as an opportunity it can also be seen as a burden for the developer to maintain these manual triggers. And by having asynchronous invalidations, the user is presented with a stale value, and only if the value is requested again after the update, the user receives the fresh value. If we consider example~\ref{example:assignment-computations} it is not unlikely that the teacher looks at an old assignment some time after it has been closed. Using asynchronous triggers the teacher is presented immediately with a stale value, but this stale value ??
-
+The alternative with high adaptability is to use manual trigger-based invalidation with asynchronous updates after request as described in section~\ref{subsec:trigger-based-invalidation-with-asynchronous-update}. This approach has the advantage that the values are only invalidated (and thereby recomputed) when a trigger is invoked, which means the developer has the opportunity to optimize the approach to only invalidate when it is relevant to the user e.g. when the cached value are supposed to change. Although this can be seen as an opportunity it can also be seen as a burden for the developer to maintain these manual triggers. And by having asynchronous invalidations, the user is presented with a stale value, and only if the value is requested again after the update, the user receives the fresh value. If we consider example~\ref{example:assignment-computations} it is not unlikely that the teacher looks at an old assignment some time after it has been closed. In cases such as this, where the value is only fetched once in a while it would not be optimal to have asynchronous updates, since the value will never be close to fresh when it is actually presented.
 
 \begin{example}
 \label{example:assignment-computations}
 On the Peergrade.io platform the teacher is presented with statistical information about the grades given by the students for a given assignment. These assignments are often current at specific time interval after which the assignment becomes ``closed'' and the statistical information are not updated.
 \end{example}
 
+The approaches suggested by Chris Wasik and Dan Ports focus on automatic invalidation and could probably be extended to do asynchronous updates on request to allow immediate responses by giving up the option of freshness, which would give the same guarantees as the trigger-based invalidation with asynchronous updates with additional automatic invalidation, but it would also have the same problems.
 
-%   - State what we would like
-%   - Not solved by the Deploy-Time method:
-%     - Lack of fault-tolerance
-%   - Dan Ports neither:
-%     - Made for PostgreSQL (makes it difficoult to use other databases)
-%   - IBM:
-%     - Supports write-through, BUT it is made for published content, not functions
-%   - Conclusion:
-%     - We need a system that lies THERE!:
-%       - Medium adaptable (= easy to adapt to new technologies)
-%       - Supports Write-Through
-%       - Flexible:
-%         - Default: immediate response + relaxed freshness
-%         - Other:
-%           - Strict freshness + automatic invalidation + update in background
-%           - Future:
-%             - Expiration-based caching
+The approach best fit for the context of this thesis is to use write-through invalidation that guarantees immediate response time as well as updating the content in-place such that the content cannot become older than the time taken to compute the value.
+
+Although this is the best fit, it still leaves a burden for the developer to declare the triggers that invokes the write through updates. Furthermore it leaves the challenge of ensuring the integrity of the cached values and invalidation marks in concurrent environments as described on figure~\ref{fig:trigger-based-concurrency-problem}.
+
+The goal of this thesis is to present a caching approach that solves the problem of the thesis for the use case described in section~\ref{sec:context} as well as fulfill the requirements described in section~\ref{sec:requirements}. Since the computation time in the given use case can be long, we must ensure that the response time does not depend on the computation time. Since we must respond immediately we need to trade-off strict freshness. To keep the values as up to date as possible we can use in-place updates based on trigger invalidation. As we can see on figure~\ref{fig:existing-solutions-comparison}, there exists no solutions fulfilling those criteria. In the rest of the thesis we will present the design and implementation of the solution that meets these requirements, which we call ``Smache''.
 
 % section existing-approaches-are-not-sufficient end
 
 \section{The Cachable Function Model}
 \label{sec:the_cachable_function_model}
 
-% Introduce the caching function and explain why it's THE solution
-% - Alternative solutions
-%   - Deploy-time:
-%     - No write-through - if write-through => not fault-tolerant or performant
-%   - Transactional Cons:
-%     - Complexity in different daemons
-%     - Not adaptable (would probably require a different solutions for a non-acid database such as MongoDB)
-%   - IBM: Only for declared content
-% - Show a diagram with the architecture of the solution
-%   => Two diagrams:
-%     - request cycle
-%     - invalidation + update cycle
-
-\begin{figure*}[ht!]
-  \centering
-  \includegraphics[width=1.0\linewidth]{figures/cachable-function-control-flow.pdf}
-  \caption{The control flow during a call to a function cached through Smache}
-  \label{fig:cachable-function-control-flow}
-\end{figure*}
-
+Smache uses the same programming model as the one described by Dan Ports~\cite{paper:liskov}. The model is organized around \emph{cachable functions}, which essentially are normal functions, where the result are \emph{memoized}\footnote{In our case: storing the result of the function and return the cached value when the function is called again with the same input}. The cachable functions are allowed to make request to the primary storage to fetch the underlying data for the function as well as calling other cached functions. This allows caching at different granularities that gives the benefit of optimizing the invalidation for different types of content.
 
 %   - Application-layer definition
 %   - Automatic Cache Invalidation (with listener)
@@ -85,6 +58,8 @@ On the Peergrade.io platform the teacher is presented with statistical informati
 \subsection{Restricted to Pure Functions}
 \label{subsec:restricted_to_pure_functions}
 
+As mentioned by Dan Ports~\cite{paper:liskov} not all functions are cachable. To be able to cache the functions they need to be \emph{pure}, which Dan Ports defines as: \myquote{[...] they [functions] must be deterministic, not have side effects, and depend only on their arguments and the storage layer state.}. Smache does not detect these properties in a function and therefore relies on the developer to ensure only pure functions are cached.
+
 % TODO: Write about how the solution is restricted to pure functions,
 %   - copy-paste pretty much (AND REFERENCE Dan Ports)
 
@@ -93,23 +68,46 @@ On the Peergrade.io platform the teacher is presented with statistical informati
 \subsection{Making Functions Cachable}
 \label{subsec:making_functions_cachable}
 
-% TODO: Write about how the functions are converted to be cachable
-%   - copy-paste pretty much (AND REFERENCE Dan Ports)
+Overall the API for making cached functions are similar to the Dan Ports' approach in which they define a \verb$MAKE-CACHABLE$ procedure that converts a pure function to a cached function with the following definition~\cite{paper:liskov}:
+
+\verb$MAKE-CACHABLE(fn)$ $\rightarrow$ \emph{cached-fn}: Makes a function cacheable. \emph{cached-fn} is a new function that first checks the cache for the result of another call with the same arguments. If not found, it executes \emph{fn} and stores its result in the cache.
+
+This definition is the basis of making a function cachable, but it will be extended further as automatic invalidation are added in chapter~\ref{chapter:invalidation} and in-place updates are added in chapter~\ref{chapter:data-update-propagation}.
+
+% TODO: Consider having these extensions in this section (or maybe next)
 
 % subsection making_functions_cachable end
 
 \subsection{Automatic Cache Invalidation}
 \label{subsec:automatic_cache_invalidation}
 
+In Dan Ports' solution the system handles all parts of cache management such that the developer only have to define which functions needs to be cached and not define how it should be invalidated. This is a great advantage since it avoids potential bugs related to cache invalidation, but it is a trade-off for flexibility as well as adaptability since this approach moves the complexity to the database in the form of assumptions about the primary storage, cache database as well as a daemon process for managing snapshots~\cite{paper:liskov}.
+
+Smache does not remove the burden of cache management, but it will handle naming (or localization) and invalidation by only relying on the developer declaring dependencies to underlying data. This will improve the usability of cache management since the cache invalidation only changes when there are changes to the underlying data as described more in chapter~\ref{chapter:invalidation}.
+
 % subsection automatic_cache_invalidation end
 
 \subsection{Data Update Propagation}
 \label{subsec:model_data_update_propagation}
 
+Smache also offers the possibility to perform in-place updates using a data update propagation system inspired by the solution IBM used to achieve a 100\% cache hit rate on the content management system for the Olympic Games in 2000(TODO: Include references).
+
+Having in-place updates allows the developer to have immediate response times while ensuring that the values returned are updated as soon as they are invalidation such that the value is not more stale than the time taken to compute it. This will be explained more in chapter~\ref{chapter:data-update-propagation}.
+
 % subsection data_update_propagation end
 
 \section{Implementing Cachable Functions in Python}
 \label{sec:implementing_cachable_functions_in_python}
+
+
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=1.0\linewidth]{figures/cachable-function-control-flow.pdf}
+  \caption{The control flow during a call to a function cached through Smache}
+  \label{fig:cachable-function-control-flow}
+\end{figure*}
+
 
 \subsection{Defining the Cachable Functions}
 \label{subsec:defining_the_cachable_functions}
