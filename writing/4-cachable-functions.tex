@@ -101,7 +101,7 @@ Having in-place updates allows the developer to have immediate response times wh
 \section{Implementing Cachable Functions in Python}
 \label{sec:implementing_cachable_functions_in_python}
 
-Hello, worls
+The basic cachable functions as they are described so far can be implemented using the architecture described in section~\ref{fig:caching-basics-architecture}. Smache implements the cachable function by exposing an implementation of the \verb$MAKE-CACHABLE$. To apply the procedure the Smache library must be loaded in the application and applied. After the \verb$MAKE-CACHABLE$ function has been used, the control flow illustrated on figure~\ref{fig:cachable-function-control-flow} is applied. When a client makes a request involving a cached function, the application will call the function wrapper that tries to find the value in the cache first and if it is not present in the cache, the original function will be called after which the result is cached and returned to the caller.
 
 \begin{figure*}[ht!]
   \centering
@@ -110,9 +110,19 @@ Hello, worls
   \label{fig:cachable-function-control-flow}
 \end{figure*}
 
+The procedure for making a function cached is implemented in using Python-decorators~\footnote{https://www.python.org/dev/peps/pep-0318/} that is an annotation that can be used to modify the behaviour of existing functions while being able to keep a reference to the original function.
 
-\subsection{Defining the Cachable Functions}
-\label{subsec:defining_the_cachable_functions}
+The implementation of the basic caching on the running example is seen on code snippet~\ref{code:basic-caching-running-example}. In this code the only addition we have made is a call to a function called \verb$computed$ on a module \verb$smache$ with a single argument and a \verb$@$ as prefix. This call corresponds to the implementation of \verb$MAKE-CACHABLE$.
+
+Smache require the developer to annotate the types of ``data source'', which are passed into the original function. In this case we have annotated using the \verb$Course$-class that corresponds to an object for an Object-Relational Mapper (ORM) that represents the collection \emph{course}. The ``data source types'' supported are ORM-objects as well as the ``Raw''-type that represents primitive values (such as strings, numbers etc.). The number of type annotations has to be the same number of arguments given to the original function.
+
+Smache uses the type annotations to do smart serialization and deserialization when the name of the cached value have to be inferred. The raw input are represented as they are in a serialized form, but the data source inputs are serialized using their. When the function is then deserialized the Smache library will use the id of the data sources to load a fresh version of the ORM-object from the database.
+
+\begin{figure*}[ht!]
+  \input{code/basic-implementation.py}
+  \caption{Implementation of basic caching on the running example}
+  \label{code:basic-caching-running-example}
+\end{figure*}
 
 % subsection defining_the_cachable_functions end
 
@@ -123,9 +133,6 @@ Hello, worls
 %     - Configurations:
 %       - Always Immediate Response + Relaxed Freshness
 %       - Strict Freshness
-%   - Python Implementation:
-%     - Introduce decorators
-%     - Show me the code - specifically use the running example!
 
 % section the_cachable_function_model end
 
