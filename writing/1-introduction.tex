@@ -91,6 +91,30 @@ This thesis addresses challenges described in section~\ref{sec:problem} and requ
 \section{Outline}
 \label{sec:outline}
 
+This thesis is structured as following:
+
+With the motivation, problem, and requirements described in this introductory chapter, chapter~\ref{chapter:caching-model} will give an introduction to the basics of caching and present the models used and a set of criteria used to evaluate caching approaches.
+
+The following chapter~\ref{chapter:caching} will describe the existing caching approaches described in literature and used in practice.
+
+Based on the knowledge of existing solution, chapter~\ref{chapter:smache-cachable-functions},~\ref{chapter:invalidation}, and~\ref{chapter:data-update-propagation} describes the solution suggested by this thesis.
+
+The solution is then evaluated and discussed based on test results and the initial requirements in chapter~\ref{chapter:results}.
+
+Chapter~\ref{chapter:caching-model} introduces caching by presenting the basic caching algorithm, the common architecture of caching system, the models used to describe caching approaches, and criteria used to evaluate caching approaches to find the appropriate technique.
+
+Chapter~\ref{chapter:caching} will describe existing caching approaches with relation to caching evaluation criteria and explain how to choose a caching technique based on these criteria.
+
+Chapter~\ref{chapter:smache-cachable-functions} presents the solution suggested by this thesis for the given context and requirements. First the techniques of existing approaches are discussed and followed by a description of the programming model - cachable functions.
+
+Chapter~\ref{chapter:invalidation} describes in more details how the cachable functions are extended to have automatic invalidations using declared dependencies to underlying data.
+
+Chapter~\ref{chapter:data-update-propagation} explains the data update propagation algorithm used to extend the cachable functions to have in-place cache updates.
+
+Chapter~\ref{chapter:results} goes through the test results related to performance, efficiency, and cache memory usages. The solution are then discussed and evaluated based on the test results and the initial requirements.
+
+Chapter~\ref{chapter:conclusion} finalize the thesis with a conclusion.
+
 % TODO: Write something about the structure of the thesis + Figure illustrating it.
 
 % section outline end
