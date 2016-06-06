@@ -150,6 +150,61 @@ The advantages of the deploy-time approach is that it doesn't require additional
 
 On the other end of the granularity scale,~\cite{paper:db-driven-http} suggests a system that caches HTTP responses. It uses a sniffer process that monitors the lifetime of a HTTP request with the queries made to the storage system. Through the information captured by the sniffer, the system builds a table that maps a given HTTP resource to the queries made. The system then caches the HTTP resource that is invalidated when underlying data related to the given resource changes. This method is interesting since it allows to cache without changing the code of the web application, but it is only described at the granularity of HTTP responses since it uses the communication between the web application, storage system and cache to achieve automatic invalidation.
 
+To be able to evaluate the techniques used in the automatic invalidation approaches described, we will divide the process into different sub problems. Automatic invalidation are based on a caching system that reacts and invalidates when changes happens to underlying data. Automatic invalidation are therefore mainly working around requests, where the client requests to update underlying data in the primary store. If we consider figure~\ref{fig:automatic-invalidation-flow} that illustrates this flow, the invalidation mechanism is responsible for step 3, 4 and 5. This involves the tasks of: \emph{triggering cache invalidation} and \emph{managing dependencies between underlying data and cached objects}. The following sections will consider these tasks and compare existing techniques.
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=0.6\linewidth]{figures/automatic-invalidation-flow.pdf}
+  \caption{The control flow of automatic invalidation when a client requests to update underlying data}
+  \label{fig:automatic-invalidation-flow}
+\end{figure*}
+
+\subsection{Triggering Cache Invalidation}
+\label{subsec:triggering-cache-invalidation}
+
+When the client updates underlying data, the application receives a request from the client and sends a request to the primary storage to update the relevant data. To be able to react to this action, triggers have to be implemented during this flow. One technique used by~\cite{paper:cache-genie, paper:deploy-time} is to have the triggers in the application such that the application triggers invalidation when the changes from the client has been applied to the primary storage. The given techniques involves a database wrapper (in the form of an ORM) that implements callbacks invoked when it sends commands to the database. If the database wrapper is implemented using the adapter-pattern, it is possible to change the underlying database technology without changing the implementation of the caching system. This means it is easier to implement the caching system for multiple database technologies as well as change the technology for existing solutions.
+
+Other solutions such as~\cite{paper:liskov, paper:ibm, paper:ibm-extended} assumes that the database is able to send notifications when changes are made to the database. These information from the notifications are intercepted by the caching system and converted to invalidations.~\cite{paper:liskov} uses an ``invalidation stream'' that is replicated directly across all cache nodes, which means the cache nodes has the responsibility of invalidating the correct cached objects. In~\cite{paper:ibm, paper:ibm-extended} this responsibility is extracted into a third process that converts the change notifications to invalidation of affected cache objects. A similar approach is used in~\cite{paper:db-driven-http} that uses a proxy between the application and the primary storage to ``sniff'' the database traffic and relate it to the HTTP-request of the client.
+
+In the techniques with in-application triggers, changes to the database around the application are not captured. So if the system has the requirement that the primary storage can receive commands from multiple applications, the best solution would be to use triggers directly from the database. But this also means the system is required to use a database technology that supports this. This comparison is also shown on figure~\ref{fig:invalidation-trigger-comparison}.
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figures/invalidation-trigger-comparison.png}
+  \caption{Comparison of triggers for automatic invalidation}
+  \label{fig:invalidation-trigger-comparison}
+\end{figure*}
+
+% subsection triggering-cache-invalidation end
+
+\subsection{Dependency Management}
+\label{subsec:dependency-management}
+
+After the invalidation has been triggered, the invalidation system needs to locate the cache objects that needs to be invalidated. This involves the task of identifying and declaring dependencies such that the triggers will invalidate the affected cache objects.
+
+Since dependency management is a burden for the developer and affects the correctness of the cache implementation, it would be most desirable to have fully automatic dependency management, which is achieved in~\cite{paper:liskov, paper:db-driven-http}. In~\cite{paper:db-driven-http} use the technique of proxies between the different servers to sniff the traffic and thereby automatically derive dependencies between HTTP-responses and queries made during the request.~\cite{paper:liskov} runs a transaction with the database while the cached object is compute and uses information from the queries made during the transactions to derive dependencies between the underlying data and the cached object. These techniques removes the burden of cache management by having fully transparent caching, but it also means the developer has less flexibility. Furthermore they are tightly coupled to the technologies used and makes it difficult to port the solutions to other technologies.
+
+Other solutions relies such as~\cite{paper:cache-genie, paper:deploy-time} on the developer declaring dependencies from the cached objects to underlying data. Since the trigger can include information about which underlying data are changed, the caching system can use the declared dependencies to invalidate the corresponding cached objects.~\cite{paper:cache-genie} supports declarations through function calls that are stored in the memory of the application. The deploy-time model suggested in~\cite{paper:deploy-time} uses static analysis of comments to allow the functions to be executed without the cache database. These techniques does not remove the burden of cache management completely, but they allow the developer to specify the dependencies in a more declarative and robust way compared to using manual invalidation triggers.
+
+The solution suggested by Jim Challenger et.al.~\cite{paper:ibm, paper:ibm-extended} uses dependencies declared in the content to construct an advanced dependency graph. When updates are made to content or underlying data, the affected cache objects are derived using the dependency graph. This solution is developed for a content management system, where the users can declare dependencies between the fragments of the content i.e. the dependencies are declared in each entity. This makes it unfeasible to use in application with slightly advanced data models, but it solves the problem well in the given case.
+
+An overview of this discussion can be found in figure~\ref{fig:dependency-management-comparison}.
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figures/dependency-management-comparison.png}
+  \caption{Comparison of dependency management techniques for automatic invalidation}
+  \label{fig:dependency-management-comparison}
+\end{figure*}
+
+
+% subsection dependency-management end
+
+
+
+
+
+
 % TODO: Mention the XML ones
 
 % OLD WRITTEN STUFF WE'LL KEEP UNTIL THIS SECTION IS FINISHED
@@ -174,49 +229,41 @@ On the other end of the granularity scale,~\cite{paper:db-driven-http} suggests 
 
 % subsection automatic_invalidation end
 
-% subsection hybrid_approaches end
-\section{Caching Approaches in Web Development}
-\label{sec:caching_approaches_in_web_development}
-
-% TODO: Rewrite this intro
-
-One important aspect of caching is the granularity of the cached content. There is no doubt that it is most desirable to be able to cache any granularity, but since the cached content could be anything, the system cannot make any assumptions about cache management to e.g. allow for smarter invalidation. Therefore most existing work are based on a specific caching granularity from the data queried from the database to the HTTP response sent to the client.
-
 \subsection{HTTP Caching}
 \label{subsec:http_caching}
 
-On the other end of the granularity scale, the developer could choose to cache the entire HTTP response send to the user. This could be the HTML documents served to the user as the website, but it could also be the JSON or XML response from an API. The HTTP protocol is the standard among web browsers to display web content and it’s widely used to communicate between web services. Since the HTTP protocol also include caching methods, which will be explained in the HTTP section, it is a very attractive caching technique among web applications.
+% TODO: Move this to the respective caching techniques as "In HTTP-caching this is implemented using the..."
 
-The HTTP protocol includes multiple mechanisms for controlling cache consistency that allows the web server to implement both key-based and expiration-based cache invalidation. These mechanisms are controlled using HTTP headers. The expiration-based cache invalidation information about the cache date and age is specified using the Cache-Control header. The client is then able to derive if a given resource is valid at a given time or if the resource has to be refreshed. To use key-based invalidation, the web server can attach a tag that uniquely identifies a given version of a resources (e.g. using a hash of the content). When the client sends a new request, it attaches the ETag of the last version received, and the web server can now respond with a 304 Not Modified with no content. This tells the client it can safely use the last version.
-
-Caching HTTP responses is a great technique when the same response are served to the multiple clients, but in situations where the content is updated often or personalized to each user, it becomes a less efficient technique since large documents are recomputed often. In the case where a small fragment of the content is personalized, it would be more desirable to only update that given fragment instead of recomputing the full document.
-
-The system need to cache the result of computations, which means it has to cache objects with a granularity more coarse than database queries. The HTTP protocol includes multiple features for cache management between the client and server, but it also makes the caching inflexible with relation to efficiency. In some situations HTTP responses includes shared fragments that need to be computed for each HTTP endpoint. Since the system expects long running computations, it would be more efficient to cache the result of those computations, meaning the system need to work on a granularity of fragments or functions. Since functions returns an output that could be considered a fragment, we will consider them as the same granularity.
-
-% TODO: Write about E-Tag and Cache-Control (similar to key-based and expiration-based)
+% On the other end of the granularity scale, the developer could choose to cache the entire HTTP response send to the user. This could be the HTML documents served to the user as the website, but it could also be the JSON or XML response from an API. The HTTP protocol is the standard among web browsers to display web content and it’s widely used to communicate between web services. Since the HTTP protocol also include caching methods, which will be explained in the HTTP section, it is a very attractive caching technique among web applications.
+%
+% The HTTP protocol includes multiple mechanisms for controlling cache consistency that allows the web server to implement both key-based and expiration-based cache invalidation. These mechanisms are controlled using HTTP headers. The expiration-based cache invalidation information about the cache date and age is specified using the Cache-Control header. The client is then able to derive if a given resource is valid at a given time or if the resource has to be refreshed. To use key-based invalidation, the web server can attach a tag that uniquely identifies a given version of a resources (e.g. using a hash of the content). When the client sends a new request, it attaches the ETag of the last version received, and the web server can now respond with a 304 Not Modified with no content. This tells the client it can safely use the last version.
+%
+% Caching HTTP responses is a great technique when the same response are served to the multiple clients, but in situations where the content is updated often or personalized to each user, it becomes a less efficient technique since large documents are recomputed often. In the case where a small fragment of the content is personalized, it would be more desirable to only update that given fragment instead of recomputing the full document.
+%
+% The system need to cache the result of computations, which means it has to cache objects with a granularity more coarse than database queries. The HTTP protocol includes multiple features for cache management between the client and server, but it also makes the caching inflexible with relation to efficiency. In some situations HTTP responses includes shared fragments that need to be computed for each HTTP endpoint. Since the system expects long running computations, it would be more efficient to cache the result of those computations, meaning the system need to work on a granularity of fragments or functions. Since functions returns an output that could be considered a fragment, we will consider them as the same granularity.
 
 % subsection http_caching end
 
-\subsection{Database Query Caching}
+% \subsection{Database Query Caching}
 
-The database can be a bottleneck in the goal of achieving fast rendering of dynamic pages, because it’s often a requirement to have structured data at which you perform complex queries. In both cases the queries can become slow when the application need to scale with relation to data or users. Even though most storage systems allows indexing to optimize specific queries, it can still be difficult for the storage system to optimize in a space efficient way. One solution to this problem is to use query caches.
+% TODO: Integrate stuff below in the existing chapters
 
-In~\cite{paper:transparent-caching, paper:cosar} this problem is solved using a proxy caching server between the web application and the database. This allows for transparent caching that require almost no changes to the system, but unfortunately it requires a lot of work to maintain the index used for cache validation and parse the queries received from the web application. Furthermore this solution are mostly made for relational databases with SQL language and require a new implementation for it to work on different storage technologies such as document-oriented databases.
+% The database can be a bottleneck in the goal of achieving fast rendering of dynamic pages, because it’s often a requirement to have structured data at which you perform complex queries. In both cases the queries can become slow when the application need to scale with relation to data or users. Even though most storage systems allows indexing to optimize specific queries, it can still be difficult for the storage system to optimize in a space efficient way. One solution to this problem is to use query caches.
+%
+% In~\cite{paper:transparent-caching, paper:cosar} this problem is solved using a proxy caching server between the web application and the database. This allows for transparent caching that require almost no changes to the system, but unfortunately it requires a lot of work to maintain the index used for cache validation and parse the queries received from the web application. Furthermore this solution are mostly made for relational databases with SQL language and require a new implementation for it to work on different storage technologies such as document-oriented databases.
+%
+% \cite{paper:cache-genie} also describes a query caching solution, where the cache management is placed entirely in the application-layer. It is based on a common technology used in web application called Object Relational Mapper (ORM), where the data model is mapped to objects in the application and often the queries are made using methods on the object. Using the ORM in the Python framework Django, \cite{paper:cache-genie} implements an extension that allows common database queries to be cached and automatically updated. Compared to having a middleware caching layer, this solution has the advantage of being able to integrate with both different database technologies (within the capabilities of the ORM) and caching systems. On the other hand, it does not capture database updates made without using the ORM. This means if updates are made manually or another application uses the same database, the cached queries are not updated.
 
-\cite{paper:cache-genie} also describes a query caching solution, where the cache management is placed entirely in the application-layer. It is based on a common technology used in web application called Object Relational Mapper (ORM), where the data model is mapped to objects in the application and often the queries are made using methods on the object. Using the ORM in the Python framework Django, \cite{paper:cache-genie} implements an extension that allows common database queries to be cached and automatically updated. Compared to having a middleware caching layer, this solution has the advantage of being able to integrate with both different database technologies (within the capabilities of the ORM) and caching systems. On the other hand, it does not capture database updates made without using the ORM. This means if updates are made manually or another application uses the same database, the cached queries are not updated.
-
-% TODO: Merge materialized views into this subsection
-
-\subsubsection{Materialized Views}
-\label{ssub:Materialized Views}
-
-Where the query caches described so far are either middle-tier or on the application-layer, caching using materialized views occurs on the database layer. Materialized views are “virtual tables” generated from other data in the database. It works by storing queries explicitly declared by the developer. The virtual tables can be explicitly refreshed or update when the dependent data changes. Materialized views is a good solution for optimizing database queries, but since the computation occurs on the database level, the computation capabilities are limited by the database technology.
-
-Caching database queries and materialized views allows for easy and transparent caching, but it does not allow computations on the web application, which limits the applicability.
+% \subsubsection{Materialized Views}
+% \label{ssub:Materialized Views}
+%
+% Where the query caches described so far are either middle-tier or on the application-layer, caching using materialized views occurs on the database layer. Materialized views are “virtual tables” generated from other data in the database. It works by storing queries explicitly declared by the developer. The virtual tables can be explicitly refreshed or update when the dependent data changes. Materialized views is a good solution for optimizing database queries, but since the computation occurs on the database level, the computation capabilities are limited by the database technology.
+%
+% Caching database queries and materialized views allows for easy and transparent caching, but it does not allow computations on the web application, which limits the applicability.
 
 % section caching_approaches_in_web_development end
 
-\section{Choosing the right Caching Technique}
+\section{Choosing the Right Caching Technique}
 \label{sec:choosing_the_right_caching_technique}
 
 % TODO: Explain/prove why this is a trade-off (ensure it is not written in caching model as well) - it probably is

@@ -24,11 +24,11 @@ In general caching is about storing the result of a computation at a where you a
 
 In some cases, where the client is not allowed to wait for the computation to run, step 3-4 are replaced by a step that simply returns an empty value.
 
-If we look at the cached value from an abstract point of view, we can see it as a \emph{result of a function} given certain \emph{inputs}. Sometimes the inputs are data from a storage system, sometimes it's the result of an API call to some external resource, sometimes it's global variables in the code. These \emph{inputs} we from now on be referred to as \emph{underlying data}.
+If we look at the cached object from an abstract point of view, we can see it as a \emph{result of a function} given certain \emph{inputs}. Sometimes the inputs are data from a storage system, sometimes it's the result of an API call to some external resource, sometimes it's global variables in the code. These \emph{inputs} we from now on be referred to as \emph{underlying data}.
 
 % TODO: Also mention 'locality' here
 
-In order for the algorithm to work, we need to be sure that when we store the cached value it has to be uniquely identified by some key such that when we lookup the value as in step 2 of the algorithm, we always locate $v$. This presents one of the challenges of cache management, which is in many cases closely related to cache invalidation (one of the two hard things in computer science\footnote{Not scientifically, but at least a favorite saying of Martin Fowler and quote by Phil Karlton}).
+In order for the algorithm to work, we need to be sure that when we store the cached object it has to be uniquely identified by some key such that when we lookup the value as in step 2 of the algorithm, we always locate $v$. This presents one of the challenges of cache management, which is in many cases closely related to cache invalidation (one of the two hard things in computer science\footnote{Not scientifically, but at least a favorite saying of Martin Fowler and quote by Phil Karlton}).
 
 In the algorithm cache invalidation is simply described as a \emph{check}, but in reality this is the hard challenge of caching. The \emph{check} could be a precomputed indicator from earlier triggers, it could be based on a key derived from the underlying data or some timestamp. These cache invalidation approaches will be described more in section~\ref{sec:invalidation_techniques}.
 
@@ -58,45 +58,24 @@ A popular choice for cache databases are key-value stores such as Redis~\footnot
 As with the algorithm on figure~\ref{fig:basic-caching}, caching can be described by a series of events. The ordering of events decides whether the cached content or a fresh computation is presented to the client. To describe the different caching techniques, we will use a timeline model with a stream of events. One timeline describes the events occurring in a single process. We can therefore assume that there exists a total ordering of events for a single timeline. To be able to describe the caching techniques explained in this thesis, we will define the following events:
 
 \begin{itemize}
-  \item \textbf{Requested} is the event occurring when a client requests a given cached value
+  \item \textbf{Requested} is the event occurring when a client requests a given cached object
   \item \textbf{Computation Started} is when the computations is started
   \item \textbf{Computation Finished} is when the computation is finished and a result is returned
-  \item \textbf{Stored} is happening when a given is stored in the cache database on a given key
+  \item \textbf{Stored} is happening when a given cached object is stored in the cache database
   \item \textbf{UD Updated} is when the underlying data has been updated
-  \item \textbf{Invalidated} is when the system has invalidated a cached value
+  \item \textbf{Invalidated} is when the system has knowledge that the cached object is invalidated
 \end{itemize}
 
-To show how the timeline model works, we will give an example involving the different events:
+Alongside these events the timeline model illustrates the interval in which the given cached object is considered valid (the cache system will serve the cached value) and when it is actually fresh (consistent with underlying data). The validity interval illustrates when the cache system will respond immediately, which means if the cached object is always considered valid then the approach supports immediate responses. In the time interval, where the fresh and valid interval overlaps, the approach will serve a fresh version of the cached value. If they always overlap then the given approach will guarantee strict freshness.
 
-\begin{example}
-\label{example:timeline-model}
-We will give an example using the basic caching algorithm described on figure~\ref{fig:basic-caching}. Consider the case illustrated on figure~\ref{fig:timeline-example}, where a client requests a value $v$ that at first isn't cached. This means the system will execute the function $f$, which returns the value instance $v_1$ and stores it in the caching database. After this some underlying data involving the computation of $v$ is updated and after the update, the client makes another request for $v$. At this point $v_1$ is not fresh since the execution of $f$ would result in another value. Therefore $v$ is invalidated by the system after which we recompute $f$ and stores the resulting value $v_2$ in the cache database.
+The timeline model applied to the basic caching algorithm~\ref{fig:basic-caching} is illustrated on figure~\ref{fig:basic-caching-timeline}.
 
 \begin{figure*}[ht!]
   \centering
-  % \includegraphics{width=1.0\linewidth]{figures/timeline-example.pdf}
-  \caption{Example of the timeline model}
-  \label{fig:timeline-example}
+  \includegraphics[width=1.0\linewidth]{figures/timeline/basic-caching.pdf}
+  \caption{The timeline model applied to the basic caching algorithm}
+  \label{fig:basic-caching-timeline}
 \end{figure*}
-
-\end{example}
-
-% TODO: Write observations about the timeline mode:
-%  - If the valid interval is always full => Immediate response time
-%  - If the fresh and valid interval is equal => Consistency
-%    - Or: at places where they are equal/overlapping we have consistency
-
-% Introduce the timeline and relevant events:
-%   - Value registration
-%   - Invalidation
-%   - Cache update
-%   - Value request
-% Concurrent Timelines:
-%   - Show that we when we have the given architecture, we have
-%     multiple concurrent timelines running as in a distributed system
-%     => We can assume that each timeline is a process
-
-% TODO: Describe the model, when we know what to describe
 
 % subsection timeline_model end
 
@@ -107,7 +86,7 @@ We will give an example using the basic caching algorithm described on figure~\r
 
 % Goals of caching
 
-To choose the correct caching technique for a given use case, we need to know the criteria for finally picking the best suited. The overall goal of caching in web development is to achieve a better user experience by getting a better performance and to save money by using less CPU power. If we assume that the cache system is able to retrieve cached values fast, the goals can be achieved by ``hitting the cache'' as often as possible. We can measure this using the metric \emph{cache hit rate}, which refers to the rate at which the cache is hit among the total number of requests for the cached value.
+To choose the correct caching technique for a given use case, we need to know the criteria for finally picking the best suited. The overall goal of caching in web development is to achieve a better user experience by getting a better performance and to save money by using less CPU power. If we assume that the cache system is able to retrieve cached objects fast, the goals can be achieved by ``hitting the cache'' as often as possible. We can measure this using the metric \emph{cache hit rate}, which refers to the rate at which the cache is hit among the total number of requests for the cached object.
 
 %% END CORRECTNESS
 
@@ -123,7 +102,7 @@ There exists multiple levels of consistency, but to keep it relevant and simple,
 
 %%%% FRESHNESS
 
-Another parameter is the freshness of the content returned by the cache. It is most desirable to have content that is as fresh as possible as oppose to having stale data, but in the end the goal is to make the served content make sense for the user. Consider example~\ref{example:peergrade-split-interface} of the Peergrade.io platform, where there are two types of users. If the teacher changed the description of an assignment and a student requested and read the description 1 min after then it would not be unexpected behaviour to show the old description from the students point of view. On the other hand if the teacher requested the description 1 min after, it would be unexpected behaviour to show the teacher an old version, since the teacher would think the description hasn't been updated. We will represent freshness as a binary parameter that we call ``Strict Freshness'', which evaluates whether a given cached value that is fetched is guaranteed to be fresh.
+Another parameter is the freshness of the content returned by the cache. It is most desirable to have content that is as fresh as possible as oppose to having stale data, but in the end the goal is to make the served content make sense for the user. Consider example~\ref{example:peergrade-split-interface} of the Peergrade.io platform, where there are two types of users. If the teacher changed the description of an assignment and a student requested and read the description 1 min after then it would not be unexpected behaviour to show the old description from the students point of view. On the other hand if the teacher requested the description 1 min after, it would be unexpected behaviour to show the teacher an old version, since the teacher would think the description hasn't been updated. We will represent freshness as a binary parameter that we call ``Strict Freshness'', which evaluates whether a given cached object that is fetched is guaranteed to be fresh.
 
 \begin{example}
 \label{example:peergrade-split-interface}
@@ -147,9 +126,9 @@ In the basic caching algorithm described on figure~\ref{fig:basic-caching}, the 
 
 % TODO: Rename this to relaxed freshness
 
-It is not possible to both serve the cached values immediately and have strict freshness. This can be proved using the example where a cached value is invalidated just before it is requested. We can only start computing the value at the moment it has been invalidated and given that the time between the invalidation and the request is smaller than the time taken to compute the value, it is not possible.
+It is not possible to both serve the cached objects immediately and have strict freshness. This can be proved using the example where a cached object is invalidated just before it is requested. We can only start computing the value at the moment it has been invalidated and given that the time between the invalidation and the request is smaller than the time taken to compute the value, it is not possible.
 
-In cases where we choose immediate response time and we can tolerate serving cached values that are not strictly fresh, we might want to keep the cached values as up to date as possible. This means that we start computing the cached values as soon as they have been invalidated. In order to achieve this we need some mechanism that invalidates depending cached values when underlying data are updated. We will also represent ``Automatic Invalidation'' as a binary parameter.
+In cases where we choose immediate response time and we can tolerate serving cached objects that are not strictly fresh, we might want to keep the cached objects as up to date as possible. This means that we start computing the cached objects as soon as they have been invalidated. In order to achieve this we need some mechanism that invalidates depending cached objects when underlying data are updated. We will also represent ``Automatic Invalidation'' as a binary parameter.
 
 %%%% CACHE MANAGEMENT
 
@@ -170,11 +149,11 @@ The reason behind the \emph{Low} criteria is that when the technique has assumpt
 From this discussion, we can sum up the evaluation parameters as follows:
 
 \begin{itemize}
-  \item \textbf{Consistency}: The cached value must be consistent with the other data
-  \item \textbf{Strict Freshness}: The cached value must be as fresh as the state of the primary store when the value was requested
-  \item \textbf{Automatic Update}: The cached value is automatically updated after it has been invalidated
-  \item \textbf{Always Immediate Response}: The cached value must be served immediately after it has been requested
-  \item \textbf{Invalidation Management}: Whether the developer has the responsibility of maintaining the invalidation of the cached values
+  \item \textbf{Consistency}: The cached object must be consistent with the other data
+  \item \textbf{Strict Freshness}: The cached object must be as fresh as the state of the primary store when the value was requested
+  \item \textbf{Automatic Update}: The cached object is automatically updated after it has been invalidated
+  \item \textbf{Always Immediate Response}: The cached object must be served immediately after it has been requested
+  \item \textbf{Invalidation Management}: Whether the developer has the responsibility of maintaining the invalidation of the cached objects
   \item \textbf{Adaptability}: How adaptable the caching technique is to existing systems
 \end{itemize}
 
