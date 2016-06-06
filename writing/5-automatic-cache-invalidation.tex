@@ -1,7 +1,55 @@
 \chapter{Automatic Cache Invalidation}
 \label{chapter:invalidation}
 
+% Content of this chapter:
+
+% - What is required? (specs whise)
+%   - Solve the consistency problem mentioned in figure fig:trigger-based-concurrency-problem
+%   -
+% - How are existing research doing it?
+% - How we do it:
+%   - State: prefer static state over dynamic since we can infer the static
+%            state from the source code
+%   - Invalidation tags?
+% - Extending the API to support automatic cache invalidation
+
+\section{Object Dependence Graph}
+\label{sec:object-dependence-graph}
+
+% TODO: Write in more details what is up with the IBM solution with relation to
+%       automatic invalidation
+
+% section object-dependence-graph end
+
+
+
+
+
+
+\section{Existing Solutions For Cache Invalidation}
+\label{sec:existing_solutions_for_cache_invalidation}
+
+Map out how the method for doing this (sniffing)
+
+* Sniffing (of the database)
+* Invalidation Streams (Transactional Consistency)
+* ORM Signals: Using signals from the database wrapper (CacheGenie)
+* Static code analysis on SQL-queries: However managing cache consistency does it
+* IBM: dependency graph + cache manager + triggers from database
+
+% TODO: Consider moving this detailed section into the approaches
+
+
+% section existing_solutions_for_cache_invalidation end
+
+\section{Extending Cachable Functions With Automatic Invalidation}
+\label{sec:extending_cachable_functions_with_automatic_invalidation}
+
 % TODO: Section where the API is extended with produceres such as relation, source etc.
+
+% section extending_cachable_functions_with_automatic_invalidation end
+
+
 
 - Seperate static and dynamic "state"
   - Static: only changes when new versions of the code base is deployed

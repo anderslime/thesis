@@ -116,7 +116,7 @@ The implementation of the basic caching on the running example is seen on code s
 
 Smache require the developer to annotate the types of ``data source'', which are passed into the original function. In this case we have annotated using the \verb$Course$-class that corresponds to an object for an Object-Relational Mapper (ORM) that represents the collection \emph{course}. The ``data source types'' supported are ORM-objects as well as the ``Raw''-type that represents primitive values (such as strings, numbers etc.). The number of type annotations has to be the same number of arguments given to the original function.
 
-Smache uses the type annotations to do smart serialization and deserialization when the name of the cached value have to be inferred. The raw input are represented as they are in a serialized form, but the data source inputs are serialized using their. When the function is then deserialized the Smache library will use the id of the data sources to load a fresh version of the ORM-object from the database.
+Smache uses the type annotations to do smart serialization and deserialization when the name of the cached value have to be inferred. The raw input are represented as they are in a serialized form, but the data source inputs are serialized using their. When the function is then deserialized the Smache library will use the id of the data sources to load a fresh version of the ORM-object from the database. Another advantage is that the Smache now know that this cached function has to be invalidated when the corresponding course entity is updated, which will be explained in chapter~\ref{chapter:invalidation}.
 
 \begin{figure*}[ht!]
   \input{code/basic-implementation.py}

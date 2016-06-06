@@ -140,7 +140,17 @@ Write-through invalidation is also an extension to the trigger-based invalidatio
 
 The trigger-based invalidation is an attractive technique since it can provide guarantees with relation to freshness and consistency while allowing for flexibility by extending it. But in practice the overhead for the developer of managing the triggers and keeping integrity becomes a burden that makes it hard to maintain. A lot of research have therefore been done in making it easier to use trigger-based invalidation.
 
-A lot of work has been put into using triggers from the database to invalidate cached data. \cite{paper:cache-genie} suggests a solution based on the Object Relational Mapper programming technique to capture relevant triggers. \cite{paper:deploy-time} also suggests using a database wrapper in the application-layer that captures and analyzes database commands and use them as triggers. TxCache suggested in~\cite{paper:liskov} uses daemon processes to monitor the database for relevant triggers. This method has the advantage that it allows multiple types of applications to manipulate the same database as opposed to~\cite{paper:cache-genie, paper:deploy-time}, where the triggers would not have been captured if the database command was made around the application. On the other hand it introduces complexity of running and monitoring the processes. With relation to database monitoring this introduces a trade-off between the complexity of the system and an assumption that multiple types of applications does not alter the same data.
+The cached objects are based on underlying data from the primary storage system, which means that changes to the underlying data also origins from the primary store. A lot of work have been put into using the database as the source of the triggers that invalidates the cached objects.
+
+In~\cite{paper:cache-genie} the database wrapper~\footnote{In this case in the form of an Object-Relational Mapper} is used to detect and trigger changes to the underlying data. This paper suggests a caching approach for caching database queries by declaring predefined queries with dependencies to underlying data using an extension to the database wrapper. The database wrapper is then responsible for detecting changes to underlying data and invalidate the affected cached queries. The advantage of using a database wrapper is that the caching system will still work if the database used by the wrapper is changed. On the other hand changes made to the database that are not made through the given database wrapper are not detected as a trigger, which leaves the responsibility of ensuring all changes are made through the database wrapper.
+
+This problem can be solved by using a database technology that is able to notify about changes directly from the database as done in the approach from IBM~\cite{paper:ibm, paper:ibm-extended} that uses the IBM DB2~\footnote{\url{http://www.ibm.com/analytics/us/en/technology/db2/}} database. In this approach the triggers are intercepted by a cache-manager that is able to invalidate the affected values using a dependency graph.
+
+This approach will be described in more details in section~\ref{sec:object-dependence-graph}.
+
+In~\cite{paper:liskov} a patch is made to the database such that the database is able to support so called ``invalidation streams'' that can help the caching system invalidate the affected cached values.
+
+\cite{paper:deploy-time} also suggests using a database wrapper in the application-layer that captures and analyzes database commands and use them as triggers. TxCache suggested in~\cite{paper:liskov} uses daemon processes to monitor the database for relevant triggers. This method has the advantage that it allows multiple types of applications to manipulate the same database as opposed to~\cite{paper:cache-genie, paper:deploy-time}, where the triggers would not have been captured if the database command was made around the application. On the other hand it introduces complexity of running and monitoring the processes. With relation to database monitoring this introduces a trade-off between the complexity of the system and an assumption that multiple types of applications does not alter the same data.
 
 % TODO: Consider if relevant
 % In some architectures the changes to the system are based on triggers or events. One such architecture called Event Sourcing works by using Domain Events to describe the changes of the system instead of using database commands~\cite{blog:focusing-on-events}. Since these events are a natural part of the application, they can be used as invalidation triggers without further additions.
@@ -164,6 +174,8 @@ A more flexible technique is to cache functions. \cite{paper:liskov} describes a
 The requirement for strong consistency introduces complexity as seen with the trigger-based and key-based cache invalidation. Some objects can be cached with weak consistency, which allows much simpler caching techniques. One method is to assign a TTL (Time to Live) to the cached value. At some point when the TTL has expired, the cached object is invalidated. The invalidation can be enforced by the cache database (Redis and Memcached supports this - TODO: include references) or as part of the protocol between the client and server as with HTTP-caching explained in section~\cite{paper:web-caching-schemes}.
 
 % TODO: Mention the XML ones
+
+% TODO: Make comparison/overview table of the different solutions
 
 % subsection automatic_invalidation end
 
