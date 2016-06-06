@@ -19,6 +19,10 @@
 % TODO: Write in more details what is up with the IBM solution with relation to
 %       automatic invalidation
 
+% TODO: Move to
+
+Jim Challenger et. al. has written multiple papers on the system used for the content management website in the Olympic Games in 1998 and 2000~\cite{paper:ibm, paper:ibm-extended}. The system is based on content that are all precomputed when served to the user, which resulted in a system that scaled for many users with content served fast since the web server only had to find the appropriate cached article when serving content. In order to allow editors to change articles and fragments, the system introduces the Data Update Propagation (DUP) algorithm. DUP uses an Object Dependence Graph (ODG) that describes the relationship between fragments using a Directed Acyclic Graph (DAG). The ODG describes both the relationships of how the fragments are embedded in each other and relationships describing the hypertext links between articles. To avoid race conditions and hypertext links to missing fragments, the fragments need to be updated in a specific order. More specific when a fragment f1 that embeds another fragment f2, the system need to update f2 before f1. Since the ODG is described DAG there is always a topological order of the nodes, which satisfies the described property for any node. The system runs using a CMS system, where the content is defined using a CMS system and not using functions from the source code. This simplifies the challenge of persisting the cached content since it does not change when a new version of the source code is deployed. It therefore leaves the challenge of updating cached content, when the definition of the computations changes.
+
 % section object-dependence-graph end
 
 
@@ -136,7 +140,7 @@ prof/1 -\
 user/5 -/
 
 - Find all funs affected by underlying data:
-prof/1 => [score1/2, hello/1/5]
+prof/1 => [score/1/2, hello/1/5]
 user/2 => [score/1/2]
 user/5 => [hello/1/5]
 
