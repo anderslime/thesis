@@ -2,91 +2,58 @@
 \label{chapter:invalidation}
 
 % Content of this chapter:
+% - Intro:
+%   - What is the purpose of this chapter?
+%     - We want automatic invalidation to achieve this and that
+%     - Solve the consistency problem mentioned in figure fig:trigger-based-concurrency-problem
+%     - Easier way to manage the cache
+%   - Present the criteria we want to fulfill and requirements extended for the purpose of this
+%     - Requirements:
+%       - Efficiency:
+%         - we want to invalidate as soon as possible
+%         - the user making changes to data should not wait for invalidation
+%       - Fault-Tolerance
+%         - nodes:
+%           - web server (cannot receive request) => nothing to do:
+%           - what if caching server is down?
+%             - timeout? (requires idempotent invalidation)
+%             - retry! (require idempotent invalidation)
+%         - avoid concurrency errors
 
-% - What is required? (specs whise)
-%   - Solve the consistency problem mentioned in figure fig:trigger-based-concurrency-problem
-%   -
-% - How are existing research doing it?
-% - How we do it:
-%   - State: prefer static state over dynamic since we can infer the static
-%            state from the source code
-%   - Invalidation tags?
-% - Extending the API to support automatic cache invalidation
+\section{Declarative Cache Invalidation}
+\label{sec:declarative-cache-invalidation}
 
-\section{Object Dependence Graph}
-\label{sec:object-dependence-graph}
+% TODO: Describe the overall solution
 
-% TODO: Write in more details what is up with the IBM solution with relation to
-%       automatic invalidation
+\section{Invalidation Timestamps}
+\label{sec:invalidation-timestamps}
 
-% TODO: Move to
+% TODO: Describe how we use invalidation timestamps to avoid the concurrency bug
+% This solution is from the IBM
+% - Suggested solution to avoid the concurrency bug
 
-Jim Challenger et. al. has written multiple papers on the system used for the content management website in the Olympic Games in 1998 and 2000~\cite{paper:ibm, paper:ibm-extended}. The system is based on content that are all precomputed when served to the user, which resulted in a system that scaled for many users with content served fast since the web server only had to find the appropriate cached article when serving content. In order to allow editors to change articles and fragments, the system introduces the Data Update Propagation (DUP) algorithm. DUP uses an Object Dependence Graph (ODG) that describes the relationship between fragments using a Directed Acyclic Graph (DAG). The ODG describes both the relationships of how the fragments are embedded in each other and relationships describing the hypertext links between articles. To avoid race conditions and hypertext links to missing fragments, the fragments need to be updated in a specific order. More specific when a fragment f1 that embeds another fragment f2, the system need to update f2 before f1. Since the ODG is described DAG there is always a topological order of the nodes, which satisfies the described property for any node. The system runs using a CMS system, where the content is defined using a CMS system and not using functions from the source code. This simplifies the challenge of persisting the cached content since it does not change when a new version of the source code is deployed. It therefore leaves the challenge of updating cached content, when the definition of the computations changes.
+% section invalidation-timestamps end
 
-% section object-dependence-graph end
+\section{Trigger Invalidation Through Database Wrapper}
+\label{sec:trigger-invalidation-through-database-wrapper}
 
+% Trigger Invalidation Through Database Wrapper
+% - Discuss the different alternatives and say why we want that
 
+% section trigger-invalidation-through-database-wrapper end
 
+\section{Invalidation Algorithm}
+\label{sec:invalidation-algorithm}
 
+% TODO: Describe (and visualize) algorithm:
+% - what does it do?
+% - correctness?
+% - time complexity
+% - space complexity
 
+% Analyze the queries performed in the algorithm as prequel to the next chapter
 
-\section{Existing Solutions For Cache Invalidation}
-\label{sec:existing_solutions_for_cache_invalidation}
-
-Map out how the method for doing this (sniffing)
-
-* Sniffing (of the database)
-* Invalidation Streams (Transactional Consistency)
-* ORM Signals: Using signals from the database wrapper (CacheGenie)
-* Static code analysis on SQL-queries: However managing cache consistency does it
-* IBM: dependency graph + cache manager + triggers from database
-
-% TODO: Consider moving this detailed section into the approaches
-
-
-% section existing_solutions_for_cache_invalidation end
-
-\section{Extending Cachable Functions With Automatic Invalidation}
-\label{sec:extending_cachable_functions_with_automatic_invalidation}
-
-% TODO: Section where the API is extended with produceres such as relation, source etc.
-
-% section extending_cachable_functions_with_automatic_invalidation end
-
-
-
-- Seperate static and dynamic "state"
-  - Static: only changes when new versions of the code base is deployed
-  - Dynamic: changes after deployment - often initiated by changes to the
-             underlying data
-  - Static state is preferred since it it's easier to test and has not 'state'
-
-- Static data now:
-  - The computed functions:
-    - find functions from its id
-    - find depending relations from other entities
-
-- Dynamic data now:
-  - The dynamic functions:
-    - Dependency graph stuff
-    - The stored cache elements
-
-- How it could work:
-  - When calling the cached function (fun instance registration):
-    - When a given computed fun is executed we will serialize the arguments the following way:
-      - Raw values (that can be json) is just serialized into json
-      - Underlying data (entities) are serialized by their entity id and instance id
-    - We can then cache the given value under a unique identifier given by concatenation
-      - A unique id for the fun (python: module + fun name)
-      - The serialized arguments
-    - From the entity arguments we store a reference from the entity instance to the computed fun instance
-      - This is stored in the "dependency graph"
-    - The next time the function is called with the same argument, it will be fetched from the cache
-  - When underlying data changes:
-    - If the data is corresponding to an (entity) argument of the function
-      - We lookup the dependency graph for all the computed funs affected by the entity
-      - These computed funs are then marked as stale and/or written throug/updated
-  - TODO: describe relation updates
+% TODO: Consider describing data structure before algorithm
 
 - Operations needed to be supported:
   - When the data is fetched:
@@ -99,6 +66,42 @@ Map out how the method for doing this (sniffing)
         - related (through relations)
     - Set cached value as stale
     - Update cached value
+% section invalidation-algorithm end
+
+\section{Object Dependence Graph}
+\label{sec:object-dependence-graph}
+
+% TODO: Write this:
+% - The contents of the data structure
+% - How to build it
+% - How to update it
+% - How to query it
+% - Correctness?
+% - Space/query time/preprocessing time analysis?
+
+- Seperate static and dynamic "state"
+  - Static: only changes when new versions of the code base is deployed
+  - Dynamic: changes after deployment - often initiated by changes to the
+             underlying data
+  - Static state is preferred since it it's easier to test and has not 'state'
+
+%   - Object Dependence Graph
+%     - What do we want to achieve with relation to dependency management
+%     - Maybe present IBM's (if it is not in the approaches chapter)
+%     - Present how we do it:
+%       - From that: which queries do we need?
+%       - From that: describe the data structures supporting these queries;
+%         - State: prefer static state over dynamic since we can infer the static
+%                  state from the source code
+
+% section object-dependence-graph end
+
+% TODO: Write in more details what is up with the IBM solution with relation to
+%       automatic invalidation
+
+% TODO: Move to
+
+Jim Challenger et. al. has written multiple papers on the system used for the content management website in the Olympic Games in 1998 and 2000~\cite{paper:ibm, paper:ibm-extended}. The system is based on content that are all precomputed when served to the user, which resulted in a system that scaled for many users with content served fast since the web server only had to find the appropriate cached article when serving content. In order to allow editors to change articles and fragments, the system introduces the Data Update Propagation (DUP) algorithm. DUP uses an Object Dependence Graph (ODG) that describes the relationship between fragments using a Directed Acyclic Graph (DAG). The ODG describes both the relationships of how the fragments are embedded in each other and relationships describing the hypertext links between articles. To avoid race conditions and hypertext links to missing fragments, the fragments need to be updated in a specific order. More specific when a fragment f1 that embeds another fragment f2, the system need to update f2 before f1. Since the ODG is described DAG there is always a topological order of the nodes, which satisfies the described property for any node. The system runs using a CMS system, where the content is defined using a CMS system and not using functions from the source code. This simplifies the challenge of persisting the cached content since it does not change when a new version of the source code is deployed. It therefore leaves the challenge of updating cached content, when the definition of the computations changes.
 
 - Data structures introduces:
   - Find affected computed fun instances from given relation
@@ -149,6 +152,51 @@ score.prof/1 => [score/1/2]
 hello.prof/1 => [hello/1/5]
 score.user/2 => [score/1/2]
 hello.user/5 => [hello/1/5]
+
+% subsection object-dependence-graph end
+
+\section{Extending Smache With Automatic Invalidation}
+\label{sec:extending-smache-with-automatic-invalidation}
+
+% Implementation
+% - Extend the programming model to include:
+%   - Relation definition
+%   - (Source definition)
+
+% section extending-smache-with-automatic-invalidation end
+
+
+\section{Discussion}
+\label{sec:discussion}
+
+% section discussion end
+
+% - How we do it:
+%   - Discuss that the design meets the requirements and criteria stated
+% - Implementation:
+%   - Extending the API to support automatic cache invalidation
+
+% section existing_solutions_for_cache_invalidation end
+
+
+% - How it could work:
+%   - When calling the cached function (fun instance registration):
+%     - When a given computed fun is executed we will serialize the arguments the following way:
+%       - Raw values (that can be json) is just serialized into json
+%       - Underlying data (entities) are serialized by their entity id and instance id
+%     - We can then cache the given value under a unique identifier given by concatenation
+%       - A unique id for the fun (python: module + fun name)
+%       - The serialized arguments
+%     - From the entity arguments we store a reference from the entity instance to the computed fun instance
+%       - This is stored in the "dependency graph"
+%     - The next time the function is called with the same argument, it will be fetched from the cache
+%   - When underlying data changes:
+%     - If the data is corresponding to an (entity) argument of the function
+%       - We lookup the dependency graph for all the computed funs affected by the entity
+%       - These computed funs are then marked as stale and/or written throug/updated
+%   - TODO: describe relation updates
+
+
 
 % chapter automatic_cache_invalidation end
 
