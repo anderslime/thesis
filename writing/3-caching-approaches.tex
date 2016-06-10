@@ -138,7 +138,7 @@ The cached objects are based on underlying data from the primary storage system,
 
 In~\cite{paper:cache-genie} the database wrapper~\footnote{In this case in the form of an Object-Relational Mapper} is used to detect and trigger changes to the underlying data. This paper suggests a caching approach for caching database queries by declaring predefined queries with dependencies to underlying data using an extension to the database wrapper. The database wrapper is then responsible for detecting changes to underlying data and invalidate the affected cached queries. The advantage of using a database wrapper is that the caching system will still work if the database used by the wrapper is changed. On the other hand changes made to the database that are not made through the given database wrapper are not detected as a trigger, which leaves the responsibility of ensuring all changes are made through the database wrapper.
 
-This problem can be solved using a database technology that is able to notify about changes directly from the database as done in the approach from IBM~\cite{paper:ibm, paper:ibm-extended} that uses the IBM DB2~\footnote{\url{http://www.ibm.com/analytics/us/en/technology/db2/}} database. In this approach the triggers are intercepted by a cache-manager that is able to invalidate the affected values using a dependency graph. Having a cache-manager introduces a single point of failure and potentially a bottleneck, but it allows capturing dynamic dependencies, which is required for the given application. The details about this approach will be described in section~\ref{sec:object-dependence-graph}.
+This problem can be solved using a database technology that is able to notify about changes directly from the database as done in the approach from IBM~\cite{paper:ibm, paper:ibm-extended} that uses the IBM DB2~\footnote{\url{http://www.ibm.com/analytics/us/en/technology/db2/}} database. In this approach the triggers are intercepted by a cache-manager that is able to invalidate the affected values using a dependency graph. Having a cache-manager introduces a single point of failure and potentially a bottleneck, but it allows capturing dynamic dependencies, which is required for the given application. The details about this approach will be described in section~\ref{sec:simple-object-dependence-graph}.
 
 In~\cite{paper:liskov} a patch is made to the database such that the database is able to support so called ``invalidation streams'' that can help the caching system invalidate the affected cached values. The cache nodes stores information about how the different cache objects should be invalidated represented by invalidation tags. The invalidation stream from the storage system are then distributed across all cache nodes and used to invalidate the affected cached objects using the invalidation tags. The primary reason for these invalidation streams is to allow transactional consistency such that the primary storage and cache nodes share information that can be used to fetch a consistent set of data across both sources.
 
@@ -200,11 +200,6 @@ An overview of this discussion can be found in figure~\ref{fig:dependency-manage
 
 % subsection dependency-management end
 
-
-
-
-
-
 % TODO: Mention the XML ones
 
 % OLD WRITTEN STUFF WE'LL KEEP UNTIL THIS SECTION IS FINISHED
@@ -260,14 +255,6 @@ An overview of this discussion can be found in figure~\ref{fig:dependency-manage
 % Where the query caches described so far are either middle-tier or on the application-layer, caching using materialized views occurs on the database layer. Materialized views are “virtual tables” generated from other data in the database. It works by storing queries explicitly declared by the developer. The virtual tables can be explicitly refreshed or update when the dependent data changes. Materialized views is a good solution for optimizing database queries, but since the computation occurs on the database level, the computation capabilities are limited by the database technology.
 %
 % Caching database queries and materialized views allows for easy and transparent caching, but it does not allow computations on the web application, which limits the applicability.
-
-\section{Object Dependence Graph}
-\label{sec:object-dependence-graph}
-
-
-
-% section object-dependence-graph end
-
 
 % section caching_approaches_in_web_development end
 

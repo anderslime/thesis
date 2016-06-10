@@ -1,57 +1,256 @@
 \chapter{Automatic Cache Invalidation}
 \label{chapter:invalidation}
 
-% Content of this chapter:
-% - Intro:
-%   - What is the purpose of this chapter?
-%     - We want automatic invalidation to achieve this and that
-%     - Solve the consistency problem mentioned in figure fig:trigger-based-concurrency-problem
-%     - Easier way to manage the cache
-%   - Present the criteria we want to fulfill and requirements extended for the purpose of this
-%     - Requirements:
-%       - Efficiency:
+In the model for cachable functions described in the previous chapter~\ref{chapter:smache-cachable-functions} we've only described how the system can make a function cachable such that Smache automatically stores and locates the cached object returned by the function. While this removes the burden of naming and localizing cached objects, it does not solve the hard problem of invalidation.
+
+To make cache invalidation easier with Smache, we will extend this solution with an invalidation mechanism that automatically invalidates the cached objects based on dependencies declared by the programmer.
+
+This chapter describes how the suggested system uses the declared dependencies to track updates to underlying data and invalidate cached objects correctly. The solution for automatic invalidation is described in three parts. First we introduce the data structures used to achieve fast and efficient invalidation (section~\ref{sec:simple-object-dependence-graph}). Second, the \emph{dependency registration} describes how the cached objects are registered into the ODG. Finally, the \emph{invalidation propagation algorithm} (section~\ref{sec:invalidation-propagation} describes how Smache invalidates affected cached objects when changes are made to the underlying data. The chapter ends with a discussion on how the suggested solution meets the criteria and requirements of the thesis.
+
+% section dependency-registration end
+
+\section{Simple Object Dependence Graph}
+\label{sec:simple-object-dependence-graph}
+
+The Object Dependence Graph (ODG) was first described in a series of papers by IBM~\cite{paper:ibm, paper:ibm-extended} and was build to support the content management system build for the Olympic Games in 2000. The final content served to the user is build from HTML-fragments and HTML-pages editable by the users as well as underlying data periodically changing. To be able to serve the final documents fast, the system pre-generates the HTML pages such that the system doesn't have to generate the pages on each request. To do this efficiently, the system maintains dependencies between the different kinds of objects and updates depending objects when underlying data changes. The pre-generation can also be described in terms of caching, where the system uses an in-place caching approach.
+
+Jim Challenger et.al.~\cite{paper:ibm-extended} presents a simple and a generalized version of the ODG. The generalized version is described for a content management system and includes a number of enhancements compared to the simple model that is unnecessary for the purpose of this thesis. We will therefore use the simple ODG that is described as following:
+
+ODG can be represented using a directed graph, where a vertex either represents underlying data or an object that is a pure transformation of underlying data. An edge from a vertex representing underlying data $u$ to a vertex representing an object $o$ denoted ($u$, $o$) indicates that a change to $u$ also affects $o$.~\cite{paper:ibm-extended} gives the following constraints for the simple ODG:
+
+\begin{itemize}
+  \item Each vertex representing underlying data does not have an incoming edge
+  \item Each vertex representing an object does not have an outgoing edge
+  \item All Vertices in the graph correspond to underlying data (nodes with incoming edges) or objects (nodes with an outgoing edge)
+  \item None of the edges have weights associated with them
+\end{itemize}
+
+Figure~\ref{fig:simple-odg} illustrates an instance of a simple ODG with four vertices of underlying data ($u_1$, $u_2$, $u_3$ and $u_4$), two vertices representing objects ($o_1$ and $o_2$), and the dependencies between them. Where we can see that when underlying data $u_2$ changes, the system must update both the cached object of $o_1$ and $o_2$ and when $u_4$ changes, it only needs to update $o_2$.
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=0.6\linewidth]{figures/simple-odg.pdf}
+  \caption{An example instance of a simple ODG}
+  \label{fig:simple-odg}
+\end{figure*}
+
+% section simple-object-dependence-graph end
+
+\section{Dependency Data Structure for Cachable Functions}
+\label{sec:dependency-data-structure-for-cachable-functions}
+
+There exists two representations of the cachable functions. The first one is the static representation, which can be derived directly from the declarations in the source code. This representation only describes dependencies between the declarations and not cached object instances. We will define this representation as the \emph{Declaration Dependence Graph (DDG)}. The other representation is dynamic and describes the dependencies between the entities of the underlying data and the cached object instances. We define this as the \emph{Instance Dependence Graph (IDG)}.
+
+\subsection{Declaration Dependence Graph}
+\label{subsec:declaration-dependence-graph}
+
+When the cachable functions are defined as in section~\ref{subsec:making-functions-cachable}, the dependencies are declared using the entity types. The DDG is an extension of the Simple Object Dependence Graph, where the cached functions corresponds to the object vertices and the entity types corresponds to the underlying data. Where the simple ODG only includes direct dependencies, the DDG has two kind of dependencies. An edge from $u$ to $o$ denoted $(u, o)_d$ represents a direct dependency, which means that the dependency defines the given $o$. That is if a given cached object instance has a dependency to an instance of an entity then it cannot change. An edge from $u$ to $o$ denoted $(u, o)_l$ represents a lazy dependency, which means that the dependency can change throughout the lifetime of the cached object instance and has to be evaluated before invalidation to derive the dependency for the instance.
+
+Figure~\ref{fig:declaration-dependence-graph} shows the DDG for the running example from code snippet~\ref{code:running-example}. For example we see that the cached object for the \verb$participant_score$-function depends directly on the participant and it depends lazily on the grade. This is because there exists a participant for each score, but the dependencies from a cached object instance to any grade entity can change throughout the lifetime.
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=0.6\linewidth]{figures/declaration-dependence-graph.pdf}
+  \caption{The Declaration Dependence Graph of the running example}
+  \label{fig:declaration-dependence-graph}
+\end{figure*}
+
+The DDG graph can be represented using two adjecency lists for the nodes representing underlying data - one list per dependency type. To access a given adjacency lists fast we can use hash tables indexed by the entity type as depicted on figure~\ref{fig:ddg-data-structure}.
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=0.6\linewidth]{figures/ddg-data-structure.pdf}
+  \caption{An illustration of the data structure representing the DDG on figure~\ref{fig:declaration-dependence-graph}}
+  \label{fig:ddg-data-structure}
+\end{figure*}
+
+The advantage of the DDG is that it does not change in the lifetime of the application, which means it can be preprocessed when the application starts. The DDG is build by iterating through all the cached functions with their respective dependencies. When a dependency (either a direct or lazy) between $u_1$ and $o_1$ is added, vertices will be added for $u_1$ and $o_1$ with an edge from $u_1$ to $o_1$ including the type of dependency. If a dependency already exists in the graph, the edge will be added for the existing vertex.
+
+% TODO: How to query it?
+
+% - How to query it
+
+% subsection declaration-dependence-graph end
+
+\subsection{Instance Dependence Graph}
+\label{subsec:instance-dependence-graph}
+
+The Instance Dependence Graph (IDG) is also an extension of the simple Object Dependence Graph (ODG), where the data entities corresponds to underlying data and the cached object instance generated from the cachable functions corresponds to the objects. An edge from underlying data $u$ to an object $o$ denoted ($u$, $o$) indicates that if $u$ is changed then $o$ must be updated.
+
+The instance dependence graph for the running example is illustrated on figure~\ref{fig:instance-dependence-graph}. In the given example, this graph is quite primitive. It it worth noting that the edges in the IDG are instance specific representations of the direct dependencies of the DDG seen on figure~\ref{fig:declaration-dependence-graph}.
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=0.3\linewidth]{figures/instance-dependence-graph.pdf}
+  \caption{An example of an Instance Dependence Graph based on the running example}
+  \label{fig:instance-dependence-graph}
+\end{figure*}
+
+% - The contents of the data structure
+% - How to build it
+% - How to update it
+% - How to query it
+% - Correctness?
+% - Space/query time/preprocessing time analysis?
+
+% subsection instance-dependence-graph end
+
+% section dependency-management-for-cachable-functions end
+
+
+% TODO: Write this:
+% - The contents of the data structure
+% - How to build it
+% - How to update it
+% - How to query it
+% - Correctness?
+% - Space/query time/preprocessing time analysis?
+
+% - Seperate static and dynamic "state"
+%   - Static: only changes when new versions of the code base is deployed
+%   - Dynamic: changes after deployment - often initiated by changes to the
+%              underlying data
+%   - Static state is preferred since it it's easier to test and has not 'state'
+
+%   - Object Dependence Graph
+%     - What do we want to achieve with relation to dependency management
+%     - Maybe present IBM's (if it is not in the approaches chapter)
+%     - Present how we do it:
+%       - From that: which queries do we need?
+%       - From that: describe the data structures supporting these queries;
+%         - State: prefer static state over dynamic since we can infer the static
+%                  state from the source code
+
+% TODO: Write in more details what is up with the IBM solution with relation to
+%       automatic invalidation
+
+% TODO: read below and find out if anything should be integrated
+
+% Jim Challenger et. al. has written multiple papers on the system used for the content management website in the Olympic Games in 1998 and 2000~\cite{paper:ibm, paper:ibm-extended}. The system is based on content that are all precomputed when served to the user, which resulted in a system that scaled for many users with content served fast since the web server only had to find the appropriate cached article when serving content. In order to allow editors to change articles and fragments, the system introduces the Data Update Propagation (DUP) algorithm. DUP uses an Object Dependence Graph (ODG) that describes the relationship between fragments using a Directed Acyclic Graph (DAG). The ODG describes both the relationships of how the fragments are embedded in each other and relationships describing the hypertext links between articles. To avoid race conditions and hypertext links to missing fragments, the fragments need to be updated in a specific order. More specific when a fragment f1 that embeds another fragment f2, the system need to update f2 before f1. Since the ODG is described DAG there is always a topological order of the nodes, which satisfies the described property for any node. The system runs using a CMS system, where the content is defined using a CMS system and not using functions from the source code. This simplifies the challenge of persisting the cached content since it does not change when a new version of the source code is deployed. It therefore leaves the challenge of updating cached content, when the definition of the computations changes.
+
+% - Data structures introduces:
+%   - Find affected computed fun instances from given relation
+%     - Subproblems:
+%       - Find underlying data identifier from relation instance
+%         - Done using a relation-function defined by the developer. This
+%           function is executed every time the query is executed.
+%       - Find affected for computed fun instances from underlying data identifier and given computed fun
+%         - Using dictionary (redis) with
+%           - key: underlying data identtifier
+%           - value: computed fun identifier
+%         - Record stored when a new function instance is executed
+%   - Find affected computed fun instances from direct underlying data
+%     - Using dictionary (key-value store/redis) with:
+%       - key: underlying data instance id
+%       - value: computed fun identifier
+%     - Record (also) stored when a new function instance is executed
+%
+% - DS Example:
+%
+% -- Static dep graph:
+%
+% prof -\
+%        score
+% user -/
+%
+% prof -\
+%        hello
+% user -/
+%
+% -- Data Structure:
+% - Given instances:
+% prof/1 -\
+%          score/1/2
+% user/2 -/
+%
+% prof/1 -\
+%          hello/1/5
+% user/5 -/
+%
+% - Find all funs affected by underlying data:
+% prof/1 => [score/1/2, hello/1/5]
+% user/2 => [score/1/2]
+% user/5 => [hello/1/5]
+%
+% - Find all funs of a given kind affected by underlying data (for relations)
+% score.prof/1 => [score/1/2]
+% hello.prof/1 => [hello/1/5]
+% score.user/2 => [score/1/2]
+% hello.user/5 => [hello/1/5]
+
+% subsection object-dependence-graph end
+
+% \section{Extending Smache With Automatic Invalidation}
+% \label{sec:extending-smache-with-automatic-invalidation}
+
+% Implementation
+% - Extend the programming model to include:
+%   - Relation definition
+%   - (Source definition)
+
+% TODO: Consider moving this to either the cachable function section
+%       or to the declaration section maybe (try to avoid mixing design and implementation please)
+
+
+% section object-dependence-graph end
+
+\section{Dependency Registration}
+\label{sec:dependency-registration}
+
+% TODO: Consider another title name
+
+For the application to know what and when to invalidate, the application must register the dependency declarations and name of cached functions instances. The dependency declarations are part of the source code and therefore available when the application is started. To identify the instances of cached functions used by the application, the caching system needs the combinations of arguments that defines those instances. These combinations are build when the cached function is accessed and the registration therefore occurs dynamically while the application is running. The registration process is illustrated on figure~\ref{fig:dependency-registration-process}.
+
+\begin{figure*}[ht!]
+  \centering
+  % \includegraphics[width=1.0\linewidth]{figures/dependency-registration-process}
+  \caption{The flow in which the cached objects are registered}
+  \label{fig:dependency-registration-process}
+\end{figure*}
+
+% TODO: MAYBE MOVE THIS TO DATA STRUCTURES: These declarations are general for the given cached function and will not change until the programmer changes the source code and deploys a new version of the application. The declarations can therefore be considered static in the lifetime of the application
+
+% The specific instances of cached objects are not located and registered until they are requested by the client, which means registrations are dynamic through the lifetime of the application, and has to be distributed across the web servers to achieve a predictable cache hit rate.
+
+
+\section{Invalidation Propagation}
+\label{sec:invalidation-propagation}
+
+The purpose of invalidation is to be able to evaluate the freshness of a given cached object and know which cached objects are stale and need to be updated. A cached object is considered stale when it's underlying data has been updated, which happens during the request from a client that involves updating, inserting or deleting data in the primary storage. To be able to react to these events, Smache subscribes to callbacks from the database wrapper. When the database transaction succeeds the database wrapper will notify Smache with the id and type~\footnote{Type is another word for the relation in a relational database and a collection in a document-oriented database} of the manipulated entity. This notification will trigger cache invalidation through Smache.
+
+The cache invalidation consists of three steps:
+
+\begin{enumerate}
+  \item Find keys for cached objects that contains the given entity as input
+  \item Find keys for cached objects that has a relation dependency to the given entity
+  \item Invalidate both set of keys using timestamp invalidation
+\end{enumerate}
+
+To trigger invalidations, Smache is notified by the database wrapper with information about which entities are updated. More specifically Smache receives the id of the entity as well as the type of the entity~
+
+
+
+% Algorithm:
+% - Receive notification about change with entity + type
+% - Find keys for cached objects that depend on the given entity:
+%   - Either directly through the input
+%   - Or through a relation dependency
+%     => relation-fun + cached-fun
+%     => relation-fun() -> entities
+%     => find keys for cached-funs that depends on given entities
+% - Invalidate all cached objects given by that key using timestamp invalidation
+
+%  - A request involving changing underlying data
+%    => We want to be able to invalidate cached values correctly
+%    => We want to do it efficiently (response time should not be affected by cache)
 %         - we want to invalidate as soon as possible
 %         - the user making changes to data should not wait for invalidation
-%       - Fault-Tolerance
-%         - nodes:
-%           - web server (cannot receive request) => nothing to do:
-%           - what if caching server is down?
-%             - timeout? (requires idempotent invalidation)
-%             - retry! (require idempotent invalidation)
-%         - avoid concurrency errors
-
-\section{Declarative Cache Invalidation}
-\label{sec:declarative-cache-invalidation}
-
-% TODO: Describe the overall solution
-
-\section{Invalidation Timestamps}
-\label{sec:invalidation-timestamps}
-
-% TODO: Describe how we use invalidation timestamps to avoid the concurrency bug
-% This solution is from the IBM
-% - Suggested solution to avoid the concurrency bug
-
-% section invalidation-timestamps end
-
-\section{Trigger Invalidation Through Database Wrapper}
-\label{sec:trigger-invalidation-through-database-wrapper}
-
-% Trigger Invalidation Through Database Wrapper
-% - Discuss the different alternatives and say why we want that
-
-% section trigger-invalidation-through-database-wrapper end
-
-\section{Invalidation Algorithm}
-\label{sec:invalidation-algorithm}
 
 % TODO: Describe (and visualize) algorithm:
 % - what does it do?
 % - correctness?
 % - time complexity
 % - space complexity
-
-% Analyze the queries performed in the algorithm as prequel to the next chapter
 
 % TODO: Consider describing data structure before algorithm
 
@@ -63,111 +262,47 @@
     - Find computed functions depending on the given entity instance
       - Both:
         - directly (through arguments)
-        - related (through relations)
     - Set cached value as stale
     - Update cached value
-% section invalidation-algorithm end
 
-\section{Object Dependence Graph}
-\label{sec:object-dependence-graph}
+% Analyze the queries performed in the algorithm as prequel to the next chapter
 
-% TODO: Write this:
-% - The contents of the data structure
-% - How to build it
-% - How to update it
-% - How to query it
-% - Correctness?
-% - Space/query time/preprocessing time analysis?
+\subsection{Invalidation Timestamps}
+\label{subsec:invalidation-timestamps}
 
-- Seperate static and dynamic "state"
-  - Static: only changes when new versions of the code base is deployed
-  - Dynamic: changes after deployment - often initiated by changes to the
-             underlying data
-  - Static state is preferred since it it's easier to test and has not 'state'
+% TODO: Describe/Discuss how we use invalidation timestamps to avoid the concurrency bug
+% This solution is from the IBM
+% - Suggested solution to avoid the concurrency bug
+%    => Timestamps: primary reason is for the data update propagation, but it allows us to evaluate freshness
 
-%   - Object Dependence Graph
-%     - What do we want to achieve with relation to dependency management
-%     - Maybe present IBM's (if it is not in the approaches chapter)
-%     - Present how we do it:
-%       - From that: which queries do we need?
-%       - From that: describe the data structures supporting these queries;
-%         - State: prefer static state over dynamic since we can infer the static
-%                  state from the source code
+% subsection invalidation-timestamps end
 
-% section object-dependence-graph end
+\subsection{Database Wrapper Triggers}
+\label{subsec:database-wrapper-triggers}
 
-% TODO: Write in more details what is up with the IBM solution with relation to
-%       automatic invalidation
+% Trigger Invalidation Through Database Wrapper
+% - Discuss the different alternatives and say why we want that
 
-% TODO: Move to
+% subsection database-wrapper-triggers end
 
-Jim Challenger et. al. has written multiple papers on the system used for the content management website in the Olympic Games in 1998 and 2000~\cite{paper:ibm, paper:ibm-extended}. The system is based on content that are all precomputed when served to the user, which resulted in a system that scaled for many users with content served fast since the web server only had to find the appropriate cached article when serving content. In order to allow editors to change articles and fragments, the system introduces the Data Update Propagation (DUP) algorithm. DUP uses an Object Dependence Graph (ODG) that describes the relationship between fragments using a Directed Acyclic Graph (DAG). The ODG describes both the relationships of how the fragments are embedded in each other and relationships describing the hypertext links between articles. To avoid race conditions and hypertext links to missing fragments, the fragments need to be updated in a specific order. More specific when a fragment f1 that embeds another fragment f2, the system need to update f2 before f1. Since the ODG is described DAG there is always a topological order of the nodes, which satisfies the described property for any node. The system runs using a CMS system, where the content is defined using a CMS system and not using functions from the source code. This simplifies the challenge of persisting the cached content since it does not change when a new version of the source code is deployed. It therefore leaves the challenge of updating cached content, when the definition of the computations changes.
+\section{Implementing Automatic Invalidation}
+\label{sec:implementing-automatic-invalidation}
 
-- Data structures introduces:
-  - Find affected computed fun instances from given relation
-    - Subproblems:
-      - Find underlying data identifier from relation instance
-        - Done using a relation-function defined by the developer. This
-          function is executed every time the query is executed.
-      - Find affected for computed fun instances from underlying data identifier and given computed fun
-        - Using dictionary (redis) with
-          - key: underlying data identtifier
-          - value: computed fun identifier
-        - Record stored when a new function instance is executed
-  - Find affected computed fun instances from direct underlying data
-    - Using dictionary (key-value store/redis) with:
-      - key: underlying data instance id
-      - value: computed fun identifier
-    - Record (also) stored when a new function instance is executed
+% TODO: Find a place for the implementation:
+% - Representation of the ODG
+%   - Cache managers are a single point of failure as well as a bottleneck
+%   - We use a database for storing information and the library for managing it
+%     - Since we represent the data in key-value stores, we can take it further and use the cache to represent it
+%     - The cache can only be used if the cache store is available
+%     - That means we got no more dependencies
+%     - Hash table => Key-value stores in Redis
+%     - Data can be sharded to scale
+%     - What about transactions?
 
-- DS Example:
-
--- Static dep graph:
-
-prof -\
-       score
-user -/
-
-prof -\
-       hello
-user -/
-
--- Data Structure:
-- Given instances:
-prof/1 -\
-         score/1/2
-user/2 -/
-
-prof/1 -\
-         hello/1/5
-user/5 -/
-
-- Find all funs affected by underlying data:
-prof/1 => [score/1/2, hello/1/5]
-user/2 => [score/1/2]
-user/5 => [hello/1/5]
-
-- Find all funs of a given kind affected by underlying data (for relations)
-score.prof/1 => [score/1/2]
-hello.prof/1 => [hello/1/5]
-score.user/2 => [score/1/2]
-hello.user/5 => [hello/1/5]
-
-% subsection object-dependence-graph end
-
-\section{Extending Smache With Automatic Invalidation}
-\label{sec:extending-smache-with-automatic-invalidation}
-
-% Implementation
-% - Extend the programming model to include:
-%   - Relation definition
-%   - (Source definition)
-
-% section extending-smache-with-automatic-invalidation end
-
+% section implementing-automatic-invalidation end
 
 \section{Discussion}
-\label{sec:discussion}
+\label{sec:invalidation-discussion}
 
 % section discussion end
 
@@ -175,6 +310,14 @@ hello.user/5 => [hello/1/5]
 %   - Discuss that the design meets the requirements and criteria stated
 % - Implementation:
 %   - Extending the API to support automatic cache invalidation
+
+% TODO:
+% - Discuss tracking dependencies vs. deriving them as in deploy-time model
+%   => With relation to efficiency
+%   => The input define the cached object. Another input == another cached object
+%     => input deps does not change
+%   => The relation dependencies change for a given cached object
+%     => Instead of tracking those, we just evaluate them every time
 
 % section existing_solutions_for_cache_invalidation end
 

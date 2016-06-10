@@ -66,13 +66,25 @@ As mentioned by Dan Ports~\cite{paper:liskov} not all functions are cachable. To
 % subsection restricted_to_pure_functions end
 
 \subsection{Making Functions Cachable}
-\label{subsec:making_functions_cachable}
+\label{subsec:making-functions-cachable}
 
-Overall the API for making cached functions are similar to the Dan Ports' approach in which they define a \verb$MAKE-CACHABLE$ procedure that converts a pure function to a cached function with the following definition~\cite{paper:liskov}:
+The solution suggested by Dan Ports et.al.~\cite{paper:liskov} includes fully automatic invalidation. The solution suggested by this thesis achieves a semi-automatic invalidation based on dependencies declared in the procedure that makes the function cachable. This thesis will extend from Dan Ports' solution for making cached functions with arguments for declaring dependencies. The API is defined as following:
 
-\verb$MAKE-CACHABLE(fn)$ $\rightarrow$ \emph{cached-fn}: Makes a function cacheable. \emph{cached-fn} is a new function that first checks the cache for the result of another call with the same arguments. If not found, it executes \emph{fn} and stores its result in the cache.
+\verb$MAKE-CACHABLE(fn, input-types, relation-deps)$ $\rightarrow$ \emph{cached-fn}: Makes a function cacheable. \emph{cached-fn} is a new function that first checks the cache for the result of another call with the same arguments. If not found, it executes \emph{fn} and stores its result in the cache.
 
-This definition is the basis of making a function cachable, but it will be extended further as automatic invalidation are added in chapter~\ref{chapter:invalidation} and in-place updates are added in chapter~\ref{chapter:data-update-propagation}.
+The added arguments for the procedure does not alter the behaviour of the \emph{cached-fn}, but it requires additional arguments used by the application for naming and invalidation. The \emph{input-types} are the types of the arguments given to the original \emph{fn} and the \emph{relation-deps} are declared dependencies to data sources, which cannot be derived from the input of \emph{fn}. The \emph{input-types} are used to indicate how the arguments should be interpreted with relation to naming (described in section~\ref{subsec:cache-object-localization} and used together with the \emph{relation-deps} to achieve automatic invalidation (described in chapter~\ref{chapter:invalidation}).
+
+\subsection{Cache Object Localization}
+\label{subsec:cache-object-localization}
+
+When the application fetches and stores the content of cached objects it need to have consistent naming such that the correct cached objects are fetched and the objects does not overwrite each other when stored. To make it easier to use cachable functions this is automatically handled by Smache. The name of a given cached object computed from a cached function \emph{must be unique} such that no other cached function is able to have the same name.
+
+The details on how this is achieved is specific to the implementation, but as an example, the Smache Python implementation uses a combination of the function name and the module in which is was defined. This becomes unique since you cannot use two modules of the same name.
+
+% subsection cache-object-localization end
+
+
+% TODO: Write something about the key-generation
 
 % TODO: Consider having these extensions in this section (or maybe next)
 
@@ -112,17 +124,19 @@ The basic cachable functions as they are described so far can be implemented usi
 
 The procedure for making a function cached is implemented in using Python-decorators~\footnote{https://www.python.org/dev/peps/pep-0318/} that is an annotation that can be used to modify the behaviour of existing functions while being able to keep a reference to the original function.
 
-The implementation of the basic caching on the running example is seen on code snippet~\ref{code:basic-caching-running-example}. In this code the only addition we have made is a call to a function called \verb$computed$ on a module \verb$smache$ with a single argument and a \verb$@$ as prefix. This call corresponds to the implementation of \verb$MAKE-CACHABLE$.
+The implementation of the basic caching on the running example is seen on code snippet~\ref{code:basic-caching-running-example}. In this code the only addition we have made is a call to a function called \verb$computed$ on a module \verb$smache$ with a single argument and a \verb$@$ as prefix that indicate it's a decorator. Additionally the there is a decorator called \verb$relation$ in which we indicate the entity type as well as a function that describes how the given relation entity relates to an entity indicated through the input. This call corresponds to the implementation of \verb$MAKE-CACHABLE$.
 
 Smache require the developer to annotate the types of ``data source'', which are passed into the original function. In this case we have annotated using the \verb$Course$-class that corresponds to an object for an Object-Relational Mapper (ORM) that represents the collection \emph{course}. The ``data source types'' supported are ORM-objects as well as the ``Raw''-type that represents primitive values (such as strings, numbers etc.). The number of type annotations has to be the same number of arguments given to the original function.
 
 Smache uses the type annotations to do smart serialization and deserialization when the name of the cached value have to be inferred. The raw input are represented as they are in a serialized form, but the data source inputs are serialized using their. When the function is then deserialized the Smache library will use the id of the data sources to load a fresh version of the ORM-object from the database. Another advantage is that the Smache now know that this cached function has to be invalidated when the corresponding course entity is updated, which will be explained in chapter~\ref{chapter:invalidation}.
 
 \begin{figure*}[ht!]
-  \input{code/basic-implementation.py}
+  \input{code/basic_implementation.py}
   \caption{Implementation of basic caching on the running example}
   \label{code:basic-caching-running-example}
 \end{figure*}
+
+% TODO: Write something about how the key is generated for the running example and maybe other keys
 
 % subsection defining_the_cachable_functions end
 
@@ -135,5 +149,13 @@ Smache uses the type annotations to do smart serialization and deserialization w
 %       - Strict Freshness
 
 % section the_cachable_function_model end
+
+\section{Discussion}
+\label{sec:cachable-function-discussion}
+
+% TODO: Discuss how these cachable functions solve the problem of cache maintenance
+
+% section discussion end
+
 
 % chapter smache-cachable-functions end

@@ -1,6 +1,7 @@
 \begin{minted}[linenos]{python}
 def time_consuming_participant_score(participant):
-    return numpy.advanced_statistical_method(participant)
+    grades = Database.find_all_grades_for_participant(participant)
+    return numpy.advanced_statistical_method(grades)
 
 def cache_key_for_participant_score(participant):
     cache_key_components = [
