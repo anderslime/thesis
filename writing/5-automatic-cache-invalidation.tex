@@ -44,7 +44,7 @@ There exists two representations of the cachable functions. The first one is the
 \subsection{Declaration Dependence Graph}
 \label{subsec:declaration-dependence-graph}
 
-When the cachable functions are defined as in section~\ref{subsec:making-functions-cachable}, the dependencies are declared using the entity types. The DDG is an extension of the Simple Object Dependence Graph, where the cached functions corresponds to the object vertices and the entity types corresponds to the underlying data. Where the simple ODG only includes direct dependencies, the DDG has two kind of dependencies. An edge from $u$ to $o$ denoted $(u, o)_d$ represents a direct dependency, which means that the dependency defines the given $o$. That is if a given cached object instance has a dependency to an instance of an entity then it cannot change. An edge from $u$ to $o$ denoted $(u, o)_l$ represents a lazy dependency, which means that the dependency can change throughout the lifetime of the cached object instance and has to be evaluated before invalidation to derive the dependency for the instance.
+When the cachable functions are defined as in section~\ref{subsec:making-functions-cachable}, the dependencies are declared using the entity types. The DDG is an extension of the Simple Object Dependence Graph, where the cached functions corresponds to the object vertices and the entity types corresponds to the underlying data. Where the simple ODG only includes direct dependencies, the DDG has two kind of dependencies. An edge from $u$ to $o$ denoted $(u, o)_d$ represents a direct dependency, which means that the dependency defines the given $o$. That is if a given cached object instance has a dependency to an instance of an entity then it cannot change. The direct dependencies includes an index indicating a position such that there is an order of direct dependencies for a given cached object. An edge from $u$ to $o$ denoted $(u, o)_l$ represents a lazy dependency, which means that the dependency can change throughout the lifetime of the cached object instance and has to be evaluated before invalidation to derive the dependency for the instance. This could just as well be two graphs, but we model it as one for illustrative purposes.
 
 Figure~\ref{fig:declaration-dependence-graph} shows the DDG for the running example from code snippet~\ref{code:running-example}. For example we see that the cached object for the \verb$participant_score$-function depends directly on the participant and it depends lazily on the grade. This is because there exists a participant for each score, but the dependencies from a cached object instance to any grade entity can change throughout the lifetime.
 
@@ -55,7 +55,7 @@ Figure~\ref{fig:declaration-dependence-graph} shows the DDG for the running exam
   \label{fig:declaration-dependence-graph}
 \end{figure*}
 
-The DDG graph can be represented using two adjecency lists for the nodes representing underlying data - one list per dependency type. To access a given adjacency lists fast we can use hash tables indexed by the entity type as depicted on figure~\ref{fig:ddg-data-structure}.
+The DDG graph is represented using two data structures. The lazy dependencies are represented using an outgoing adjacency list from the underlying data nodes. The direct dependencies are represented using an incoming adjacency list from the object nodes ordered by the position index of the dependency. To access a given adjacency list fast we use hash tables index by entity type for the outgoing adjacency list and by the object ID for the incoming adjacency lists as depicted on figure~\ref{fig:ddg-data-structure}.
 
 \begin{figure*}[ht!]
   \centering
@@ -64,11 +64,24 @@ The DDG graph can be represented using two adjecency lists for the nodes represe
   \label{fig:ddg-data-structure}
 \end{figure*}
 
-The advantage of the DDG is that it does not change in the lifetime of the application, which means it can be preprocessed when the application starts. The DDG is build by iterating through all the cached functions with their respective dependencies. When a dependency (either a direct or lazy) between $u_1$ and $o_1$ is added, vertices will be added for $u_1$ and $o_1$ with an edge from $u_1$ to $o_1$ including the type of dependency. If a dependency already exists in the graph, the edge will be added for the existing vertex.
+New dependencies can be added to the DDG using
 
-% TODO: How to query it?
+\begin{itemize}
+  \item \verb$add_dependency(s_id, t_id)$: Adds a dependency between the source id \verb$s_id$ used as index for the hash table and the target id \verb$t_id$ used as element in the adjacency list.
+\end{itemize}
 
-% - How to query it
+When \verb$add_dependency$ is used we check if there already exists an adjacency list in the hash table using \verb$s_id$. If there exists one, we add \verb$t_id$ to the given adjacency list, or else we add a new adjacency list only including \verb$t_id$ and indexed by \verb$s_id$.
+
+The DDG is build by iterating through all the cached functions with their respective dependencies and add the dependencies to the data structure as described above. The lazy dependencies are added with the entity type as \verb$s_id$ and the cached function as \verb$t_id$. The direct dependencies are added using the cached function as \verb$s_id$ and the entity type as \verb$s_id$.  The advantage of the DDG is that it does not change in the lifetime of the application, which means it can be preprocessed when the application starts.
+
+The queries needed for automatic cache invalidation are the following:
+
+\begin{itemize}
+  \item \verb$lookup_lazy_dependency(entity_type)$: Finds all lazy dependencies from a given entity type
+  \item \verb$lookup_direct_dependency(fun_id)$: Finds all direct dependencies from a given function id
+\end{itemize}
+
+Using these data structures we can access a pointer with access to all lazy or direct dependencies using $O(1)$ expected time if we use a hash table using perfect hashing.~\cite{paper:perfect-hashing}. In worst case the space used is the maximum number of edges $O(|u| \cdot |o|)$, where $|u|$ denotes the number of notes representing underlying data and $|o|$ represents the number of nodes representing objects.
 
 % subsection declaration-dependence-graph end
 
@@ -77,7 +90,7 @@ The advantage of the DDG is that it does not change in the lifetime of the appli
 
 The Instance Dependence Graph (IDG) is also an extension of the simple Object Dependence Graph (ODG), where the data entities corresponds to underlying data and the cached object instance generated from the cachable functions corresponds to the objects. An edge from underlying data $u$ to an object $o$ denoted ($u$, $o$) indicates that if $u$ is changed then $o$ must be updated.
 
-The instance dependence graph for the running example is illustrated on figure~\ref{fig:instance-dependence-graph}. In the given example, this graph is quite primitive. It it worth noting that the edges in the IDG are instance specific representations of the direct dependencies of the DDG seen on figure~\ref{fig:declaration-dependence-graph}.
+The instance dependence graph for the running example is illustrated on figure~\ref{fig:instance-dependence-graph}. In the given example, this graph is quite primitive. It's worth noting that the edges in the IDG are instance specific representations of the direct dependencies of the DDG seen on figure~\ref{fig:declaration-dependence-graph}.
 
 \begin{figure*}[ht!]
   \centering
@@ -86,132 +99,51 @@ The instance dependence graph for the running example is illustrated on figure~\
   \label{fig:instance-dependence-graph}
 \end{figure*}
 
-% - The contents of the data structure
-% - How to build it
-% - How to update it
-% - How to query it
-% - Correctness?
-% - Space/query time/preprocessing time analysis?
+The representation of the IDG is similar to the representation of lazy dependencies for the DDG, where the dependencies are represented using an outgoing adjacency list indexed by a hash table as illustrated on figure~\ref{fig:idg-data-structure}.
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=1.0\linewidth]{figures/idg-data-structure.pdf}
+  \caption{An illustration of the data structure representing the IDG on figure~\ref{fig:instance-dependence-graph}}
+  \label{fig:idg-data-structure}
+\end{figure*}
+
+New dependencies are added using \verb$add_dependency$ described for the DDG in section~\ref{subsec:declaration-dependence-graph}, where the entity id is the source and the cached object is the target.
+
+The queries needed for automatic invalidation are:
+
+\begin{itemize}
+  \item \verb$lookup_cached_object(entity_id)$: Finds all cached objects depending on the \verb$entity_id$.
+\end{itemize}
+
+The DDG uses the same amount of time and space as the DDG described in section~\ref{subsec:instance-dependence-graph}.
 
 % subsection instance-dependence-graph end
 
 % section dependency-management-for-cachable-functions end
-
-
-% TODO: Write this:
-% - The contents of the data structure
-% - How to build it
-% - How to update it
-% - How to query it
-% - Correctness?
-% - Space/query time/preprocessing time analysis?
-
-% - Seperate static and dynamic "state"
-%   - Static: only changes when new versions of the code base is deployed
-%   - Dynamic: changes after deployment - often initiated by changes to the
-%              underlying data
-%   - Static state is preferred since it it's easier to test and has not 'state'
-
-%   - Object Dependence Graph
-%     - What do we want to achieve with relation to dependency management
-%     - Maybe present IBM's (if it is not in the approaches chapter)
-%     - Present how we do it:
-%       - From that: which queries do we need?
-%       - From that: describe the data structures supporting these queries;
-%         - State: prefer static state over dynamic since we can infer the static
-%                  state from the source code
-
-% TODO: Write in more details what is up with the IBM solution with relation to
-%       automatic invalidation
-
-% TODO: read below and find out if anything should be integrated
-
-% Jim Challenger et. al. has written multiple papers on the system used for the content management website in the Olympic Games in 1998 and 2000~\cite{paper:ibm, paper:ibm-extended}. The system is based on content that are all precomputed when served to the user, which resulted in a system that scaled for many users with content served fast since the web server only had to find the appropriate cached article when serving content. In order to allow editors to change articles and fragments, the system introduces the Data Update Propagation (DUP) algorithm. DUP uses an Object Dependence Graph (ODG) that describes the relationship between fragments using a Directed Acyclic Graph (DAG). The ODG describes both the relationships of how the fragments are embedded in each other and relationships describing the hypertext links between articles. To avoid race conditions and hypertext links to missing fragments, the fragments need to be updated in a specific order. More specific when a fragment f1 that embeds another fragment f2, the system need to update f2 before f1. Since the ODG is described DAG there is always a topological order of the nodes, which satisfies the described property for any node. The system runs using a CMS system, where the content is defined using a CMS system and not using functions from the source code. This simplifies the challenge of persisting the cached content since it does not change when a new version of the source code is deployed. It therefore leaves the challenge of updating cached content, when the definition of the computations changes.
-
-% - Data structures introduces:
-%   - Find affected computed fun instances from given relation
-%     - Subproblems:
-%       - Find underlying data identifier from relation instance
-%         - Done using a relation-function defined by the developer. This
-%           function is executed every time the query is executed.
-%       - Find affected for computed fun instances from underlying data identifier and given computed fun
-%         - Using dictionary (redis) with
-%           - key: underlying data identtifier
-%           - value: computed fun identifier
-%         - Record stored when a new function instance is executed
-%   - Find affected computed fun instances from direct underlying data
-%     - Using dictionary (key-value store/redis) with:
-%       - key: underlying data instance id
-%       - value: computed fun identifier
-%     - Record (also) stored when a new function instance is executed
-%
-% - DS Example:
-%
-% -- Static dep graph:
-%
-% prof -\
-%        score
-% user -/
-%
-% prof -\
-%        hello
-% user -/
-%
-% -- Data Structure:
-% - Given instances:
-% prof/1 -\
-%          score/1/2
-% user/2 -/
-%
-% prof/1 -\
-%          hello/1/5
-% user/5 -/
-%
-% - Find all funs affected by underlying data:
-% prof/1 => [score/1/2, hello/1/5]
-% user/2 => [score/1/2]
-% user/5 => [hello/1/5]
-%
-% - Find all funs of a given kind affected by underlying data (for relations)
-% score.prof/1 => [score/1/2]
-% hello.prof/1 => [hello/1/5]
-% score.user/2 => [score/1/2]
-% hello.user/5 => [hello/1/5]
-
-% subsection object-dependence-graph end
-
-% \section{Extending Smache With Automatic Invalidation}
-% \label{sec:extending-smache-with-automatic-invalidation}
-
-% Implementation
-% - Extend the programming model to include:
-%   - Relation definition
-%   - (Source definition)
-
-% TODO: Consider moving this to either the cachable function section
-%       or to the declaration section maybe (try to avoid mixing design and implementation please)
-
-
-% section object-dependence-graph end
 
 \section{Dependency Registration}
 \label{sec:dependency-registration}
 
 % TODO: Consider another title name
 
-For the application to know what and when to invalidate, the application must register the dependency declarations and name of cached functions instances. The dependency declarations are part of the source code and therefore available when the application is started. To identify the instances of cached functions used by the application, the caching system needs the combinations of arguments that defines those instances. These combinations are build when the cached function is accessed and the registration therefore occurs dynamically while the application is running. The registration process is illustrated on figure~\ref{fig:dependency-registration-process}.
+For the application to know what and when to invalidate, the application must register the dependency declarations and name of cached functions instances. The dependency declarations that defines the lazy and direct dependencies are part of the source code and therefore available when the application is started as illustrated on figure~\ref{fig:declaration-dependency-registration}. This registration flow simply collects all the cached functions registered through the cachable function procedure and adds them as dependencies in the DDG.
+
+The registration of cached object instances happens when the cached object is accessed for the first time as illustrated on figure~\ref{fig:instance-dependency-registration}. In this flow we start by looking up the given cached object in the IDG, but since it's the first time the object is accessed it does not exist. To generate the name of the cached objects we use the ordered direct dependencies from the DDG combined with the input from the request. We derive dependencies to underlying data from the input that represents entities and add dependencies between the given entities and the cached object through the IDG.
 
 \begin{figure*}[ht!]
   \centering
-  % \includegraphics[width=1.0\linewidth]{figures/dependency-registration-process}
-  \caption{The flow in which the cached objects are registered}
-  \label{fig:dependency-registration-process}
+  \includegraphics[width=1.0\linewidth]{figures/instance-dependency-registration.pdf}
+  \caption{The flow in which cached object instances are accessed when they are accessed the first time}
+  \label{fig:instance-dependency-registration}
 \end{figure*}
 
-% TODO: MAYBE MOVE THIS TO DATA STRUCTURES: These declarations are general for the given cached function and will not change until the programmer changes the source code and deploys a new version of the application. The declarations can therefore be considered static in the lifetime of the application
-
-% The specific instances of cached objects are not located and registered until they are requested by the client, which means registrations are dynamic through the lifetime of the application, and has to be distributed across the web servers to achieve a predictable cache hit rate.
-
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=1.0\linewidth]{figures/declaration-dependency-registration.pdf}
+  \caption{The flow in which lazy and direct dependencies are registered from the declarations}
+  \label{fig:declaration-dependency-registration}
+\end{figure*}
 
 \section{Invalidation Propagation}
 \label{sec:invalidation-propagation}
@@ -298,6 +230,11 @@ To trigger invalidations, Smache is notified by the database wrapper with inform
 %     - Hash table => Key-value stores in Redis
 %     - Data can be sharded to scale
 %     - What about transactions?
+
+%   - Static: only changes when new versions of the code base is deployed
+%   - Dynamic: changes after deployment - often initiated by changes to the
+%              underlying data
+%   - Static state is preferred since it it's easier to test and has not 'state'
 
 % section implementing-automatic-invalidation end
 

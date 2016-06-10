@@ -1,15 +1,6 @@
-function compile_latex {
-  pdflatex -shell-escape -halt-on-error -interaction nonstopmode thesis.tex
-}
+#!/usr/bin/env bash
+source ~/thesis/writing/bin/latexutils.sh
 
-function compile_with_notifications {
-  terminal-notifier -title 'Compiling your LaTeX' -message '🤓 🚀 '
-  compile_latex && bibtex thesis && compile_latex && compile_latex
-  local latexstatus=$?
-  if [ $latexstatus -eq 0 ]; then
-    terminal-notifier -execute "open ~/thesis/writing/thesis.pdf" -title '✅ Your PDF is ready!' -message 'Click here to see it 📄 '
-  else
-    terminal-notifier -title '‼️  Error on LaTeX compilation!' -message 'Your document was not compiled ‼️ 🙃 '
-  fi
-}
-compile_with_notifications
+show_compiling_notification
+compile_latex_silently && bibtex thesis > /dev/null && compile_latex_silently && compile_latex_silently
+output_latex_status

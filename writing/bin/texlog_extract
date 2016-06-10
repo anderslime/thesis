@@ -1,0 +1,386 @@
+#!/usr/bin/env ruby
+# encoding: utf-8
+require 'optparse'
+require 'tempfile'
+require 'fileutils'
+
+Version = '3.04'
+ MYNAME = 'texlog_extract'
+
+Help=
+<<'DOC'
+= texlog_extract - extract errors and warnings from TeX logs
+
+= Synopsis
+texlog_extract [options] [file[.log]]	
+
+Options:
+-h			Print short help and exit
+   --help		Show full documentation and exit
+-V,--version		Print version and exit
+-w,--web		Web colouring instead of ANSI
+-n,--nocolor		No colouring instead of ANSI
+-c,--config[=file]	Use |file| as config file, not |/home/wybo/.texlog_extract.conf|
+			No |file| given: do not read any config file
+
+= Description
+
+texlog_extract is a Ruby script that extracts a TeX log file, keeping
+track of the files in which errors and warnings occur and, for each
+file, reports warnings, the first error (if any), and the error‘s line
+number. The output comes on standard output in ASCII, ANSI-colored
+ASCII or HTML.
+
+
+If no input file is given, standard input is used, so these make also sense:
+    texlog_extract <file.log
+or
+    pdflatex file.tex </dev/null |texlog_extract
+In the latter case, it is not the log file that is analyzed, but the output
+of /pdflatex/.
+
+= Options
+
+-h	Prints the Synopsis section and exits.
+--help	Shows the full documentation and exits.
+-V,--version	
+	Prints script's version and exits.
+-n,--nocolor	
+	The output of texlog_extract will be coloured with ANSI sequences by
+	default: error messages are coloured red, warning magenta, file names
+	yellow. The |--nocolor| option suppresses this.
+-w,--web	
+	The |--web| option substitutes ANSI colouring codes with HTML codes.
+	This is useful if TeX is used in a web application.
+-c,--config[=file]	
+	By default, texlog_extract will, after processing the command line
+	arguments, read the configuration file |~/.texlog_extract.conf|, if that file
+	exists. The |--config| option, if used without an argument, prevents this.
+	If it /has/ an argument, that is considered an alternative file for such
+	input. For example:
+	
+	  texlog_extract --config=tle.cf main.log
+	
+	or, shorter:
+	
+          texlog_extract -ctle.cf main
+	
+	A useful example for the contents of such a file is:
+	  [warnings_to_skip]
+	    LaTeX Font Warning
+	    Package thumbpdf Warning
+	This skips any warnings in the log file if they contain one of the two
+	strings.
+
+= Author and copyright
+Author	Wybo Dekker
+Email	U{Wybo@dekkerdocumenten.nl}{wybo@dekkerdocumenten.nl}
+License	Released under the U{www.gnu.org/copyleft/gpl.html}{GNU General Public License}
+DOC
+
+class String
+   @@model = 1
+   @@pre  = {:err=>['','[31;1m','<b><font color="#aa0000">'],
+             :lin=>['','[34;1m','<b><font color="#00aa00">'],
+             :fil=>['','[33m',  '<b><font color="#0000aa">'],
+             :wrn=>['','[35;1m','<b><font color="#aaaa00">'],
+            }
+   @@post = ['','[0m','</font></b>']
+
+   def setmodel(i) @@model=i; end
+
+   def err; @@pre[:err][@@model]+self+@@post[@@model]; end
+   def lin; @@pre[:lin][@@model]+self+@@post[@@model]; end
+   def fil; @@pre[:fil][@@model]+self+@@post[@@model]; end
+   def wrn; @@pre[:wrn][@@model]+self+@@post[@@model]; end
+         
+   def skip(w)
+      w.each do |v|
+         return true if self =~ /#{v}/
+      end
+      return false
+   end
+end
+
+# - print a newline, if newline is true,
+# - print the message if not nil,
+# - then exit with the exitvalue
+def quit(mess=nil,exitvalue=0)
+   handle = exitvalue == 0 ? STDOUT : STDERR
+   handle.puts MYNAME+': '+(exitvalue > 0? mess.err : mess) if mess
+   exit(exitvalue)
+end
+
+def handle_options
+   ARGV.options do |opt|
+      opt.banner ="Usage: #{MYNAME} [options] file[.log]"
+
+      opt.on('-h'            ,	'print this help and exit') do
+         quit opt.help.gsub(/^.*—\n/,'')
+      end
+      opt.on(     '--help'   ,	'show full documentation and exit') do
+         quit Help
+      end
+      opt.on('-V','--version',	'print version and exit') do
+         quit Version
+      end
+      opt.on('-w','--web'    ,	'web colouring instead of ANSI') do
+         ''.setmodel(2)
+      end
+      opt.on('-n','--nocolor',	'no colouring instead of ANSI')	do
+         ''.setmodel(0)
+      end
+      opt.on('-c','--config[-file]',String,
+      				'use file as config file, not',"#{@cf}",
+      				'with no argument: don´t read any config file') do |v|
+         @cf = v||''
+      end
+      opt.on('-r','--rc','—') do
+         quit("-r and --rc options have been replaced with -c and --config, see documentation",1)
+      end
+      opt.on('-I','—') do
+         system("instscript --zip --pdf --markdown #{MYNAME}")
+         exit
+      end
+
+      opt.parse!
+   end or quit("Option parsing error")
+end
+
+# extract a TeX log file, showing the most probable error in red and
+# the error's line number in green.
+#
+# return with:
+# - file in which the error was found,
+# - the linenumber in that file, and
+# - a hash in which the keys are the names of the files containing errors.
+#   For each key, the value is an array with error and warning messages
+#   in the correxponding file.
+#
+def texlog_extract(file,warnings_to_skip=[])
+
+   # read all lines in array log, chomp the lines, and add an empty line
+   if File.exist?(file)
+      log = open(file).readlines.map { |x| x.chomp }.push("")
+   else
+      return nil,0,{""=>"No log file (#{file})"}
+   end
+
+   currentfile, linenum, maxlen, skipinispace, message =
+   [''],        0,       79,     false,        {'' => []}
+
+   if log[0] !~ /^This is [a-zA-Z]*TeX, Version/
+      return nil, 0, { file => "This is probably not a TeX log file".err }
+   elsif log[0] =~ /LuaTeX.*rev (\d+)/
+      if $1.to_i <= 5238
+         maxlen = 80 # luatex has a bug
+      else
+         quit("unknown version (#$1) of luatex; #{MYNAME} needs correction")
+      end
+   end
+
+   # undo linebreaks at 80-char lengths
+   log2 = []
+   while log.size > 0
+      log2.push('')
+      loop do
+         l = log.shift or break
+         # test for characters with invalid utf-8 codes
+         # and replace them so that texlog_extract can go on:
+         unless l.valid_encoding?
+            l.encode!("utf-8",:invalid=>:replace)
+            STDERR.puts("invalid encoding (#{MYNAME} expects utf-8) in ".wrn, l)
+         end
+         log2[-1] << l
+         break if l.size < maxlen
+         # If the line ends with (xyz and is exactly maxlen chars long, xyz may
+         # be a filename, or a part if a filename. If it's a full filename
+         # it must exist, if it's a partial filename it /may/ exist.
+         # So we first test if it exists and the concatenation with the next line does not.
+         # In that case it's a full name and we break:
+         l =~ /.*\((.*)/ && File.exist?($1) && !File.exist?($1+log[0]) and break
+      end
+   end
+
+   # pack-unpack get rid of invalid encodings that are generated by hyperref when
+   # it encounters non-ascii characters in its settings
+   log = log2.map { |x| x.unpack('C*').pack('U*') }
+   content = ''
+   nwrn = p = nerr = 0
+   while line = log.shift
+      if skipinispace && line =~ /^[[:space:]]/
+         next
+      else
+         skipinispace=false
+      end
+      case line
+      when /^\s*$/ then next
+      when /\(Font\)/ then next
+      when /^LaTeX Font Info/ then next
+      when /^File:/ then next
+      when /^(Class|Package|LaTeX|\* LaTeX) ([[:alpha:]]+ )?[wW]arning:\s+/
+         # some warnings are followed by explanation lines, starting
+         # either with whitespace or with the package name in
+         # parenthesis+at least 2 spaces:
+         w = line
+         w.skip(warnings_to_skip) && next
+         packagename = $2
+         continue = packagename ? true : false
+         while continue
+            l = log.shift
+            if l =~ /^(\(#{packagename.strip}\))?\s\s+/
+               w << l.sub(/.*?\s+/,' ') # maybe insert \n here?
+            else
+               continue = false
+               log.unshift(l)
+            end
+         end
+         nwrn += 1
+         message[currentfile[-1]||""].push(w.sub(/warning/i,'\&'.wrn))
+      when /^Overfull \\hbox/
+         line.skip(warnings_to_skip) && next
+         nwrn += 1
+         message[currentfile[-1]].push('Warning: '.wrn+line)
+      when /^Missing character:/
+         line.skip(warnings_to_skip) && next
+         nwrn += 1
+         message[currentfile[-1]].push('Warning: '.wrn+line)
+      when /^No pages of output/
+         nwrn += 1
+         message[currentfile[-1]].push('Warning: '.wrn+line)
+         next
+      when /Here is how much of [[:alpha:]]*TeX/
+         skipinispace = true
+         next
+      end
+
+      # keep track of the file we are in:
+      unless p > 0 # but only up to the first error
+         # remove 1: () and 2: things between ()
+         line.sub(/\(\)/,'').gsub(/\(\S+?\)/,'').scan(/\(\S+|\)/).each do |f|
+            if f == ')'
+               currentfile.pop unless currentfile.size == 1
+            else
+               f = f.slice(1..-1) # without the initial (
+               currentfile.push f
+               message[f] ||= []
+            end
+         end
+      end
+
+      # recent texi2dvi uses TeX-option --file-line-error, which
+      # replaces the ! with <filename>:<lineno>:
+      if line =~ /^!/ or line =~ /^#{currentfile[-1]}:/
+         nerr += 1
+         if linenum > 0 # this is the second error message
+            p = 20
+         else # first error's linenumber
+            p += 1
+            line = line.err
+         end
+      elsif line =~ /^l\.(\d+) (.*)/ && p > 0 # look for a line number only after an error
+         linenum = $1.to_i
+         content = $2
+         line = line.lin
+      end
+
+      if p > 0
+         message[currentfile[-1]].push(line)
+         p += 1
+         break if p > 20 # this must be enough to see what's wrong
+      end
+   end
+   if log.index('No pages of output.')
+      message[currentfile[-1]].push('No pages of output - is your text body empty?'.wrn)
+      nwrn += 1
+   end
+
+   if currentfile[-1] and currentfile[-1] != ''
+      errorfile = currentfile[-1]
+      message[currentfile[-1]].push('file'.err + ': ' + errorfile)
+      message[currentfile[-1]].push('line'.err + " #{linenum}: #{content}")
+   end
+
+   # check if there is a bibtex log (blg) file and add it if so:
+   blg = file.sub(/\.log$/,'.blg')
+   if File.exist?(blg)
+      m = "From the bibtex log file:\n".err # used only if there are errors
+      pr = false # start printing only after a Database line
+      bib = nil
+      open(blg).readlines.each do |bibline|
+         case bibline
+         when /^The style file:/
+            pr = true
+         when /Reallocated/
+            next
+         when /Database file.*: (.*)/
+            # if we saw already messages for the first .bib file, report only those
+            break if pr && bib && !message[bib].empty?
+            bib = $1
+            currentfile.push(bib)
+            message[bib] = []
+            next
+         when /^You've used/
+            break
+         else
+            if pr
+               errorfile = bib
+               message[currentfile[-1]].push(m+bibline.sub(/^Illegal/,'!\&'))
+               nerr += 1 unless m.empty?
+               m = ''
+            end
+         end
+      end
+   end
+   m = ''
+   m << ( "#{nerr} error" + (nerr > 1 ? 's' : '')).err if nerr > 0
+   m << (" #{nwrn} warning" + (nwrn > 1 ? 's' : '')).wrn if nwrn > 0
+   message[''] ||= []
+   message[''].push(m)
+   message.delete_if { |k,v| v == [] }
+   return errorfile, linenum, (nerr == 0 && nwrn == 0) ? [] : message
+end # texlog_extract
+
+@cf = File.join(ENV['HOME'],'.'+MYNAME)+'.conf'
+File.exist?(@cf) or @cf=''
+warnings_to_skip = []
+handle_options
+
+unless @cf.empty?
+   File.exist?(@cf) or quit("Specified configuration file #{@cfopt} does not exist",1)
+end
+
+if ARGV.size > 1
+   i = @cf.empty? ? "\n\t\tIf you used the -c option, concatenate it with its argument" : ''
+   quit("Found #{ARGV.size} arguments (#{ARGV.join(", ")}) instead of one#{i}",1)
+end
+
+if ARGV[0] 
+   file = ARGV[0].sub(/\.log$/,'')+'.log'
+   File.exist?(file)    or quit("file #{file} not found",1)
+   File.readable?(file) or quit("file #{file} not readable",1)
+else
+   STDERR.puts "(reading from stdin)" 
+   file = Tempfile.new("#{MYNAME}-").path
+   open(file,'w') { |f| f.puts STDIN.readlines }
+end
+
+if ! @cf.empty? && File.exist?(@cf)
+   array = 'warnings_to_skip'
+   open(@cf) do |f|
+      f.readlines.each do |v|
+         if v =~ /\s*\[\s*([[:alpha:]_]+)\s*\]/
+            array = $1
+         else
+            eval "#{array}.push(v.strip)"
+         end
+      end
+   end
+end
+
+errfile,lineno,messhash = texlog_extract(file,warnings_to_skip)
+printf("%d %s\n",lineno,errfile) unless STDOUT.isatty
+messhash.sort.reverse.each do |f, messages|
+   puts "Messages for file #{f}:".fil unless f.empty?
+   puts messages
+end

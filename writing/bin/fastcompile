@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-function compile_latex {
-  pdflatex -shell-escape thesis.tex
-}
-compile_latex && compile_latex
+source ~/thesis/writing/bin/latexutils.sh
+
+show_compiling_notification
+compile_latex_silently && compile_latex_silently
+output_latex_status
