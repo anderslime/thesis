@@ -1,0 +1,11 @@
+# TODOS
+
+- Tables:
+  - Include references to the paper suggesting the solution
+  - Remove unnecessary split lines (read Writing for Computer Science)
+- Figures:
+  - Ensure the figure is self-explanatory or include explaining caption
+  - Be consistent: ensure a given shape always has the same meaning + use the
+    same shape for the same content (e.g. same shape for data, stores etc.)
+- Code:
+  - Refer as listings (or source code) instead of figures

@@ -159,8 +159,8 @@ To be able to evaluate the techniques used in the automatic invalidation approac
   \label{fig:automatic-invalidation-flow}
 \end{figure*}
 
-\subsection{Triggering Cache Invalidation}
-\label{subsec:triggering-cache-invalidation}
+\subsubsection{Triggering Cache Invalidation}
+\label{subsubsec:triggering-cache-invalidation}
 
 When the client updates underlying data, the application receives a request from the client and sends a request to the primary storage to update the relevant data. To be able to react to this action, triggers have to be implemented during this flow. One technique used by~\cite{paper:cache-genie, paper:deploy-time} is to have the triggers in the application such that the application triggers invalidation when the changes from the client has been applied to the primary storage. The given techniques involves a database wrapper (in the form of an ORM) that implements callbacks invoked when it sends commands to the database. If the database wrapper is implemented using the adapter-pattern, it is possible to change the underlying database technology without changing the implementation of the caching system. This means it is easier to implement the caching system for multiple database technologies as well as change the technology for existing solutions.
 
@@ -175,10 +175,10 @@ In the techniques with in-application triggers, changes to the database around t
   \label{fig:invalidation-trigger-comparison}
 \end{figure*}
 
-% subsection triggering-cache-invalidation end
+% subsubsection triggering-cache-invalidation end
 
-\subsection{Dependency Management}
-\label{subsec:dependency-management}
+\subsubsection{Dependency Management}
+\label{subsubsec:dependency-management}
 
 After the invalidation has been triggered, the invalidation system needs to locate the cache objects that needs to be invalidated. This involves the task of identifying and declaring dependencies such that the triggers will invalidate the affected cache objects.
 
@@ -197,8 +197,7 @@ An overview of this discussion can be found in figure~\ref{fig:dependency-manage
   \label{fig:dependency-management-comparison}
 \end{figure*}
 
-
-% subsection dependency-management end
+% subsubsection dependency-management end
 
 % TODO: Mention the XML ones
 

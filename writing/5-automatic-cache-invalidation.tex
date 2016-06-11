@@ -103,7 +103,7 @@ The representation of the IDG is similar to the representation of lazy dependenc
 
 \begin{figure*}[ht!]
   \centering
-  \includegraphics[width=1.0\linewidth]{figures/idg-data-structure.pdf}
+  \includegraphics[width=0.6\linewidth]{figures/idg-data-structure.pdf}
   \caption{An illustration of the data structure representing the IDG on figure~\ref{fig:instance-dependence-graph}}
   \label{fig:idg-data-structure}
 \end{figure*}
@@ -133,7 +133,7 @@ The registration of cached object instances happens when the cached object is ac
 
 \begin{figure*}[ht!]
   \centering
-  \includegraphics[width=1.0\linewidth]{figures/instance-dependency-registration.pdf}
+  \includegraphics[width=0.8\linewidth]{figures/instance-dependency-registration.pdf}
   \caption{The flow in which cached object instances are accessed when they are accessed the first time}
   \label{fig:instance-dependency-registration}
 \end{figure*}
@@ -145,69 +145,66 @@ The registration of cached object instances happens when the cached object is ac
   \label{fig:declaration-dependency-registration}
 \end{figure*}
 
+\newpage
+
 \section{Invalidation Propagation}
 \label{sec:invalidation-propagation}
 
 The purpose of invalidation is to be able to evaluate the freshness of a given cached object and know which cached objects are stale and need to be updated. A cached object is considered stale when it's underlying data has been updated, which happens during the request from a client that involves updating, inserting or deleting data in the primary storage. To be able to react to these events, Smache subscribes to callbacks from the database wrapper. When the database transaction succeeds the database wrapper will notify Smache with the id and type~\footnote{Type is another word for the relation in a relational database and a collection in a document-oriented database} of the manipulated entity. This notification will trigger cache invalidation through Smache.
 
-The cache invalidation consists of three steps:
+Based on the type and id of the changed entity, Smache updates affected cached objects in two steps:
 
 \begin{enumerate}
-  \item Find keys for cached objects that contains the given entity as input
-  \item Find keys for cached objects that has a relation dependency to the given entity
+  \item Find keys for cached objects depending on the changed entity
   \item Invalidate both set of keys using timestamp invalidation
 \end{enumerate}
 
-To trigger invalidations, Smache is notified by the database wrapper with information about which entities are updated. More specifically Smache receives the id of the entity as well as the type of the entity~
+There are two sets of object names found from the direct dependencies lazy and dependencies. To find the cached objects that directly depends on the given entity we query the IDG data structure with \verb$lookup_cached_object(entity_id)$, which returns a list of names for cached objects affected by the given change. The other set of object names are found by evaluating lazy dependencies for the given entity type.
+The lazy dependency declarations are found by querying the DDG with \verb$lookup_lazy_dependency(entity_type)$. The lazy dependency is then evaluated using the declared procedure, which returns a new set of entities directly related to the given data source. We then query the IDG with \verb$lookup_cached_object(entity_id)$ with id's from the new set of relations, which returns lists of all cached objects that depends on the given entities. From these cached objects we filter all the keys such that we only include keys for cached objects related to the lazy dependency.
 
-
-
-% Algorithm:
-% - Receive notification about change with entity + type
-% - Find keys for cached objects that depend on the given entity:
-%   - Either directly through the input
-%   - Or through a relation dependency
-%     => relation-fun + cached-fun
-%     => relation-fun() -> entities
-%     => find keys for cached-funs that depends on given entities
-% - Invalidate all cached objects given by that key using timestamp invalidation
-
-%  - A request involving changing underlying data
-%    => We want to be able to invalidate cached values correctly
-%    => We want to do it efficiently (response time should not be affected by cache)
-%         - we want to invalidate as soon as possible
-%         - the user making changes to data should not wait for invalidation
-
-% TODO: Describe (and visualize) algorithm:
-% - what does it do?
-% - correctness?
-% - time complexity
-% - space complexity
-
-% TODO: Consider describing data structure before algorithm
-
-- Operations needed to be supported:
-  - When the data is fetched:
-    - Lookup cache to see if value is fresh
-    - (Computed and) Store cached value
-  - When underlying data changes:
-    - Find computed functions depending on the given entity instance
-      - Both:
-        - directly (through arguments)
-    - Set cached value as stale
-    - Update cached value
+We then invalidate both set of keys using timestamp invalidation as explained in the following section~\ref{subsec:timestamp-invalidation}.
 
 % Analyze the queries performed in the algorithm as prequel to the next chapter
 
-\subsection{Invalidation Timestamps}
-\label{subsec:invalidation-timestamps}
+\subsection{Timestamp Invalidation}
+\label{subsec:timestamp-invalidation}
 
-% TODO: Describe/Discuss how we use invalidation timestamps to avoid the concurrency bug
-% This solution is from the IBM
-% - Suggested solution to avoid the concurrency bug
-%    => Timestamps: primary reason is for the data update propagation, but it allows us to evaluate freshness
+To invalidate correctly the technique must comply with the liveness and safety property, which we define in the following terms:
 
-% subsection invalidation-timestamps end
+\begin{itemize}
+  \item \textbf{Liveness}: \emph{A stale object must eventually be invalidated}
+  \item \textbf{Safety}: \emph{The value representing a fresh object must be based on the newest version of the underlying data}
+\end{itemize}
+
+In trigger-based invalidation where the name of a cached object is considered static we need external information to evaluate whether a given cached object is fresh. In a naive invalidation technique, we can use a boolean value that indicates whether or not the cached value is fresh. When invalidation is triggered the value is set to \verb$false$ and when the cached object has been updated it would be set to \verb$true$. The problem here is that in an environment with multiple application servers, the technique would be prone to race conditions as illustrated on figure~\ref{fig:trigger-based-concurrency-problem}. Since the given cached object would be marked as fresh even though the value of the object in reality is stale, the cached object will not be invalidated until a new trigger is invoked and thereby contradict the liveness property.
+
+One solution to this problem is to lock the invalidation mechanism such that the invalidation indication cannot be changed during an update. By using a lock the technique achieves liveness, but it also means that when another process wants to invalidate, it has to wait until the lock has been released. If the waiting process is a web server serving a user, the user would have to wait for the computation to finish.
+
+To accommodate the liveness property and avoid user's having to wait for invalidation, we use a solution suggested in~\cite{paper:ibm-extended} that uses a form of logical timestamps to represent the version of a cached object. In this technique the cache system keeps track of the number of times a given cached object has been invalidated, which we denote $num\_of\_updates$. The number starts with $0$ and is incremented every time a cached object's underlying data changes.
+We also keep a value representing the timestamp in which the current value of a cached object is based on, which we denote we $last\_update\_timestamp$. When the cached object is recomputed, the $num\_of\_updates$ is fetched and set as the timestamp of the current computation denoted $current\_computation\_timestamp$. When the computation returns the new value for the cached object, we fetch the value for $num\_of\_updates$ again denoted $latest\_num\_of\_updates$. At this point we have two cases:
+
+\begin{enumerate}
+  \item If $latest\_num\_of\_updates \geq current\_computation\_timestamp$ then we do nothing since a computation based on newer data has already updated the cached object.
+  \item Else we update $last\_update\_timestamp$ to be equal to $current\_computation\_timestamp$ and update the value.
+\end{enumerate}
+
+% TODO: Add a proof here! Below is not a proof, just thoughts.
+% - We assume step 2 is atomic
+%   => The underlying data representing the cached object has a timestamp from the start of the computation
+% - If we start computation at t=3 after the computation we have two cases:
+% 1. last_update_timestamp is >= 3, because there have been an
+% update to underlying data as well as the value since the computation
+% was started. Since the given value was inserted with a timestamp larger than t
+% then it must be started later and is therefore newer.
+% 2. last_update_timestamp is < 3. Then we know that there has been a change
+% to underlying data after the value update that have triggered an increment
+% to num_of_updates, which is used for the given computation. The computation
+% that resulted in the current value was started when num_of_updates was < 3,
+% and we therefore know that the given computation was started later than that
+% one (todo: use references). When we reach step 2 and write the new value,
+% we therefore know that it is the latest.
+
+% subsection timestamp-invalidation end
 
 \subsection{Database Wrapper Triggers}
 \label{subsec:database-wrapper-triggers}
@@ -215,10 +212,14 @@ To trigger invalidations, Smache is notified by the database wrapper with inform
 % Trigger Invalidation Through Database Wrapper
 % - Discuss the different alternatives and say why we want that
 
+We've already discussed existing approaches in section~\ref{subsubsec:triggering-cache-invalidation} that compares the techniques on figure~\ref{fig:invalidation-trigger-comparison}. The triggers sent directly from the database or through a database sniffer have an advantage of capturing all changes made to the database - also those not sent through the application. The disadvantage of those techniques is that they are coupled to the database technology used. Instead of using a technique that depends on the exact database technology, Smache uses the database wrapper to trigger invalidations. The database wrapper makes it easier to change the implementation and thereby the database technology, which means the caching system becomes more flexible and easier to use in applications using different technologies. Furthermore since the triggers are intercepted through function callbacks in the web server process, the system doesn't need an external process to convert triggers from the database or sniffer into invalidations.
+
 % subsection database-wrapper-triggers end
 
 \section{Implementing Automatic Invalidation}
 \label{sec:implementing-automatic-invalidation}
+
+TODO: Write about how the automatic invalidation is implemented
 
 % TODO: Find a place for the implementation:
 % - Representation of the ODG

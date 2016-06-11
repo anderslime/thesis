@@ -1,6 +1,7 @@
 \begin{minted}[linenos]{python}
 @smache.relations(
-    (Participant, lambda participant: participant.courses)
+    (Participant, lambda participant: participant.courses),
+    (Grade, lambda grade: grade.assignment_course)
 )
 @smache.computed(Course)
 def course_score(course)
