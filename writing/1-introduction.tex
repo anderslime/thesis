@@ -7,7 +7,7 @@ Web applications are becoming more and more dynamic with more personalized conte
 
 The performance can often be optimized by profiling and analyzing the code behind the computation, but this often not the easiest solution and in some cases the complexity or amount of data used makes it difficult achieve a satisfactory performance. Caching is a popular solution for improving the performance and scalability in these cases since it allows for a simple, scalable and generic way of addressing bottlenecks in the web applications.
 
-Although it sounds like a silver bullet it also places a burden on the developer that must locate and update the cached values while preserving consistency guarantees. This challenge is for example seen in an outage of the whole Facebook system:
+Although it sounds like a silver bullet it also places a burden on the programmer that must locate and update the cached values while preserving consistency guarantees. This challenge is for example seen in an outage of the whole Facebook system:
 
 \begin{quote}
   The intent of the automated system is to check for configuration values that are invalid in the cache and replace them with updated values from the persistent store. This works well for a transient problem with the cache, but it doesn’t work when the persistent store is invalid.
@@ -27,23 +27,21 @@ Most of the existing caching solutions are based on a pull based caching strateg
 
 The pull based caching strategy has the advantage that we only have to cache content that is being used, but it also means that the first time a client asks for the value, it has to wait for the computation to finish. This is not optimal with relation to user experience since the user has to wait in order to be presented with the requested content. To solve this problem we have to precompute the cached values such that the user is presented with content as soon as it is requested.
 
-Besides the performance problem on the initial request, existing caching solutions leaves responsibility for the developers to maintain the cache in order ensure consistency and an appropriate level of freshness.
+Besides the performance problem on the initial request, existing caching solutions leaves responsibility for the programmers to maintain the cache in order ensure consistency and an appropriate level of freshness.
 
 These problems with existing caching solutions, presents two major challenges:
 
 \textbf{Cache Management}
 
-The first challenge of cache management is faced in any caching system. The developer has to manage the caching system by assigning identifiers to the cached value and keeping it up to date such that the user is not presented with unexpected content.
+The first challenge related to cache management is faced in any caching system, where the programmer has to manage the caching system by naming the cached value and keeping them up to date such that the users are not presented with unexpected content.
 
-One particular challenge within cache management is \emph{cache invalidation} since it require the developer to identify every underlying data that affects the given cached value. The developer then has to declare a way for the cached value to be invalidated when any of the underlying data changes. This analysis is difficult since it require global reasoning about how the underlying data changes in the web application and which computations are cached. Furthermore if the computation behind the cached value is altered to depend on new underlying data, the cache invalidation also has to change, making the cache prone to errors if the latter is forgotten.
+One particular challenge within cache management is \emph{cache invalidation} that relies on the programmer correctly identifying every underlying data that affects the given cached value. The programmer then has to declare a way for the cached value to be invalidated when any of the underlying data changes. This analysis is difficult since it require global reasoning about how the underlying data changes in the web application and which computations are cached. Furthermore if the computation behind the cached value is altered to depend on new underlying data, the cache invalidation also has to change, making the cache prone to errors if the latter is forgotten.
 
 We discuss this more in chapter~\ref{chapter:caching} and~\ref{chapter:invalidation}.
 
 \textbf{Data Update Propagation}
 
-The second challenge is related to the task of efficiently keeping the cached values up to date and ensure the consistency between the cache and the storage system. At first, if we need to support the web application to be scalable, we need multiple web application processes. This means we run the cache updates in parallel and we therefore need to prevent concurrency bugs and ensure liveness and correctness of the solution.
-
-This challenge will be covered in chapter~\ref{chapter:data-update-propagation}.
+The second challenge is related to the task of efficiently keeping the cached values fresh while ensuring the consistency between the cache and the storage system. This challenge will be addressed in chapter~\ref{chapter:data-update-propagation}.
 
 % section problem end
 
@@ -52,7 +50,7 @@ This challenge will be covered in chapter~\ref{chapter:data-update-propagation}.
 
 The final solution addressing the problems described, will be designed with the following non-functional requirements:
 
-\textbf{Software design:} Must be designed to be maintainable such that the developer that uses the caching system understands how it works from using it and has the ability to extend it. The design of the system should also be flexible to support multiple storage systems and caches.
+\textbf{Software design:} Must be designed to be maintainable such that the programmer that uses the caching system understands how it works from using it and has the ability to extend it. The design of the system should also be flexible to support multiple storage systems and caches.
 
 \textbf{Adaptability:} Should be convenient and easy to adapt into existing systems. Furthermore the usage of the system should be easy to understand.
 

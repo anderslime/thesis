@@ -132,7 +132,7 @@ In cases where we choose immediate response time and we can tolerate serving cac
 
 %%%% CACHE MANAGEMENT
 
-So far we've considered parameters from a user's perspective, but to evaluate the caching technique fully we also need to see it from the perspective of the developer since a big part of cache management is manually tracking dependencies between the cached content and the underlying data. We want the caching system to be transparent such that it is easy to add and remove caching from existing computations. Additionally we want the caching system to be robust such that when new code involving a cached computation is added, it should behave as expected without introducing errors. We cannot measure the level of robustness so we will therefore introduce the binary criteria: does the caching technique involve maintenance with relation to invalidation (shortened as invalidation maintenance)?
+So far we've considered parameters from a user's perspective, but to evaluate the caching technique fully we also need to see it from the perspective of the programmer since a big part of cache management is manually tracking dependencies between the cached content and the underlying data. We want the caching system to be transparent such that it is easy to add and remove caching from existing computations. Additionally we want the caching system to be robust such that when new code involving a cached computation is added, it should behave as expected without introducing errors. We cannot measure the level of robustness so we will therefore introduce the binary criteria: does the caching technique involve maintenance with relation to invalidation (shortened as invalidation maintenance)?
 
 %%%% ADAPTABILITY
 
@@ -153,7 +153,7 @@ From this discussion, we can sum up the evaluation parameters as follows:
   \item \textbf{Strict Freshness}: The cached object must be as fresh as the state of the primary store when the value was requested
   \item \textbf{Automatic Update}: The cached object is automatically updated after it has been invalidated
   \item \textbf{Always Immediate Response}: The cached object must be served immediately after it has been requested
-  \item \textbf{Invalidation Management}: Whether the developer has the responsibility of maintaining the invalidation of the cached objects
+  \item \textbf{Invalidation Management}: Whether the programmer has the responsibility of maintaining the invalidation of the cached objects
   \item \textbf{Adaptability}: How adaptable the caching technique is to existing systems
 \end{itemize}
 

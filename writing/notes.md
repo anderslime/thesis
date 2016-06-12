@@ -57,7 +57,7 @@
 - Cachable functions
   - Analysis (requirements => our solution)
     - of the requirements
-      - How do we get easy invalidations for the developer?
+      - How do we get easy invalidations for the programmer?
         - Automatic cache invalidation
         - Easy declarions/integration
       - How do we ensure correctness?

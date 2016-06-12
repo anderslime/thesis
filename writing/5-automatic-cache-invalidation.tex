@@ -221,6 +221,12 @@ We've already discussed existing approaches in section~\ref{subsubsec:triggering
 
 TODO: Write about how the automatic invalidation is implemented
 
+% Architecture
+% - How do we represent timestamp invalidation?
+%   => As part of the cached value
+%   => Easy to shard the cache database (and allow to scale horizontally)
+
+
 % TODO: Find a place for the implementation:
 % - Representation of the ODG
 %   - Cache managers are a single point of failure as well as a bottleneck
@@ -231,11 +237,6 @@ TODO: Write about how the automatic invalidation is implemented
 %     - Hash table => Key-value stores in Redis
 %     - Data can be sharded to scale
 %     - What about transactions?
-
-%   - Static: only changes when new versions of the code base is deployed
-%   - Dynamic: changes after deployment - often initiated by changes to the
-%              underlying data
-%   - Static state is preferred since it it's easier to test and has not 'state'
 
 % section implementing-automatic-invalidation end
 
