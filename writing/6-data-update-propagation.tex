@@ -5,27 +5,35 @@ Until now we've explained how to build a caching system that is able to cache th
 In this chapter we will extend the current solution with in-place updates using a data update propagation algorithm that schedules updates for invalidated cache objects addressing the second challenge of the problem description~\ref{sec:problem}.
 
 % Content in this chapter:
+% - Existing approaches
 % - Analysis of the concurrency problem
 % - Efficient schedueling of updates
-%   - Look for similar solutions in research!
-%     => "DBProxy: A dynamic data cache for Web applications"
-%     => "Scalable application-aware data freshening"
-%     => ?
-%   - Avoid unnecessary updates
-%     => Prune duplicate jobs? (spoiler: NOT)
-%     => Do not compute fresh values (YES!)
-%   - IBM:
-%     => Schedule in topological order + parallelize sub-graphs
-%   - Others:
-%     => "Update Propagation Strategies for Improving the Quality of Data on the Web "
-%   - Our solution:
-%     => Using timestamp invalidation for concurrency control also for in-place updates
-%     => Always compute newest value (do not use stale value of sub-computes)
-%     => We get: retries, parallel computations, simple scheduling
-%   - Maybe measure QoD?
+% - The implementation
 
-\subsection{Consistent Concurrent Write-Through}
-\label{subsec:consistent_concurrent_write_through}
+
+\section{Existing Data Update Propagation Approaches}
+\label{sec:existing-data-update-propagation-approaches}
+
+% Describe the basics of data update propagation:
+%  - Invalidations => DUP (as in write-through)
+
+% Look for similar solutions in research!
+% => "DBProxy: A dynamic data cache for Web applications"
+% => "Scalable application-aware data freshening"
+% => ?
+
+% - Existing solutions use fancy scheduling algorithm, because they assume that
+%   when a cached computation calls another cached computation it uses the stale
+%   value.
+% - That is we have dependencies between updates such that the result of the
+%   child computation have to be computed first.
+%   => Makes it hard to parallelize
+%   => Refer to the thing that IBM does
+
+% section existing-data-update-propagation-approaches end
+
+\section{Race Condition on Write-Through Invalidation}
+\label{sec:race-condition-on-write-through-invalidation}
 
 % TODO: Write this as a problem that is ignored in many existing caching solutions or maybe just traded off for simplicity. Describe how key-based invalidation ensures this and how all other could have this problem solved.
 
@@ -40,6 +48,43 @@ At first we would like the caching to be correct. In the case of caching, we wil
 
 % TODO: Analysis and argue why some of the solutions leads to inconsistent cached values and breaks the safety requirement.
 
-% subsection consistent_concurrent_write_through end
+% section race-condition-on-write-through-invalidation end
+
+\section{The Data Update Propagation Algorithm}
+\label{sec:the-data-update-propagation-algorithm}
+
+% Our approach:
+% - Use invalidation timestamps (as described before!)
+% - We can then paralellize
+
+% Advantages:
+% - We remove this assumption by using timestamp invalidation and always
+%   recompute values for sub-computations when they are not fresh.
+% - That is: Ensure that a given computation executed at time $t1$ always compute values
+%   based on the state of underlying data at time $t1$.
+% - This way we still have the possibility of optimizing the write-through by
+%   scheduling, but we also have a simple scheduling algorithm that is easy to
+%   parallelize and require no advanced algorithm.
+
+%   - Avoid unnecessary updates
+%     => Prune duplicate jobs? (spoiler: NOT)
+%     => Do not compute fresh values (YES!)
+%   - IBM:
+%     => Schedule in topological order + parallelize sub-graphs
+%   - Others:
+%     => "Update Propagation Strategies for Improving the Quality of Data on the Web "
+%   - Our solution:
+%     => Using timestamp invalidation for concurrency control also for in-place updates
+%     => Always compute newest value (do not use stale value of sub-computes)
+%     => We get: retries, parallel computations, simple scheduling
+%   - Maybe measure QoD?
+
+% section the-data-update-propagation-algorithm end
+
+\section{Implementing the Data Updata Propagation Algorithm}
+\label{sec:implementing-the-data-updata-propagation-algorithm}
+
+% section implementing-the-data-updata-propagation-algorithm end
+
 
 % section updating_the_cache end

@@ -49,10 +49,6 @@ The goal of this thesis is to present a caching approach that solves the problem
 
 Smache uses the same programming model as the one described by Dan Ports~\cite{paper:liskov}. The model is organized around \emph{cachable functions}, which essentially are normal functions, where the result are \emph{memoized}\footnote{In our case: storing the result of the function and return the cached value when the function is called again with the same input}. The cachable functions are allowed to make request to the primary storage to fetch the underlying data for the function as well as calling other cached functions. This allows caching at different granularities that gives the benefit of optimizing the invalidation for different types of content.
 
-%   - Application-layer definition
-%   - Automatic Cache Invalidation (with listener)
-%   - Data Update Propagation (with worker)
-
 % - Definition of cachable function (taken from Dan Ports)
 
 \subsection{Restricted to Pure Functions}
@@ -83,7 +79,6 @@ The details on how this is achieved is specific to the implementation, but as an
 
 % subsection cache-object-localization end
 
-
 % TODO: Write something about the key-generation
 
 % TODO: Consider having these extensions in this section (or maybe next)
@@ -104,7 +99,7 @@ Smache does not remove the burden of cache management, but it will handle naming
 \subsection{Data Update Propagation}
 \label{subsec:model_data_update_propagation}
 
-Smache also offers the possibility to perform in-place updates using a data update propagation system inspired by the solution IBM used to achieve a 100\% cache hit rate on the content management system for the Olympic Games in 2000(TODO: Include references).
+Smache also offers the possibility to perform in-place updates using a data update propagation system inspired by the solution IBM used to achieve a 100\% cache hit rate on the content management system for the Olympic Games in 2000~\cite{paper:ibm, paper:ibm-extended}.
 
 Having in-place updates allows the developer to have immediate response times while ensuring that the values returned are updated as soon as they are invalidation such that the value is not more stale than the time taken to compute it. This will be explained more in chapter~\ref{chapter:data-update-propagation}.
 

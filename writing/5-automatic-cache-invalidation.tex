@@ -188,7 +188,7 @@ We also keep a value representing the timestamp in which the current value of a 
   \item Else we update $last\_update\_timestamp$ to be equal to $current\_computation\_timestamp$ and update the value.
 \end{enumerate}
 
-% TODO: Add a proof here! Below is not a proof, just thoughts.
+TODO: Add a proof here that it has safety and liveness
 % - We assume step 2 is atomic
 %   => The underlying data representing the cached object has a timestamp from the start of the computation
 % - If we start computation at t=3 after the computation we have two cases:
@@ -241,6 +241,14 @@ TODO: Write about how the automatic invalidation is implemented
 
 \section{Discussion}
 \label{sec:invalidation-discussion}
+
+TODO: Discuss the following:
+
+\begin{itemize}
+  \item How automatic invalidation meets the requirements
+  \item Discuss how deriving dependencies instead of tracking would affect the solution (maybe do this in the same section as describing dependency tracking)
+  \item
+\end{itemize}
 
 % section discussion end
 
