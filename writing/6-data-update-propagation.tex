@@ -26,7 +26,7 @@ TODOS:
 \label{sec:race-condition-on-write-through-invalidation}
 
 When the name of the cached objects are the same as in trigger-based invalidation, the cached object becomes a shared resources that have to be accessed and updated from multiple web servers. This means we have to consider the concurrency challenges related to this concurrent environment to avoid avoid race conditions( while ensuring liveness of the system).
-As illustrated on figure~\ref{fig:incorrect-update-analysis} a race condition can occur when there are processes updating the same cached objects at the same time. In this case a race condition affects the correctness of the system such that a given cached object is marked as fresh even though it's value is stale.
+As illustrated on figure~\ref{fig:incorrect-updates-analysis} a race condition can occur when there are processes updating the same cached objects at the same time. In this case a race condition affects the correctness of the system such that a given cached object is marked as fresh even though it's value is stale.
 
 \begin{figure*}[ht!]
   \centering
