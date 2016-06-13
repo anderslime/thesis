@@ -12,7 +12,7 @@ This chapter describes how the suggested system uses the declared dependencies t
 \section{Simple Object Dependence Graph}
 \label{sec:simple-object-dependence-graph}
 
-The Object Dependence Graph (ODG) was first described in a series of papers by IBM~\cite{paper:ibm, paper:ibm-extended} and was build to support the content management system build for the Olympic Games in 2000. The final content served to the user is build from HTML-fragments and HTML-pages editable by the users as well as underlying data periodically changing. To be able to serve the final documents fast, the system pre-generates the HTML pages such that the system doesn't have to generate the pages on each request. To do this efficiently, the system maintains dependencies between the different kinds of objects and updates depending objects when underlying data changes. The pre-generation can also be described in terms of caching, where the system uses an in-place caching approach.
+The Object Dependence Graph (ODG) was first described in a series of papers by IBM~\cite{paper:ibm, paper:ibm-extended} and was build to support the content management system build for the Olympic Games in 2000. The final content served to the user is build from HTML-fragments and HTML-pages editable by the users as well as underlying data periodically changing. To be able to serve the final documents fast, the system pre-generates the HTML pages such that the system doesn't have to generate the pages on each request. To do this efficiently, the system maintains dependencies between the different kinds of objects and updates depending objects when underlying data changes. The cache object pre-generation can also be described in terms of caching, where the system uses an in-place caching approach.
 
 Jim Challenger et.al.~\cite{paper:ibm-extended} presents a simple and a generalized version of the ODG. The generalized version is described for a content management system and includes a number of enhancements compared to the simple model that is unnecessary for the purpose of this thesis. We will therefore use the simple ODG that is described as following:
 
@@ -222,10 +222,16 @@ We've already discussed existing approaches in section~\ref{subsubsec:triggering
 TODO: Write about how the automatic invalidation is implemented
 
 % Architecture
-% - How do we represent timestamp invalidation?
+% - Discussions:
+%   - How do we represent timestamp invalidation?
 %   => As part of the cached value
 %   => Easy to shard the cache database (and allow to scale horizontally)
-
+% - Architecture:
+%   - Describe as extension of the one described for basic caching
+%   - Additions:
+%     - IDG (as part of cache? or externally?)
+%     - DDG (in application memory)
+%     - Timestamps as part of cache?
 
 % TODO: Find a place for the implementation:
 % - Representation of the ODG

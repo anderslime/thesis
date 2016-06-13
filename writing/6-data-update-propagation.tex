@@ -2,32 +2,23 @@
 \label{chapter:data-update-propagation}
 
 Until now we've explained how to build a caching system that is able to cache the result of functions, where the result is invalidated automatically when its underlying data changes. This solution makes it easier to manage cache invalidation and locate cached values, but after a result has been invalidated the user has to wait for the value to be recomputed, which can be critical for the user experience in cases where the computation time is too long.
-In this chapter we will extend the current solution with in-place updates using a data update propagation algorithm that schedules updates for invalidated cache objects addressing the second challenge of the problem description~\ref{sec:problem}.
-
-% Content in this chapter:
-% - Existing approaches
-% - Analysis of the concurrency problem
-% - Efficient schedueling of updates
-% - The implementation
+In this chapter we will extend the current solution with in-place updates using a data update propagation (DUP) algorithm that schedules updates for invalidated cache objects addressing the second challenge of the problem description~\ref{sec:problem}. We will start by covering existing approaches (section~\ref{sec:existing-data-update-propagation-approaches}) followed by an analysis of the problems involved with concurrent in-place updates (section~\ref{sec:race-condition-on-write-through-invalidation}). Based on the knowledge from these sections we will describe the design (section~\ref{sec:the-data-update-propagation-algorithm}) and implementation (section~\ref{sec:implementing-the-data-updata-propagation-algorithm}) used in Smache.
 
 \section{Existing Data Update Propagation Approaches}
 \label{sec:existing-data-update-propagation-approaches}
 
-% Describe the basics of data update propagation:
-%  - Invalidations => DUP (as in write-through)
+In the approach suggested by Jim Challenger et.al.~\cite{paper:ibm, paper:ibm-extended, paper:ibm-publishing-system}, the DUP algorithm is based on invalidation from the Object Dependence Graph described in section~\ref{sec:simple-object-dependence-graph}. When underlying data changes all depending cached objects are scheduled for update, but since some of the cached objects depends on other cached objects they cannot be computed in any order. If a cached object $o_2$ that depends on another cached object $o_1$ where updated first then it would be based on an old version of $o_1$, which means it would still be stale and the algorithm would not have liveness. To solve this problem the approach updates all cached objects in a topological order, which ensures that $o_2$ is ordered after $o_1$ since it depends on $o_1$. One limitations of this technique is that it only works if the object dependence graph has no cycles i.e. it is an \emph{Directed Asyclic Graph}. Another limitation is that when there is an order of the jobs then they must be synchronized when executed in parallel.
 
+TODOS:
+
+- Write about Labrinidis's strategy \\
+- Write about DBProxy
+
+% A. Labrinidis and N. Roussopoulos~\cite{paper:update-propagation-strategies}
 % Look for similar solutions in research!
 % => "DBProxy: A dynamic data cache for Web applications"
-% => "Scalable application-aware data freshening"
+% => "Update Propagation Strategies for improving the quality of the web"
 % => ?
-
-% - Existing solutions use fancy scheduling algorithm, because they assume that
-%   when a cached computation calls another cached computation it uses the stale
-%   value.
-% - That is we have dependencies between updates such that the result of the
-%   child computation have to be computed first.
-%   => Makes it hard to parallelize
-%   => Refer to the thing that IBM does
 
 % section existing-data-update-propagation-approaches end
 
@@ -36,7 +27,8 @@ In this chapter we will extend the current solution with in-place updates using 
 
 % TODO: Write this as a problem that is ignored in many existing caching solutions or maybe just traded off for simplicity. Describe how key-based invalidation ensures this and how all other could have this problem solved.
 
-At first we would like the caching to be correct. In the case of caching, we will define correctness in terms of liveness and safety: the caching system will update the cache when necessary and it will eventually return the most fresh value computed. That is if we have a computation $f$ that computes the value $v_1$ at time $t_1$ and $v_2$ at time $t_2$ then the cache store will eventually contain $v_2$ given that $t_2 > t_1$. Although this could be seen as a prerequisite for the caching system, most implementations ignore this fact to achieve a simpler cache system. Because when we want to keep the integrity between updates we need some kind of ordering for the updates that adds complexity to the system. The problem is also illustrated on figure~\ref{fig:incorrect-updates-analysis}.
+When the name of the cached objects are the same as in trigger-based invalidation, the cached object becomes a shared resources that have to be accessed and updated from multiple web servers. This means we have to consider the concurrency challenges related to this concurrent environment to avoid avoid race conditions( while ensuring liveness of the system).
+As illustrated on figure~\ref{fig:incorrect-update-analysis} a race condition can occur since there are multiple web servers that are able to update the cached objects at the same time. In this case a race condition affects the correctness of the system such that a given cached object is marked as fresh even though it's value is stale.
 
 \begin{figure*}[ht!]
   \centering
@@ -44,8 +36,6 @@ At first we would like the caching to be correct. In the case of caching, we wil
   \caption{Showing how two concurrent caching updates from two different application servers results in an inconsistent state. We see that even though the request from \emph{Web 2} are based on data older than \emph{Web 1} it gets to write }
   \label{fig:incorrect-updates-analysis}
 \end{figure*}
-
-% TODO: Analysis and argue why some of the solutions leads to inconsistent cached values and breaks the safety requirement.
 
 % section race-condition-on-write-through-invalidation end
 
