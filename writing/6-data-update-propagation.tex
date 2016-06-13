@@ -25,15 +25,13 @@ TODOS:
 \section{Race Condition on Write-Through Invalidation}
 \label{sec:race-condition-on-write-through-invalidation}
 
-% TODO: Write this as a problem that is ignored in many existing caching solutions or maybe just traded off for simplicity. Describe how key-based invalidation ensures this and how all other could have this problem solved.
-
 When the name of the cached objects are the same as in trigger-based invalidation, the cached object becomes a shared resources that have to be accessed and updated from multiple web servers. This means we have to consider the concurrency challenges related to this concurrent environment to avoid avoid race conditions( while ensuring liveness of the system).
-As illustrated on figure~\ref{fig:incorrect-update-analysis} a race condition can occur since there are multiple web servers that are able to update the cached objects at the same time. In this case a race condition affects the correctness of the system such that a given cached object is marked as fresh even though it's value is stale.
+As illustrated on figure~\ref{fig:incorrect-update-analysis} a race condition can occur when there are processes updating the same cached objects at the same time. In this case a race condition affects the correctness of the system such that a given cached object is marked as fresh even though it's value is stale.
 
 \begin{figure*}[ht!]
   \centering
   \includegraphics[width=1.0\linewidth]{figures/incorrect-update-analysis.pdf}
-  \caption{Showing how two concurrent caching updates from two different application servers results in an inconsistent state. We see that even though the request from \emph{Web 2} are based on data older than \emph{Web 1} it gets to write }
+  \caption{Showing how two concurrent caching updates from two different application servers results in an inconsistent state. We see that even though the request from \emph{Update Process 2} are based on data older than \emph{Update Process 1} it gets to write }
   \label{fig:incorrect-updates-analysis}
 \end{figure*}
 
@@ -41,6 +39,23 @@ As illustrated on figure~\ref{fig:incorrect-update-analysis} a race condition ca
 
 \section{The Data Update Propagation Algorithm}
 \label{sec:the-data-update-propagation-algorithm}
+
+% TODO: Consider this a chapter for itself
+The existing solution described in section~\ref{sec:existing-data-update-propagation-approaches} assumes that a given cached computation is only accessed by one process at the same time. This has the advantage that they avoid race conditions, but it also means that the scheduling have to synchronize parallel execution to avoid updating the same object. The optimizations are then achieved using scheduling algorithms that evaluates the update jobs and prioritize them based on some metric such as the freshness or computation time. By having this assumption and enforce an order of execution some jobs have to wait to be executed. The only way to optimize the execution of these jobs is to acquire faster CPU's, which is expensive compared to buying more CPU's.
+
+Instead of using advanced scheduling algorithms to achieve a high throughput we suggest a solution that allows concurrent updates of the same cached object. By allowing this we can scale our update execution by buying more CPU's and thereby be able to execute more jobs at the same time.
+
+To allow concurrent updates we use Timestamp Invalidation as already explained in section~\ref{subsec:timestamp-invalidation}. Timestamp Invalidation ensures that a given computation does not overwrite the value of a cached object if the computation is based on a newer version of underlying data. Figure~\ref{fig:incorrect-update-analysis-timestamp-fix}
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=1.0\linewidth]{figures/incorrect-update-analysis-timestamp-fix.pdf}
+  \caption{How Invalidation Timestamps fixes the concurrency problem described in figure~\ref{fig:incorrect-updates-analysis}.}
+  \label{fig:incorrect-update-analysis-timestamp-fix}
+\end{figure*}
+
+Since invalidation timestamps ensures the integrity of the cached objects we are allowed to scale horizontally and thereby execute as many jobs at once as there are update processes available. Furthermore since timestamp invalidation makes it possible to evaluate if a cached object is fresh, we can avoid computation of duplicates by only execute computations for stale cached objects. We could also optimize it even further by avoid scheduling recomputations for cached objects that are already scheduled, but this would require an atomic procedure to check if there already exists a similar job and only schedule the new job if there are none.
+
 
 % Our approach:
 % - Use invalidation timestamps (as described before!)
@@ -73,7 +88,14 @@ As illustrated on figure~\ref{fig:incorrect-update-analysis} a race condition ca
 \section{Implementing the Data Updata Propagation Algorithm}
 \label{sec:implementing-the-data-updata-propagation-algorithm}
 
-% section implementing-the-data-updata-propagation-algorithm end
+TODO: Write about how the data update propagation is implemented
 
+\begin{itemize}
+  \item Using queues (i.e. the producer/consumer model) as the scheduling mechanism (add job to queue to schedule update). Workers are then polling from the queue and executing.
+  \item How the timestamp mechanism works (if it has not already been shown in the chapter on automatic invalidation)
+  \item The architecture of the solution
+\end{itemize}
+
+% section implementing-the-data-updata-propagation-algorithm end
 
 % section updating_the_cache end
