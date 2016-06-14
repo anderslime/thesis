@@ -125,15 +125,13 @@ The DDG uses the same amount of time and space as the DDG described in section~\
 \section{Dependency Registration}
 \label{sec:dependency-registration}
 
-% TODO: Consider another title name
-
 For the application to know what and when to invalidate, the application must register the dependency declarations and name of cached functions instances. The dependency declarations that defines the lazy and direct dependencies are part of the source code and therefore available when the application is started as illustrated on figure~\ref{fig:declaration-dependency-registration}. This registration flow simply collects all the cached functions registered through the cachable function procedure and adds them as dependencies in the DDG.
 
 The registration of cached object instances happens when the cached object is accessed for the first time as illustrated on figure~\ref{fig:instance-dependency-registration}. In this flow we start by looking up the given cached object in the IDG, but since it's the first time the object is accessed it does not exist. To generate the name of the cached objects we use the ordered direct dependencies from the DDG combined with the input from the request. We derive dependencies to underlying data from the input that represents entities and add dependencies between the given entities and the cached object through the IDG.
 
 \begin{figure*}[ht!]
   \centering
-  \includegraphics[width=0.8\linewidth]{figures/instance-dependency-registration.pdf}
+  \includegraphics[width=1.0\linewidth]{figures/instance-dependency-registration.pdf}
   \caption{The flow in which cached object instances are accessed when they are accessed the first time}
   \label{fig:instance-dependency-registration}
 \end{figure*}
@@ -161,8 +159,7 @@ Based on the type and id of the changed entity, Smache updates affected cached o
 
 There are two sets of object names found from the direct dependencies lazy and dependencies. To find the cached objects that directly depends on the given entity we query the IDG data structure with \verb$lookup_cached_object(entity_id)$, which returns a list of names for cached objects affected by the given change. The other set of object names are found by evaluating lazy dependencies for the given entity type.
 The lazy dependency declarations are found by querying the DDG with \verb$lookup_lazy_dependency(entity_type)$. The lazy dependency is then evaluated using the declared procedure, which returns a new set of entities directly related to the given data source. We then query the IDG with \verb$lookup_cached_object(entity_id)$ with id's from the new set of relations, which returns lists of all cached objects that depends on the given entities. From these cached objects we filter all the keys such that we only include keys for cached objects related to the lazy dependency.
-
-We then invalidate both set of keys using timestamp invalidation as explained in the following section~\ref{subsec:timestamp-invalidation}.
+At last we invalidate both set of keys using timestamp invalidation as explained in the following section~\ref{subsec:timestamp-invalidation}.
 
 % Analyze the queries performed in the algorithm as prequel to the next chapter
 
@@ -221,18 +218,37 @@ We've already discussed existing approaches in section~\ref{subsubsec:triggering
 
 TODO: Write about how the automatic invalidation is implemented
 
-% Architecture
+\subsection{Update Transactions}
+\label{subsec:update-transactions}
+
+% - The representation of a cached object
+%   => This is where we explain how we do timestamp invalidation
+%   => Important feature: possible to do transaction between timestamp and value
+%   => Solution: represent cached object as value + update_num + last_update_timestamp
+%   => Else if possible to do transactions across keys
+%   => Request same as in cachable functions, where the freshness is evaluated as with timestamp invalidation
+
+% subsection update-transactions end
+
+\subsection{Asynchronous Invalidation}
+\label{subsec:asynchronous-invalidation}
+
+% - Asynchronous Invalidation
+% - Architecture
+%   - Timestamp Invalidation as part integrated part of the cache
+%     => Easy to shard the database
 % - Discussions:
 %   - How do we represent timestamp invalidation?
 %   => As part of the cached value
 %   => Easy to shard the cache database (and allow to scale horizontally)
+
+% Architecture
 % - Architecture:
 %   - Describe as extension of the one described for basic caching
 %   - Additions:
 %     - IDG (as part of cache? or externally?)
 %     - DDG (in application memory)
 %     - Timestamps as part of cache?
-
 % TODO: Find a place for the implementation:
 % - Representation of the ODG
 %   - Cache managers are a single point of failure as well as a bottleneck
@@ -243,6 +259,8 @@ TODO: Write about how the automatic invalidation is implemented
 %     - Hash table => Key-value stores in Redis
 %     - Data can be sharded to scale
 %     - What about transactions?
+
+% subsection asynchronous-invalidation end
 
 % section implementing-automatic-invalidation end
 
