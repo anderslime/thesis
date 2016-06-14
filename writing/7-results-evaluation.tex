@@ -11,17 +11,37 @@
 
 Possible tests (choose the ones that makes sense):
 
+\subsection{Performance}
+\label{subsec:performance}
+
 \begin{itemize}
   \item Prove that update requests are not made slower (because they are async)
-  \item Test that functions are not tested when they are already fresh
   \item Test performance when a given computation uses a lot of cached results (can we do multi-fetch here?)
-  \item Test how often cached functions are executed unnecessarily
   \item Test how long it takes to warm up cache
+\end{itemize}
+
+% subsection performance end
+
+\subsection{Space}
+\label{subsec:space}
+
+\begin{itemize}
   \item Test memory consumption of cache database when using Peergrade.io
+\end{itemize}
+
+% subsection space end
+
+\section{Update Throughput}
+\label{sec:update-throughput}
+
+\begin{itemize}
   \item Test and compare sequential topologically sorted with parallelized
   \item Test update throughput under different write-patterns
+  \item Test how often cached functions are executed unnecessarily
   \item Test some QoD measurements
 \end{itemize}
+
+% section update-throughput end
 
 % section cache-sizes-and-performance end
 

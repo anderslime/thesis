@@ -223,9 +223,9 @@ An overview of this discussion can be found in figure~\ref{fig:dependency-manage
 
 % subsection automatic_invalidation end
 
-\subsection{HTTP Caching}
-\label{subsec:http_caching}
-
+% \subsection{HTTP Caching}
+% \label{subsec:http_caching}
+%
 % TODO: Move this to the respective caching techniques as "In HTTP-caching this is implemented using the..."
 
 % On the other end of the granularity scale, the programmer could choose to cache the entire HTTP response send to the user. This could be the HTML documents served to the user as the website, but it could also be the JSON or XML response from an API. The HTTP protocol is the standard among web browsers to display web content and it’s widely used to communicate between web services. Since the HTTP protocol also include caching methods, which will be explained in the HTTP section, it is a very attractive caching technique among web applications.
@@ -260,15 +260,7 @@ An overview of this discussion can be found in figure~\ref{fig:dependency-manage
 \section{Choosing the Right Caching Technique}
 \label{sec:choosing_the_right_caching_technique}
 
-% TODO: Explain/prove why this is a trade-off (ensure it is not written in caching model as well) - it probably is
-
-% TODO: Remember both criteria and requirements
-
-% TODO: Write a general recap/discussion on which solutions are good for what
-
-% Write a lot about the trade-offs:
-
-In general there is no best or correct solutions - it's a matter of choosing the solution best suited in the given context depending on the web application and specific use case. We will therefore compare the different approaches based on the parameters described in section~\ref{sec:evaluating_caching_techniques}. This comparison is illustrated on figure~\ref{fig:existing-solutions-comparison}.
+In general there is not a best or correct caching solution - it's a matter of choosing the solution best suited in the given context depending on the architecture of the web application and the specific use case. To get closer to the solution suited for our context (section~\ref{sec:context}) we will compare the different approaches based on the parameters described in section~\ref{sec:evaluating_caching_techniques}. This comparison is illustrated on figure~\ref{fig:existing-solutions-comparison}.
 
 \begin{figure*}[ht!]
   \centering
@@ -277,28 +269,12 @@ In general there is no best or correct solutions - it's a matter of choosing the
   \label{fig:existing-solutions-comparison}
 \end{figure*}
 
-% TODO: Explain the trade-offs
+\subsection{Immediate Response vs. Strict Freshness}
+\label{subsec:immediate-response-vs-strict-freshness}
 
-From this comparison we see that some decisions have to be made between some of the parameters. At first the approach cannot both give an immediate response and provide strict freshness since if the cached computation takes $\Delta t_c$ to compute and the invalidation happens just before the request then the response time will be $~ \Delta t_c$.
+From this comparison we see that there exists not solution that is able to both give an immediate response for every cached function and ensure strict freshness. This trade-off not only exists with the existing solutions, it is not possible to achieve in theory.
+If we have strict freshness for a solution and the client requests the value of a cached object at time $t_2$ and the given cached object was invalidated at time $t_1$, then the value that is fresh at time $t_2$ cannot be available before $\Delta t_c - (t_1 - t_2)$, where $\Delta t_c$ denotes the time taken to compute the value. Unless we make assumptions about the computation time then we cannot achieve immediate response time. The same argument can be used for the reverse situation.
 
-% TODO: Make flow chart to decide for strategy (or maybe wait with the flow chart until after smache).
-
-% Trade-offs:
-%  - Imediate Response vs. Strict freshness
-
-% Flexibility of solutions:
-%  - Some solutions (such as Transactional Consistency) proves that their solutions
-%  - can be configured on a per use-case basis.
-
-
-% BELOW: Something that should be added to the sections above or the next chapter
-%
-% In order to keep the cached values up to date we need automatic cache invalidation. In order to achieve automatic cache invalidation with transactional consistency,~\cite{paper:liskov} describes a solution a solution that need assumptions about the storage and cache system. The system designed in this thesis does not need such strict consistency guarantees, and some of the components in the solution is therefore not necessary.
-%
-% The solution suggested by Jim Challenger et. al. is highly relevant to the problem of this thesis, but since the system is designed for a publishing system, it leaves some challenges that have to be solved to satisfy the requirements of this thesis.
-%
-% Also relevant is the paper by~\cite{paper:deploy-time} that suggests a solution that identifies dependencies and injects invalidation callbacks into the source code on deployment. This method makes the caching transparent, but it also comes with the cost that the code will be different in development and production. Furthermore the solution described does not perform write-through updates, which would also be inefficient since it would slow down existing operations that involved cache invalidations.
-%
-% Conclusion from this chapter: solutions exists for a lot of the sub-problems this thesis is facing, but there exists no complete solution to satisfy the requirements.
+% subsection immediate-response-vs-strict-freshness end
 
 % section choosing_the_right_caching_technique end

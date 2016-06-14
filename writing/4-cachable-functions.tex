@@ -13,10 +13,6 @@ The goal of this thesis is to present a caching solution that is able to handle 
 \section{Existing Approaches are Not Sufficient}
 \label{sec:existing-approaches-are-not-sufficient}
 
-% TODO: Find shorter title for this section
-
-% TODO: Consider moving this to the last chapter?
-
 In the primary use case of the context in this thesis (described in section~\ref{sec:context}), the platform presents statistical information based on some advanced computation that takes a long time to compute ($>\text{ 10 sec.}$). If we want to keep the teacher's attention to the platform, we need to find a caching technique that is not depending on the time taken to compute the information. Furthermore we want to keep the information as fresh as possible.
 
 If we consider the overview on figure~\ref{fig:existing-solutions-comparison}, we can already leave out caches that optimizes DB-queries and declared content since they do not solve the problem of caching advanced statistical computations. The solution proposed by IBM is made for declared HTML-content and not on computations based on data from a storage system. This leaves the set of approaches that are able to cache arbitrary content and HTTP-responses, but given caching arbitrary content has less assumptions, they are more attractive.
@@ -67,20 +63,28 @@ The solution suggested by Dan Ports et.al.~\cite{paper:liskov} includes fully au
 
 The added arguments for the procedure does not alter the behaviour of the \emph{cached-fn}, but it requires additional arguments used by the application for naming and invalidation. The \emph{input-types} are the types of the arguments given to the original \emph{fn} and the \emph{relation-deps} are declared dependencies to data sources, which cannot be derived from the input of \emph{fn}. The \emph{input-types} are used to indicate how the arguments should be interpreted with relation to naming (described in section~\ref{subsec:cache-object-localization} and used together with the \emph{relation-deps} to achieve automatic invalidation (described in chapter~\ref{chapter:invalidation}).
 
+% subsection making_functions_cachable end
+
 \subsection{Cache Object Localization}
 \label{subsec:cache-object-localization}
 
-When the application fetches and stores the content of cached objects it need to have consistent naming such that the correct cached objects are fetched and the objects does not overwrite each other when stored. To make it easier to use cachable functions this is automatically handled by Smache. The name of a given cached object computed from a cached function \emph{must be unique} such that no other cached function is able to have the same name.
+When the application fetches and stores cached objects, the developer must derive a name that is used as the key in the cache store and therefore also used for identifying the cached object. To localize a cached object instance correctly the name \emph{must be unique} such that no other cached function is able to have the same name. To make cache management easier cachable functions in Smache automatically generates the name based on the input given to \verb$MAKE-CACHABLE$. The details on how this is achieved is specific to the implementation. The naming is implemented using a \verb$SERIALIZABLE-FUN-NAME$ that is defined as following:
 
-The details on how this is achieved is specific to the implementation, but as an example, the Smache Python implementation uses a combination of the function name and the module in which is was defined. This becomes unique since you cannot use two modules of the same name.
+\verb$SERIALIZABLE-FUN-NAME(fn, input)$ $\rightarrow$ \emph{fun-name}: Returns the name that uniquely identifies the cached object instance representing the call to the function \emph{fn} with \emph{input}. The name is constructed by concatenating a unique serialized version of \emph{fn} and a serialization of \emph{input}. The serialization of \emph{input} is done by concatenating a serialized version of each argument.
 
-% TODO: Write something about the key-generation
+This procedure makes it possible to represent the cached object in the cache such that it is possible to locate and store the result of a given cached function in the cache database.
 
-% TODO: Consider having these extensions in this section (or maybe next)
+To support in-place updates that allows the cache system to automatically update the cached objects as they are invalidated, \verb$SERIALIZABLE-FUN-NAME$ must also comply with the following requirement:
+
+\begin{itemize}
+  \item The serializations of \emph{fn} and \emph{input} must be done in such a way that there exists another procedure \verb$DESERIALIZE-FUN$ that deserializes \emph{fun-name} such that it is possible to locate and call \emph{fn} with \emph{input} in another process.
+\end{itemize}
+
+The \verb$DESERIALIZED-FUN$ is defined as following:
+
+\verb$DESERIALIZED-FUN(fun-name)$ $\rightarrow$ \emph{fun}, \emph{input}: Returns a pointer to \emph{fun} as well as \emph{input}. It must be possible to call \emph{fun} with \emph{input} as arguments such that the result is the same as before \verb$SERIALIZABLE-FUN-NAME$ is applied.
 
 % subsection cache-object-localization end
-
-% subsection making_functions_cachable end
 
 \subsection{Automatic Cache Invalidation}
 \label{subsec:automatic_cache_invalidation}
@@ -91,19 +95,20 @@ Smache does not remove the burden of cache management, but it will handle naming
 
 % subsection automatic_cache_invalidation end
 
-\subsection{Data Update Propagation}
-\label{subsec:model_data_update_propagation}
+\subsection{Write-Through Updates}
+\label{subsec:write-through-updates}
 
 Smache also offers the possibility to perform in-place updates using a data update propagation system inspired by the solution IBM used to achieve a 100\% cache hit rate on the content management system for the Olympic Games in 2000~\cite{paper:ibm, paper:ibm-extended}.
 
 Having in-place updates allows the programmer to have immediate response times while ensuring that the values returned are updated as soon as they are invalidation such that the value is not more stale than the time taken to compute it. This will be explained more in chapter~\ref{chapter:data-update-propagation}.
 
-% subsection data_update_propagation end
+% subsection write-through-updates end
 
 \section{Implementing Cachable Functions in Python}
 \label{sec:implementing_cachable_functions_in_python}
 
-The basic cachable functions as they are described so far can be implemented using the architecture described in section~\ref{fig:caching-basics-architecture}. Smache implements the cachable function by exposing an implementation of the \verb$MAKE-CACHABLE$. To apply the procedure the Smache library must be loaded in the application and applied. After the \verb$MAKE-CACHABLE$ function has been used, the control flow illustrated on figure~\ref{fig:cachable-function-control-flow} is applied. When a client makes a request involving a cached function, the application will call the function wrapper that tries to find the value in the cache first and if it is not present in the cache, the original function will be called after which the result is cached and returned to the caller.
+% How the cachable function works
+Smache implements the cachable function by exposing an implementation of the \verb$MAKE-CACHABLE$. To apply the procedure the Smache library must be loaded in the application and applied. The \verb$MAKE-CACHABLE$ converts the original function to a cached function that intercepts the method invocation and directs it to a wrapper function in the Smache library. When a client makes a request involving a cached function, the application will call the function wrapper that tries to find the value in the cache first and if it is not present in the cache, the original function will be called after which the result is cached and returned to the caller. This control flow of a cached function is illustrated on figure~\ref{fig:cachable-function-control-flow}.
 
 \begin{figure*}[ht!]
   \centering
@@ -114,11 +119,7 @@ The basic cachable functions as they are described so far can be implemented usi
 
 The procedure for making a function cached is implemented in using Python-decorators~\footnote{https://www.python.org/dev/peps/pep-0318/} that is an annotation that can be used to modify the behaviour of existing functions while being able to keep a reference to the original function.
 
-The implementation of the basic caching on the running example is seen on code snippet~\ref{code:basic-caching-running-example}. In this code the only addition we have made is a call to a function called \verb$computed$ on a module \verb$smache$ with a single argument and a \verb$@$ as prefix that indicate it's a decorator. Additionally the there is a decorator called \verb$relation$ in which we indicate the entity type as well as a function that describes how the given relation entity relates to an entity indicated through the input. This call corresponds to the implementation of \verb$MAKE-CACHABLE$.
-
-Smache require the programmer to annotate the types of ``data source'', which are passed into the original function. In this case we have annotated using the \verb$Course$-class that corresponds to an object for an Object-Relational Mapper (ORM) that represents the collection \emph{course}. The ``data source types'' supported are ORM-objects as well as the ``Raw''-type that represents primitive values (such as strings, numbers etc.). The number of type annotations has to be the same number of arguments given to the original function.
-
-Smache uses the type annotations to do smart serialization and deserialization when the name of the cached value have to be inferred. The raw input are represented as they are in a serialized form, but the data source inputs are serialized using their. When the function is then deserialized the Smache library will use the id of the data sources to load a fresh version of the ORM-object from the database. Another advantage is that the Smache now know that this cached function has to be invalidated when the corresponding course entity is updated, which will be explained in chapter~\ref{chapter:invalidation}.
+The implementation of the basic caching on the running example is seen on code snippet~\ref{code:basic-caching-running-example}. In this code the only addition we have made is a call to a function called \verb$computed$ on a module \verb$smache$ with a single argument and a \verb$@$ as prefix that indicate it's a decorator. Additionally there is a decorator called \verb$relation$ in which we indicate the entity type as well as a function that describes how the given relation entity relates to an entity indicated through the input. This call corresponds to the implementation of \verb$MAKE-CACHABLE$.
 
 \begin{figure*}[ht!]
   \input{code/basic_implementation.py}
@@ -126,26 +127,37 @@ Smache uses the type annotations to do smart serialization and deserialization w
   \label{code:basic-caching-running-example}
 \end{figure*}
 
-% TODO: Write something about how the key is generated for the running example and maybe other keys
+% Declaration
+Smache require the programmer to annotate the types of ``data source'', which are passed into the original function. In this case we have annotated using the \verb$Course$-class that corresponds to an object for an Object-Relational Mapper (ORM) that represents the collection \emph{course}. The ``data source types'' supported are ORM-objects as well as the ``Raw''-type that represents primitive values (such as strings, numbers etc.). The number of type annotations has to be the same number of arguments given to the original function. The type annotations are used to derive direct dependencies as explained more in section~\ref{chapter:invalidaton} and to implement automatic naming.
 
-% subsection defining_the_cachable_functions end
+% Naming
+The Smache library implements both the \verb$SERIALIZED-FUN-NAME$ and \verb$DESERIALIZED-FUN$ to support automatic invalidation and in-place updates. The implementation works by having a \emph{seperator-token} that is used in between the concatenations. The input is deserialized and serialized using the \emph{JavaScript Object Notation (JSON)}protocol~\cite{docs:json}. Using the python implementation~\cite{docs:python-json} Smache encodes primitive Python values into JSON and decode it back from JSON to Python values. The implementation of the encoding and decoding can be seen in appendix~\ref{appendix:implementation-of-function-serialization-and-deserialization}. Besides decoding and encoding the cached object instances, the full implementation also involves storing and loading references from/to the computed functions.
+To give an example, we will demonstrate the usage of the localization procedures with the default seperator token $~~~$. We can serialize the function \verb$course_score$ from the running example in code~\ref{code:running-example}. When the running example has been made cachable as in code~\ref{code:basic-caching-running-example} and we use a \verb$Course$-object from the \verb$ORM$ we can serialize and deserialize as seen in code~\ref{code:function-serialization}.
+
+\begin{figure*}[ht!]
+  \input{code/function_serialization.py}
+  \caption{Example of how function serialization and deserialization can be done in Smache}
+  \label{code:function-serialization}
+\end{figure*}
 
 % section implementing_cachable_functions_in_python end
-
-%   - Discussion about guarantees (where does it lie in the comparison mode)
-%   - MAYBE wait until final discussion
-%     - Configurations:
-%       - Always Immediate Response + Relaxed Freshness
-%       - Strict Freshness
 
 % section the_cachable_function_model end
 
 \section{Discussion}
 \label{sec:cachable-function-discussion}
 
-% TODO: Discuss how these cachable functions solve the problem of cache maintenance
+TODO: Write a discussion of the following topics:
+
+\begin{itemize}
+  \item
+  \item (How does naming and locality solve the problem?)
+  \item Usability compared to other solutions (declares dependencies, not automatic)
+  \item Limitation: Can only use data from primary storage (alternatives than database? external resource?)
+  \item Flexibility/Adaptablity: Since functions are pretty low level they could easily be extended to support HTTP-Caching, query caching, etc.
+  \item Limitation with relation to serialize/deserialize. Our implementation targets dynamic languages, but Java or CSharp would probably need a completely different implementation
+\end{itemize}
 
 % section discussion end
-
 
 % chapter smache-cachable-functions end

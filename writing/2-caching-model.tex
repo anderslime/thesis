@@ -96,6 +96,8 @@ To evaluate the caching technique for a given use case, we will see the situatio
 
 %%%% CONSISTENCY
 
+% TODO: Rewrite this to transactional consistency since normal consistency comes from strict freshness
+
 We will not make any assumptions about the content send by the server, which means the content could be the result of multiple cached computations. Each of these computations are based on some underlying data e.g. served from the primary store. In the case where some computations are based on the same data we have to keep the different results consistent. Furthermore the response might be based on both cached content and content loaded directly from the primary store in which case we have to keep the data consistent across the cache database and the primary storage. This issue leads to the criteria of the level of consistency.
 
 There exists multiple levels of consistency, but to keep it relevant and simple, we will evaluate the level of consistency using a binary value: either the caching technique ensures consistency with the data from the primary storage or else it doesn't.
@@ -123,8 +125,6 @@ While the freshness describes what is expected behaviour with relation to the co
 In the basic caching algorithm described on figure~\ref{fig:basic-caching}, the computation has to run after it has been invalidated. If the caching technique runs this computation in the same process as the request from the client, the client has to wait for the computation to finish in order to show the content to the user. If the time taken to compute the value exceeds the accepted response time limits described above, it could become critical for the user experience. Based on this fact we will introduce the binary parameter of whether or not the client has to wait for the computation to finish after invalidation. The weight of this parameter is proportional to the cache miss rate since it's only requests, which results in a cache miss that are affected by the slow response time.
 
 %%%% AUTOMATIC UPDATE/INVALIDATION
-
-% TODO: Rename this to relaxed freshness
 
 It is not possible to both serve the cached objects immediately and have strict freshness. This can be proved using the example where a cached object is invalidated just before it is requested. We can only start computing the value at the moment it has been invalidated and given that the time between the invalidation and the request is smaller than the time taken to compute the value, it is not possible.
 
