@@ -1,11 +1,20 @@
-\chapter{Results and Evaluation}
-\label{chapter:results}
+\chapter{Tests and Evaluation}
+\label{chapter:tests-and-evaluation}
+
+\section{Experimental Setup}
+\label{sec:experimental-setup}
+
+% section experimental-setup end
+
+\section{Cache Sizes and Performance}
+\label{sec:cache-sizes-and-performance}
 
 Possible tests (choose the ones that makes sense):
 
 \begin{itemize}
   \item Prove that update requests are not made slower (because they are async)
   \item Test that functions are not tested when they are already fresh
+  \item Test performance when a given computation uses a lot of cached results (can we do multi-fetch here?)
   \item Test how often cached functions are executed unnecessarily
   \item Test how long it takes to warm up cache
   \item Test memory consumption of cache database when using Peergrade.io
@@ -14,9 +23,15 @@ Possible tests (choose the ones that makes sense):
   \item Test some QoD measurements
 \end{itemize}
 
+% section cache-sizes-and-performance end
+
+\section{Evaluation}
+\label{sec:evaluation}
+
 Discuss this:
 
 \begin{itemize}
+  \item Test results
   \item Software Design
   \item Adaptability
   \item (Fault-Tolerance)
@@ -29,5 +44,9 @@ Discuss this:
 %      - Should be computed
 %      - BUT: Be aware of (accidental) DOS (all web requests are hold up by long running computations)
 
+
+% section evaluation end
+
+% chapter tests-and-evaluation end
 % chapter results_and_evaluation end
 

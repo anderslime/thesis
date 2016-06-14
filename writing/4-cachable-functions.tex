@@ -56,9 +56,6 @@ Smache uses the same programming model as the one described by Dan Ports~\cite{p
 
 As mentioned by Dan Ports~\cite{paper:liskov} not all functions are cachable. To be able to cache the functions they need to be \emph{pure}, which Dan Ports defines as: \myquote{[...] they [functions] must be deterministic, not have side effects, and depend only on their arguments and the storage layer state.}. Smache does not detect these properties in a function and therefore relies on the programmer to ensure only pure functions are cached.
 
-% TODO: Write about how the solution is restricted to pure functions,
-%   - copy-paste pretty much (AND REFERENCE Dan Ports)
-
 % subsection restricted_to_pure_functions end
 
 \subsection{Making Functions Cachable}
@@ -77,13 +74,11 @@ When the application fetches and stores the content of cached objects it need to
 
 The details on how this is achieved is specific to the implementation, but as an example, the Smache Python implementation uses a combination of the function name and the module in which is was defined. This becomes unique since you cannot use two modules of the same name.
 
-% subsection cache-object-localization end
-
 % TODO: Write something about the key-generation
 
 % TODO: Consider having these extensions in this section (or maybe next)
 
-% TODO: Maybe write in more details what happens in Make-Cachable (such as registering the function)
+% subsection cache-object-localization end
 
 % subsection making_functions_cachable end
 
