@@ -57,6 +57,14 @@ Discuss this:
   \item (Fault-Tolerance)
 \end{itemize}
 
+% Adaptability:
+% - Since we have made the solutions as layers we can provide flexiblity:
+% => Cachable Functions i only the basis - missing correct invalidations
+% => Automatic Invalidation - provide possibility to invalidate
+% => DUP - extends automatic invalidation to provide in-place updates
+% == We can easily configure Smache to omit the DUP-step and thereby obtain strict freshness (on a per-fun level)
+% == We support more use cases
+
 % Fault-Tolerance:
 %  - If the cache is not reachable:
 %    - If computation time > 10s: should return no result

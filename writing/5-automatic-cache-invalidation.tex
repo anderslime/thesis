@@ -39,7 +39,10 @@ Figure~\ref{fig:simple-odg} illustrates an instance of a simple ODG with four ve
 \section{Dependency Data Structure for Cachable Functions}
 \label{sec:dependency-data-structure-for-cachable-functions}
 
-There exists two representations of the cachable functions. The first one is the static representation, which can be derived directly from the declarations in the source code. This representation only describes dependencies between the declarations and not cached object instances. We will define this representation as the \emph{Declaration Dependence Graph (DDG)}. The other representation is dynamic and describes the dependencies between the entities of the underlying data and the cached object instances. We define this as the \emph{Instance Dependence Graph (IDG)}.
+% TODO: Describe this in a way so that we understand the purpose of the graphs instead of how they are represented
+% TODO: Make it clear that we only use these data structures to represent the dependencies
+
+There exists two representations of dependencies for cachable functions. The first one is the static representation, which can be derived directly from the declarations in the source code. This representation only describes dependencies between the declarations and not cached object instances. We will define this representation as the \emph{Declaration Dependence Graph (DDG)}. The other representation is dynamic and describes the dependencies between the entities of the underlying data and the cached object instances. We define this as the \emph{Instance Dependence Graph (IDG)}.
 
 \subsection{Declaration Dependence Graph}
 \label{subsec:declaration-dependence-graph}
@@ -116,7 +119,7 @@ The queries needed for automatic invalidation are:
   \item \verb$lookup_cached_object(entity_id)$: Finds all cached objects depending on the \verb$entity_id$.
 \end{itemize}
 
-The DDG uses the same amount of time and space as the DDG described in section~\ref{subsec:instance-dependence-graph}.
+% TODO: Analyze time and space (not the same as DDG since it depends on the data)
 
 % subsection instance-dependence-graph end
 
@@ -127,6 +130,13 @@ The DDG uses the same amount of time and space as the DDG described in section~\
 
 For the application to know what and when to invalidate, the application must register the dependency declarations and name of cached functions instances. The dependency declarations that defines the lazy and direct dependencies are part of the source code and therefore available when the application is started as illustrated on figure~\ref{fig:declaration-dependency-registration}. This registration flow simply collects all the cached functions registered through the cachable function procedure and adds them as dependencies in the DDG.
 
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=1.0\linewidth]{figures/declaration-dependency-registration.pdf}
+  \caption{The flow in which lazy and direct dependencies are registered from the declarations}
+  \label{fig:declaration-dependency-registration}
+\end{figure*}
+
 The registration of cached object instances happens when the cached object is accessed for the first time as illustrated on figure~\ref{fig:instance-dependency-registration}. In this flow we start by looking up the given cached object in the IDG, but since it's the first time the object is accessed it does not exist. To generate the name of the cached objects we use the ordered direct dependencies from the DDG combined with the input from the request. We derive dependencies to underlying data from the input that represents entities and add dependencies between the given entities and the cached object through the IDG.
 
 \begin{figure*}[ht!]
@@ -135,15 +145,6 @@ The registration of cached object instances happens when the cached object is ac
   \caption{The flow in which cached object instances are accessed when they are accessed the first time}
   \label{fig:instance-dependency-registration}
 \end{figure*}
-
-\begin{figure*}[ht!]
-  \centering
-  \includegraphics[width=1.0\linewidth]{figures/declaration-dependency-registration.pdf}
-  \caption{The flow in which lazy and direct dependencies are registered from the declarations}
-  \label{fig:declaration-dependency-registration}
-\end{figure*}
-
-\newpage
 
 \section{Invalidation Propagation}
 \label{sec:invalidation-propagation}
@@ -160,6 +161,7 @@ Based on the type and id of the changed entity, Smache updates affected cached o
 There are two sets of object names found from the direct dependencies lazy and dependencies. To find the cached objects that directly depends on the given entity we query the IDG data structure with \verb$lookup_cached_object(entity_id)$, which returns a list of names for cached objects affected by the given change. The other set of object names are found by evaluating lazy dependencies for the given entity type.
 The lazy dependency declarations are found by querying the DDG with \verb$lookup_lazy_dependency(entity_type)$. The lazy dependency is then evaluated using the declared procedure, which returns a new set of entities directly related to the given data source. We then query the IDG with \verb$lookup_cached_object(entity_id)$ with id's from the new set of relations, which returns lists of all cached objects that depends on the given entities. From these cached objects we filter all the keys such that we only include keys for cached objects related to the lazy dependency.
 At last we invalidate both set of keys using timestamp invalidation as explained in the following section~\ref{subsec:timestamp-invalidation}.
+Since the process of finding keys for depending objects involves multiple network calls to the primary storage, the invalidation propagation must be asynchronous to avoid a performance degrade for requests that involves updating underlying data.
 
 % Analyze the queries performed in the algorithm as prequel to the next chapter
 
@@ -178,14 +180,32 @@ In trigger-based invalidation where the name of a cached object is considered st
 One solution to this problem is to lock the invalidation mechanism such that the invalidation indication cannot be changed during an update. By using a lock the technique achieves liveness, but it also means that when another process wants to invalidate, it has to wait until the lock has been released. If the waiting process is a web server serving a user, the user would have to wait for the computation to finish.
 
 To accommodate the liveness property and avoid user's having to wait for invalidation, we use a solution suggested in~\cite{paper:ibm-extended} that uses a form of logical timestamps to represent the version of a cached object. In this technique the cache system keeps track of the number of times a given cached object has been invalidated, which we denote $num\_of\_updates$. The number starts with $0$ and is incremented every time a cached object's underlying data changes.
-We also keep a value representing the timestamp in which the current value of a cached object is based on, which we denote we $last\_update\_timestamp$. When the cached object is recomputed, the $num\_of\_updates$ is fetched and set as the timestamp of the current computation denoted $current\_computation\_timestamp$. When the computation returns the new value for the cached object, we fetch the value for $num\_of\_updates$ again denoted $latest\_num\_of\_updates$. At this point we have two cases:
+We also keep a value representing the timestamp in which the current value of a cached object is based on, which we denote we $last\_update\_timestamp$. When the cached object is recomputed, the $num\_of\_updates$ is fetched and set as the timestamp of the current computation denoted $current\_computation\_timestamp$.
+When the computation returns the new value for the cached object, we write update the cached object unless it has been updated during the computation. We can do this using the following algorithm:
 
 \begin{enumerate}
-  \item If $latest\_num\_of\_updates \geq current\_computation\_timestamp$ then we do nothing since a computation based on newer data has already updated the cached object.
-  \item Else we update $last\_update\_timestamp$ to be equal to $current\_computation\_timestamp$ and update the value.
+  \item Fetch the value for $num\_of\_updates$ again denoted $latest\_num\_of\_updates$.
+  \item
+    \begin{enumerate}
+      \item If $latest\_num\_of\_updates \geq current\_computation\_timestamp$ then we do nothing since a computation based on newer data has already updated the cached object.
+      \item Else we update $last\_update\_timestamp$ to be equal to $current\_computation\_timestamp$ and update the value.
+    \end{enumerate}
 \end{enumerate}
 
+We can then say the following about the freshness of a cached object:
+
+\begin{itemize}
+  \item \textbf{A cached object is fresh} when its $num\_of\_updates = last\_update\_timestamp$
+\end{itemize}
+
+To avoid race conditions the execution of this algorithm need to be executed in a transaction such that if $num\_of\_updates$ is incremented between step 1 and 2 then the algorithm be aborted. Fortunately, timestamps have the property that the execution of a computation at a given timestamp always yields the same result, which means we can retry the algorithm with the same result. In other words the algorithm is considered idempotent. We will therefore retry the update algorithm until it has finished. Alternatively we could lock all the values while executing the algorithm, but this means we will block the incremental of $num\_of\_updates$ that is responsible for invalidating and therefore more important.
+Furthermore we also need the incremental of $num\_of\_updates$ to be atomic.
+
+\subsubsection{Proof}
+\label{subsubsec:proof}
+
 TODO: Add a proof here that it has safety and liveness
+
 % - We assume step 2 is atomic
 %   => The underlying data representing the cached object has a timestamp from the start of the computation
 % - If we start computation at t=3 after the computation we have two cases:
@@ -201,7 +221,25 @@ TODO: Add a proof here that it has safety and liveness
 % one (todo: use references). When we reach step 2 and write the new value,
 % we therefore know that it is the latest.
 
+% subsubsection proof end
+
+
 % subsection timestamp-invalidation end
+
+\subsection{Data Maintained by The Cache}
+\label{subsec:data-maintained-by-the-cache}
+
+To support timestamp invalidation we will extend the representation of a cached object with the following values:
+
+\begin{itemize}
+  \item $value$: The result of the cached function related to the cached object
+  \item $num\_of\_updates$: The number of updates the given cached object is aware about
+  \item $last\_update\_timestamp$: The timestamp corresponding to the computation of the current $value$
+\end{itemize}
+
+By representing the timestamps in the same object as the value we can more easily implement concurrency control mechanisms such as a lock or transactions as described above. We could represent the timestamps in another database, but this would mean we had to support distributed transactions across the cache database and the database with timestamps. We could also represent the timestamps in seperate objects than the value, but this would make it harder to shard the cached objects across multiple cache servers since we need to ensure that the cached objects are on the same server as the value to avoid distributed locking.
+
+% subsection data-maintained-by-the-cache end
 
 \subsection{Database Wrapper Triggers}
 \label{subsec:database-wrapper-triggers}
@@ -216,10 +254,22 @@ We've already discussed existing approaches in section~\ref{subsubsec:triggering
 \section{Implementing Automatic Invalidation}
 \label{sec:implementing-automatic-invalidation}
 
-TODO: Write about how the automatic invalidation is implemented
+The Smache library implements automatic invalidation as described in the design above except for a few details such as the exact data structures of the dependency graphs, which have been replaced by similar representations to simplify the implementation. In this section how cachable functions (section~\ref{sec:implementing_cachable_functions_in_python}) are extended to support automatic invalidation. We will start by explaining how the IDG and DDG are implemented (section ~\ref{subsec:dependency-graphs}) followed by a description on how we implement transactions to update cached objects with timestamp invalidation (section~\ref{subsec:update-transactions}). Finally, we explain how we implement asynchronous invalidation to avoid invalidation affecting the performance of requests updating underlying data (section~\ref{subsec:asynchronous-invalidation}).
+
+\subsection{Dependency Graphs}
+\label{subsec:dependency-graphs}
+
+The dependency graphs are used by the update procedure to derive relevant cache objects to be invalidated.
+The DDG is static and will not change after the application starts and we can therefore easily duplicate the data across all the web server without implementing any replication since the data will not change. The DDG is therefore represented using objects in the application that can be queried by calling the methods of the DDG repository.
+The IDG is dynamic in the lifetime of the application and will therefore be represented in a separate process. Optimally the IDG should be represented using hash tables, but to simplify the architecture, the data structure is implemented using the cache database that is assumed to be a common cache server supporting \verb$LOOKUP$ and \verb$STORE$ as described in section~\ref{subsec:cache-server}. In this implementation the keys corresponds to keys in the hash table and the linked lists are represented in the content by a serialized list.
+
+% subsection dependency-graphs end
 
 \subsection{Update Transactions}
 \label{subsec:update-transactions}
+
+
+
 
 % - The representation of a cached object
 %   => This is where we explain how we do timestamp invalidation
@@ -227,29 +277,6 @@ TODO: Write about how the automatic invalidation is implemented
 %   => Solution: represent cached object as value + update_num + last_update_timestamp
 %   => Else if possible to do transactions across keys
 %   => Request same as in cachable functions, where the freshness is evaluated as with timestamp invalidation
-
-% subsection update-transactions end
-
-\subsection{Asynchronous Invalidation}
-\label{subsec:asynchronous-invalidation}
-
-% - Asynchronous Invalidation
-% - Architecture
-%   - Timestamp Invalidation as part integrated part of the cache
-%     => Easy to shard the database
-% - Discussions:
-%   - How do we represent timestamp invalidation?
-%   => As part of the cached value
-%   => Easy to shard the cache database (and allow to scale horizontally)
-
-% Architecture
-% - Architecture:
-%   - Describe as extension of the one described for basic caching
-%   - Additions:
-%     - IDG (as part of cache? or externally?)
-%     - DDG (in application memory)
-%     - Timestamps as part of cache?
-% TODO: Find a place for the implementation:
 % - Representation of the ODG
 %   - Cache managers are a single point of failure as well as a bottleneck
 %   - We use a database for storing information and the library for managing it
@@ -260,7 +287,16 @@ TODO: Write about how the automatic invalidation is implemented
 %     - Data can be sharded to scale
 %     - What about transactions?
 
+% subsection update-transactions end
+
+\subsection{Asynchronous Invalidation}
+\label{subsec:asynchronous-invalidation}
+
+% TODO: Write on how we do asynchronous invalidation reliably
+% => Using queues and workers
+
 % subsection asynchronous-invalidation end
+
 
 % section implementing-automatic-invalidation end
 
@@ -272,7 +308,8 @@ TODO: Discuss the following:
 \begin{itemize}
   \item How automatic invalidation meets the requirements
   \item Discuss how deriving dependencies instead of tracking would affect the solution (maybe do this in the same section as describing dependency tracking)
-  \item
+  \item Limitation on dependency management (it need to support locking or transactions)
+  \item Whether these persistent data should be represented in a cache database?
 \end{itemize}
 
 % section discussion end
