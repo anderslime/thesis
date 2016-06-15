@@ -284,11 +284,27 @@ Code snippet~\ref{code:timestamp_invalidation} is a simplified version of the co
 \subsection{Asynchronous Invalidation}
 \label{subsec:asynchronous-invalidation}
 
-% TODO: Write on how we do asynchronous invalidation reliably
-% => Using queues and workers
+Recall figure~\ref{fig:automatic-invalidation-flow} illustrating the flow where changes to the data in the primary storage system triggers a notification to the caching system, which invalidates affected cache objects. If the notification in step 3 was invoked synchronously then the performance of step 4 and 5 would affect the response time of the request and thereby affect the user experience of the use case involving the given request. In our case we cannot ensure to retrieve dependencies fast since we have lazy dependencies that must be evaluated based on requests to the primary storage. We will therefore implement the trigger-step asynchronously such that requests involving updates to underlying data are not affected by Smache.
+
+If the notification is delivered more than once we will just achieve a worse cache hit rate and affect performance, but it will not affect the integrity of the cache object. We must therefore monitor and ensure exactly-once-delivery of the notification.
+With most technologies the simplest solution for implementing asynchronous behaviour is to start a new thread that executes the invalidation. This way the asynchronous behaviour is controlled by the web server and we don't have to introduce new components to the architecture. Although this would be the preferred solution the Python language does not implement real concurrent behaviour, because it implements a Global Interpreter Lock that prevents multiple threads to execute the same bytecode at once.
+To implement concurrent invalidations in Python we will therefore use the concept of \emph{Background jobs}, where the notifications are represented by a \emph{job} that is pushed into a queue. To execute the jobs we have multiple \emph{workers}, which are basically processes that also contains a version of the source code for the application. When there are jobs in the queue, a worker will pull the given job from the queue and execute it. Figure~\ref{fig:background-workers} illustrates how background workers are used to invalidate cache object asynchronously. To implement this behaviour we need to add application workers to the architecture as illustrated on figure~\ref{fig:architecture-with-workers}.
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=1.0\linewidth]{figures/architecture-with-workers.pdf}
+  \caption{The architecture required by a web application that uses Smache with automatic invalidation.}
+  \label{fig:architecture-with-workers}
+\end{figure*}
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=1.0\linewidth]{figures/background-workers.pdf}
+  \caption{How background workers are used do perform invalidation asynchronously.}
+  \label{fig:background-workers}
+\end{figure*}
 
 % subsection asynchronous-invalidation end
-
 
 % section implementing-automatic-invalidation end
 
