@@ -263,29 +263,21 @@ The dependency graphs are used by the update procedure to derive relevant cache 
 The DDG is static and will not change after the application starts and we can therefore easily duplicate the data across all the web server without implementing any replication since the data will not change. The DDG is therefore represented using objects in the application that can be queried by calling the methods of the DDG repository.
 The IDG is dynamic in the lifetime of the application and will therefore be represented in a separate process. Optimally the IDG should be represented using hash tables, but to simplify the architecture, the data structure is implemented using the cache database that is assumed to be a common cache server supporting \verb$LOOKUP$ and \verb$STORE$ as described in section~\ref{subsec:cache-server}. In this implementation the keys corresponds to keys in the hash table and the linked lists are represented in the content by a serialized list.
 
+Alternatively we could represent the dependency graphs using a cache manager process, but this would just introduce a potential bottleneck as well as a single point of failure. In our solution we limit the number of possible process failures by integrating the dependency graph into existing components of the architecture.
+
 % subsection dependency-graphs end
 
 \subsection{Update Transactions}
 \label{subsec:update-transactions}
 
+To implement timestamp invalidation we need to implement concurrency control to ensure that the timestamp invalidation is implemented correctly. In the version of Smache implemented during this thesis, we use \emph{Redis}~\footnote{http://redis.io/} as the cache database. Redis have support for simple transactions using a combination of the \verb$WATCH$-command and the \verb$MULTI$-command. The \verb$WATCH$-command is executed with a key, which tells Redis that a given transaction should fail if the specificed key is modified during the transaction. The \verb$MULTI$-command allows to specific multiple commands in a single atomic action.
+Code snippet~\ref{code:timestamp_invalidation} is a simplified version of the code that implements the update procedure with timestamp invalidation. It uses the Python Redis~\cite{docs:python-redis} library to communicate with the Redis database. When it invokes the \verb$WATCH$-command the client will request Redis to start a transaction. Afterwards we build a \verb$MULTI$-command that will update the cached object if it is newer and invokes the \verb$EXECUTE$-command. The Redis-client will send the command and if the transaction fails it will raise a \verb$WatchError$-exception indicating the key has been modified, after which we retry the transaction with the same values.
 
-
-
-% - The representation of a cached object
-%   => This is where we explain how we do timestamp invalidation
-%   => Important feature: possible to do transaction between timestamp and value
-%   => Solution: represent cached object as value + update_num + last_update_timestamp
-%   => Else if possible to do transactions across keys
-%   => Request same as in cachable functions, where the freshness is evaluated as with timestamp invalidation
-% - Representation of the ODG
-%   - Cache managers are a single point of failure as well as a bottleneck
-%   - We use a database for storing information and the library for managing it
-%     - Since we represent the data in key-value stores, we can take it further and use the cache to represent it
-%     - The cache can only be used if the cache store is available
-%     - That means we got no more dependencies
-%     - Hash table => Key-value stores in Redis
-%     - Data can be sharded to scale
-%     - What about transactions?
+\begin{figure*}[ht!]
+  \input{code/timestamp_invalidation.py}
+  \caption{The code for implementing timestamp invalidation in Python. RedisConnection represents an object communicating with the (Redis) cache database. CacheStore represents the object that communicates with the cache database.}
+  \label{code:timestamp_invalidation}
+\end{figure*}
 
 % subsection update-transactions end
 
@@ -310,6 +302,7 @@ TODO: Discuss the following:
   \item Discuss how deriving dependencies instead of tracking would affect the solution (maybe do this in the same section as describing dependency tracking)
   \item Limitation on dependency management (it need to support locking or transactions)
   \item Whether these persistent data should be represented in a cache database?
+  \item Timestamp invalidation => idempotent updates => we don't need an order of updates
 \end{itemize}
 
 % section discussion end
