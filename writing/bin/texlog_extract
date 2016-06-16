@@ -12,7 +12,7 @@ Help=
 = texlog_extract - extract errors and warnings from TeX logs
 
 = Synopsis
-texlog_extract [options] [file[.log]]	
+texlog_extract [options] [file[.log]]
 
 Options:
 -h			Print short help and exit
@@ -43,28 +43,28 @@ of /pdflatex/.
 
 -h	Prints the Synopsis section and exits.
 --help	Shows the full documentation and exits.
--V,--version	
+-V,--version
 	Prints script's version and exits.
--n,--nocolor	
+-n,--nocolor
 	The output of texlog_extract will be coloured with ANSI sequences by
 	default: error messages are coloured red, warning magenta, file names
 	yellow. The |--nocolor| option suppresses this.
--w,--web	
+-w,--web
 	The |--web| option substitutes ANSI colouring codes with HTML codes.
 	This is useful if TeX is used in a web application.
--c,--config[=file]	
+-c,--config[=file]
 	By default, texlog_extract will, after processing the command line
 	arguments, read the configuration file |~/.texlog_extract.conf|, if that file
 	exists. The |--config| option, if used without an argument, prevents this.
 	If it /has/ an argument, that is considered an alternative file for such
 	input. For example:
-	
+
 	  texlog_extract --config=tle.cf main.log
-	
+
 	or, shorter:
-	
+
           texlog_extract -ctle.cf main
-	
+
 	A useful example for the contents of such a file is:
 	  [warnings_to_skip]
 	    LaTeX Font Warning
@@ -93,7 +93,7 @@ class String
    def lin; @@pre[:lin][@@model]+self+@@post[@@model]; end
    def fil; @@pre[:fil][@@model]+self+@@post[@@model]; end
    def wrn; @@pre[:wrn][@@model]+self+@@post[@@model]; end
-         
+
    def skip(w)
       w.each do |v|
          return true if self =~ /#{v}/
@@ -355,12 +355,12 @@ if ARGV.size > 1
    quit("Found #{ARGV.size} arguments (#{ARGV.join(", ")}) instead of one#{i}",1)
 end
 
-if ARGV[0] 
+if ARGV[0]
    file = ARGV[0].sub(/\.log$/,'')+'.log'
    File.exist?(file)    or quit("file #{file} not found",1)
    File.readable?(file) or quit("file #{file} not readable",1)
 else
-   STDERR.puts "(reading from stdin)" 
+   STDERR.puts "(reading from stdin)"
    file = Tempfile.new("#{MYNAME}-").path
    open(file,'w') { |f| f.puts STDIN.readlines }
 end
@@ -379,8 +379,12 @@ if ! @cf.empty? && File.exist?(@cf)
 end
 
 errfile,lineno,messhash = texlog_extract(file,warnings_to_skip)
-printf("%d %s\n",lineno,errfile) unless STDOUT.isatty
-messhash.sort.reverse.each do |f, messages|
-   puts "Messages for file #{f}:".fil unless f.empty?
-   puts messages
+if messhash.empty?
+  exit 0
+else
+  messhash.sort.reverse.each do |f, messages|
+    puts "Messages for file #{f}:".fil unless f.empty?
+    puts messages
+  end
+  exit 1
 end

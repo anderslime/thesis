@@ -1,18 +1,31 @@
-\chapter{Tests and Evaluation}
+\chapter{Results and Evaluation}
 \label{chapter:tests-and-evaluation}
+
+Throughout this project Smache has been implemented in Python and integrated into the Peergrade.io-platform. The source code is available through a ZIP-file attached with the thesis as well as for open source contributions at:
+
+\url{https://github.com/anderslime/smache}
+
+Besides the Python implementation of Smache, the source code also includes automated tests with a test coverage of 98\% (TODO: update this result at end of project) and a small benchmark framework to execute and plot the results of performance tests with different sizes of data sets. The automated tests are automatically verified by a continous integration application, Travis, that runs the full test suite when new versions of the code are merged into the source code. The test results are available at \url{https://travis-ci.org/anderslime/smache}.
+
+The rest of this chapter will describe the experimental setup for the tests of the Smache library (section~\ref{sec:experimental-setup}), followed by results from testing the performance (section~\ref{sec:performance}), the update throughput (section~\ref{sec:update-throughput}) and the space (section~\ref{sec:space}). Finally, the test results are evaluated based on the test result (section~\ref{sec:evaluation}).
+
+% TODO: Add test framework for sniffing dependencies
 
 \section{Experimental Setup}
 \label{sec:experimental-setup}
 
+Consider having predefined cases, such as:
+
+\begin{enumerate}
+  \item Deeply nested (e.g. 5 computed funs depending on each other)
+  \item A computed node with a lot of computed node children
+  \item A computed node with multiple parent computed nodes
+\end{enumerate}
+
 % section experimental-setup end
 
-\section{Cache Sizes and Performance}
-\label{sec:cache-sizes-and-performance}
-
-Possible tests (choose the ones that makes sense):
-
-\subsection{Performance}
-\label{subsec:performance}
+\section{Performance}
+\label{sec:performance}
 
 \begin{itemize}
   \item Prove that update requests are not made slower (because they are async)
@@ -20,16 +33,7 @@ Possible tests (choose the ones that makes sense):
   \item Test how long it takes to warm up cache
 \end{itemize}
 
-% subsection performance end
-
-\subsection{Space}
-\label{subsec:space}
-
-\begin{itemize}
-  \item Test memory consumption of cache database when using Peergrade.io
-\end{itemize}
-
-% subsection space end
+% section performance end
 
 \section{Update Throughput}
 \label{sec:update-throughput}
@@ -43,10 +47,19 @@ Possible tests (choose the ones that makes sense):
 
 % section update-throughput end
 
-% section cache-sizes-and-performance end
+\section{Space}
+\label{sec:space}
+
+\begin{itemize}
+  \item Test memory consumption of cache database when using Peergrade.io
+\end{itemize}
+
+% section space end
 
 \section{Evaluation}
 \label{sec:evaluation}
+
+% TODO: Should this be full evaluation
 
 Discuss this:
 

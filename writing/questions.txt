@@ -1,0 +1,17 @@
+# Thesis
+- The extend structure?
+- Seperation between design and implementation? (implementation-specifics are related to the result/technology?)
+
+# Handin
+- Handin-number from administration?
+- Handin printed example? If so, how many and when? (officially monday at 23:59, but this is too late, right?)
+- How do i hand-in code?
+  => GitHub?
+  => E-mail you a zip?
+  => ZIP in CampusNet?
+
+# Presentation
+- Present as “I”?
+- What is interesting to present?
+- Time?
+- When?
