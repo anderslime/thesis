@@ -64,12 +64,23 @@ The final solution addressing the problems described, will be designed with the 
 
 % section requirements end
 
-\section{Context / Running Example}
+\section{Context}
 \label{sec:context}
 
 The problem and requirements are based on a running web applications - the Peergrade.io-platform to ensure that the system is also designed, implemented and tested to be used in practice.
 
 Peergrade.io is a platform for facilitating peer-evaluation in university and high school courses. Currently the platforms serves multiple institutions and thousands of students. One of the key parts of the platform is showing various statistics about the performance of the students in a course. The statistics are based on advanced calculations which take up a large amount of time and needs to be recalculated on small changes to the underlying data.
+
+TODO: Describe how PeerGrade.io works
+
+% TODO: Write about PeerGrade.IO's current stack
+% - MongoDB
+% - Python
+
+% But we know technology changes so we want to support multiple data stores/technologies
+
+\subsection{Running Example}
+\label{subsec:running-example}
 
 To relate the solution to a practical example, the thesis will use the following code as a running example:
 
@@ -81,7 +92,8 @@ To relate the solution to a practical example, the thesis will use the following
 
 In this example we have a function \verb$course_score$ that computes the average score in a given course by fetching the participants from the primary data store and through iterations of each participant calculate the average score using the function \verb$participant_score$ that calculates the score of a single participant using a long running external method.
 
-% TODO: Write that we use MONGO DB as the running example but aim to be general to support other kinds of data stores
+% subsection running-example end
+
 
 % section context end
 

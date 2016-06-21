@@ -7,30 +7,13 @@ Throughout this project Smache has been implemented in Python and integrated int
 
 Besides the Python implementation of Smache, the source code also includes automated tests with a test coverage of 98\% (TODO: update this result at end of project) and a small benchmark framework to execute and plot the results of performance tests with different sizes of data sets. The automated tests are automatically verified by a continous integration application, Travis, that runs the full test suite when new versions of the code are merged into the source code. The test results are available at \url{https://travis-ci.org/anderslime/smache}.
 
-The rest of this chapter will describe the experimental setup for the tests of the Smache library (section~\ref{sec:experimental-setup}), followed by results from testing the performance (section~\ref{sec:performance}), the update throughput (section~\ref{sec:update-throughput}) and the space (section~\ref{sec:space}). Finally, the test results are evaluated based on the test result (section~\ref{sec:evaluation}).
+The rest of this chapter will lay out test results of experiments made to test the assumptions about the solution. The results shown in the from executing the experiements on a MacBook Pro (Retina, 15-inch, Early 2013) with an 2.4 GHz Intel Core i7 (4 cores) and 8 GB 1600 MHz DDR3 RAM. The experiments will test the performance of the invalidation flow (section~\ref{sec:performance}), the update throughput (section~\ref{sec:update-throughput}) and the space (section~\ref{sec:space}). Finally, Smache is evaluated based on the test result and requirements (section~\ref{sec:evaluation}).
 
-% TODO: Add test framework for sniffing dependencies
-
-\section{Experimental Setup}
-\label{sec:experimental-setup}
-
-Consider having predefined cases, such as:
-
-\begin{enumerate}
-  \item Deeply nested (e.g. 5 computed funs depending on each other)
-  \item A computed node with a lot of computed node children
-  \item A computed node with multiple parent computed nodes
-\end{enumerate}
-
-% section experimental-setup end
-
-\section{Performance}
+\section{Performance of Requests that Changes Underlying Data}
 \label{sec:performance}
 
 \begin{itemize}
-  \item Prove that update requests are not made slower (because they are async)
-  \item Test performance when a given computation uses a lot of cached results (can we do multi-fetch here?)
-  \item Test how long it takes to warm up cache
+  \item (CHECK) Prove that update requests are not made slower (because they are async)
 \end{itemize}
 
 % section performance end
@@ -39,20 +22,80 @@ Consider having predefined cases, such as:
 \label{sec:update-throughput}
 
 \begin{itemize}
-  \item Test and compare sequential topologically sorted with parallelized
-  \item Test update throughput under different write-patterns
-  \item Test how often cached functions are executed unnecessarily
-  \item Test some QoD measurements
+  \item We want to test throughput, because it is more comparable and not vanity (...?)
+  \item We test in two cached function patterns
 \end{itemize}
+
+To evaluate the performance and scalability of the concurrency used in the data update propagation, we will measure the update throughput while increasing the number of workers, where the number of workers is the amount updates the system is able to process at the same time. While it would be possible to measure against examples in the context of the Peergrade.io, we have chosen to measure against patterns of cached functions. The tests will be performed against a use case, where many cached functions depends on a single underlying data resource (section~\ref{subsec:many-cached-functions} and afterwards a case where multiple cached functions depends on each other in a nested hiearchy (section~\ref{subsec:nested-cached-functions}).
+
+\subsection{Many Cached Functions}
+\label{subsec:many-cached-functions}
+
+In this use case we will test a use case, where multiple instances of the same cached function depends on the same underlying data such that when the underlying data updates then all the cached objects instances for the cached function must be updated. The use case is illustrated on figure~\ref{fig:test-multi-deps}.
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=1.0\linewidth]{figures/test-multi-deps.pdf}
+  \caption{Illustration of the dependencies of the cached function for the "Many Cached Functions" test case}
+  \label{fig:test-multi-deps}
+\end{figure*}
+
+To simulate a slow functions the tests uses the \verb$sleep$-method from Python's \verb$time$-module such that each function uses $400$ ms to execute. The results of the tests are illustrated on the graph on figure~\ref{fig:graph_throughput_workers_multi}.
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=1.0\linewidth]{figures/results/graph_throughput_workers_multi.pdf}
+  \caption{How the system scales with many cached functions depending on the same underlying data while the number of workers is increased}
+  \label{fig:graph_throughput_workers_multi}
+\end{figure*}
+
+\begin{itemize}
+  \item Comment: scales at least linear (throughput stays the at least same while scaling functions)
+  \item Comment: multiple workers scales even better + better throughput
+\end{itemize}
+
+% subsection many-cached-functions end
+
+\subsection{Nested Cached Functions}
+\label{subsec:nested-cached-functions}
+
+\begin{itemize}
+  \item Figure of the cached functions (graph)
+  \item Show graph of no. of workers vs. throughput
+  \item Comment: nested updates are not that optimized by concurrent updates
+  \item Concurrent updates are faster for nested, because a scheduler would schedule this in sequence
+\end{itemize}
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=0.1\linewidth]{figures/test-nested-deps.pdf}
+  \caption{Illustration of the dependencies of the cached function for the "Nested Cached Functions" test case}
+  \label{fig:test-nested-deps}
+\end{figure*}
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=1.0\linewidth]{figures/results/graph_throughput_workers_nested.pdf}
+  \caption{How the system scales with nested cached functions while the number of workers is increased}
+  \label{fig:graph_throughput_workers_nested}
+\end{figure*}
+
+% subsection nested-cached-functions end
 
 % section update-throughput end
 
 \section{Space}
 \label{sec:space}
 
+\subsection{Peergrade.io Platform}
+\label{subsec:peergrade-io-platform}
+
 \begin{itemize}
   \item Test memory consumption of cache database when using Peergrade.io
+  \item Test dependency graph as well as the feasibility
 \end{itemize}
+
+% subsection peergrade-io-platform end
 
 % section space end
 
@@ -63,12 +106,19 @@ Consider having predefined cases, such as:
 
 Discuss this:
 
+\subsubsection{Efficiency and Scalability}
+\label{subsubsec:efficiency-and-scalability}
+
 \begin{itemize}
-  \item Test results
-  \item Software Design
-  \item Adaptability
-  \item (Fault-Tolerance)
+  \item We have a less efficient, but simpler + faster for some cases
+  \item By allowing multiple workers we even scale better in some cases
 \end{itemize}
+
+% subsubsection efficiency-and-scalability end
+
+
+\subsubsection{Adaptability}
+\label{subsubsec:adaptability}
 
 % Adaptability:
 % - Since we have made the solutions as layers we can provide flexiblity:
@@ -78,6 +128,17 @@ Discuss this:
 % == We can easily configure Smache to omit the DUP-step and thereby obtain strict freshness (on a per-fun level)
 % == We support more use cases
 
+\begin{itemize}
+  \item See cached function section for changes
+  \item We have achieved a solution, where we are able to make functions cachable without changing the behaviour of the function. We can easily remove it again.
+  \item Maybe: we could achieve an even better solution by using transactions that sniffs the dependencies
+\end{itemize}
+
+% subsubsection adaptability end
+
+\subsubsection{Fault-Tolerance}
+\label{subsubsec:fault-tolerance}
+
 % Fault-Tolerance:
 %  - If the cache is not reachable:
 %    - If computation time > 10s: should return no result
@@ -85,9 +146,11 @@ Discuss this:
 %      - Should be computed
 %      - BUT: Be aware of (accidental) DOS (all web requests are hold up by long running computations)
 
+% subsubsection fault-tolerance end
 
 % section evaluation end
 
 % chapter tests-and-evaluation end
+
 % chapter results_and_evaluation end
 
