@@ -12,21 +12,34 @@ The rest of this chapter will lay out test results of experiments made to test t
 \section{Performance of Requests that Changes Underlying Data}
 \label{sec:performance}
 
-\begin{itemize}
-  \item (CHECK) Prove that update requests are not made slower (because they are async)
-\end{itemize}
+One of the requirements of the system is that the performance of existing operations should not be affected negatively by introducing the caching system. On the requests that changes underlying data, the application will notify and execute invalidation in the same process, which will affect the response time of the update request. The performance of invalidation have been evaluated using a test that uses both \emph{direct dependencies} and \emph{lazy dependencies}.
+
+The results visualized on figure~\ref{fig:graph-update-requests} indicates how a synchronous and asynchronous write-through mechanism impacts the time taken to update underlying data. If we consider the asynchronous mechanism used by Smache, it introduces a small constant overhead of around $2$ ms as seen on the exact results shown on table~\ref{tab:update-requests}. The synchronous mechanism introduces an overhead depending on the execution time of the cached function, which means the time taken to update underlying data would be affected by the caching system.
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=1.0\linewidth]{figures/results/graph_update_requests.pdf}
+  \caption{Impact of introducing synchronous and asynchronous write-through in a case, where the update affects a single cached object instance with variable execution time.}
+  \label{fig:graph-update-requests}
+\end{figure*}
+
+TODO: Fill out this table
+
+\begin{table}[htpb]
+  \centering
+  \caption{caption}
+  \label{tab:update-requests}
+  \begin{tabular}{c}
+
+  \end{tabular}
+\end{table}
 
 % section performance end
 
 \section{Update Throughput}
 \label{sec:update-throughput}
 
-\begin{itemize}
-  \item We want to test throughput, because it is more comparable and not vanity (...?)
-  \item We test in two cached function patterns
-\end{itemize}
-
-To evaluate the performance and scalability of the concurrency used in the data update propagation, we will measure the update throughput while increasing the number of workers, where the number of workers is the amount updates the system is able to process at the same time. While it would be possible to measure against examples in the context of the Peergrade.io, we have chosen to measure against patterns of cached functions. The tests will be performed against a use case, where many cached functions depends on a single underlying data resource (section~\ref{subsec:many-cached-functions} and afterwards a case where multiple cached functions depends on each other in a nested hiearchy (section~\ref{subsec:nested-cached-functions}).
+To evaluate the performance and scalability of the concurrency used in the data update propagation, we will measure the update throughput while increasing the number of workers, where the number of workers is the amount updates the system is able to process at the same time. While it would be possible to measure against examples in the context of the Peergrade.io, we have chosen to measure against patterns of cached functions. The tests will be performed against a use case, where many cached functions depends on a single underlying data resource (section~\ref{subsec:many-cached-functions} and afterwards a case where multiple cached functions depends on each other in a nested hierarchy (section~\ref{subsec:nested-cached-functions}).
 
 \subsection{Many Cached Functions}
 \label{subsec:many-cached-functions}
