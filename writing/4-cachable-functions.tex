@@ -10,7 +10,7 @@ The goal of this thesis is to present a caching solution that is able to handle 
 % - Existing approaches does not solve our problem optimally
 % - Smache: Programming Model for Cachable Functions
 
-\section{Existing Approaches are Not Sufficient}
+\section{Why Existing Approaches are Not Sufficient}
 \label{sec:existing-approaches-are-not-sufficient}
 
 In the primary use case of the context in this thesis (described in section~\ref{sec:context}), the platform presents statistical information based on some advanced computation that takes a long time to compute ($>\text{ 10 sec.}$). If we want to keep the teacher's attention to the platform, we need to find a caching technique that is not depending on the time taken to compute the information. Furthermore we want to keep the information as fresh as possible.
@@ -24,12 +24,10 @@ From these approaches the expiration-based invalidation technique has the advant
 If we consider use case example~\ref{example:assignment-computations}, the statistical information of current assignments are updated at the same frequency as the closed assignments, and if we want to keep the cached values for the current information up to date, we also need to update all non current information. This is not desirable with relation to efficiency since the CPU will be busy in time proportional to the time of the computing the statistical information for the assignment and the total number of assignments on the platform. In other words the number of CPU's we need to occupy for this job can be calculated by $\frac{\Delta t_c \cdot n_c \cdot u_c}{t_d}$, where $\Delta t_c$ is the time of the computation, $n_c$ is the number of computations, $\Delta u_c$ is the number of updates per 24 hours and $\Delta t_d$ is the number of seconds per 24 hours. Considering the example - if we have 500 assignments on the platform and we want to update the information every 10 minutes with a computation time of 30 seconds each, then we occupy a CPU in $\frac{60 \cdot 500 \cdot \frac{10 \cdot 60}{60 \cdot 60 \cdot 24}}{60 \cdot 60 \cdot 24}\text{ occupied CPU's} = 50\text{ occupied CPU's}$. If the amount of computational power isn't a problem, the expiration-based approach would be the best solution, but that is not the case of this thesis, where efficiency is a requirement.
 
 The alternative with high adaptability is to use manual trigger-based invalidation with asynchronous updates after request as described in section~\ref{subsec:trigger-based-invalidation-with-asynchronous-update}. This approach has the advantage that the values are only invalidated (and thereby recomputed) when a trigger is invoked, which means the programmer has the opportunity to optimize the approach to only invalidate when it is relevant to the user e.g. when the cached value are supposed to change. Although this can be seen as an opportunity it can also be seen as a burden for the programmer to maintain these manual triggers. And by having asynchronous invalidations, the user is presented with a stale value, and only if the value is requested again after the update, the user receives the fresh value. If we consider example~\ref{example:assignment-computations} it is not unlikely that the teacher looks at an old assignment some time after it has been closed. In cases such as this, where the value is only fetched once in a while it would not be optimal to have asynchronous updates, since the value will never be close to fresh when it is actually presented.
-
 \begin{example}
 \label{example:assignment-computations}
 On the Peergrade.io platform the teacher is presented with statistical information about the grades given by the students for a given assignment. These assignments are often current at specific time interval after which the assignment becomes ``closed'' and the statistical information are not updated.
 \end{example}
-
 The approaches suggested by Chris Wasik and Dan Ports focus on automatic invalidation and could probably be extended to do asynchronous updates on request to allow immediate responses by giving up the option of freshness, which would give the same guarantees as the trigger-based invalidation with asynchronous updates with additional automatic invalidation, but it would also have the same problems.
 
 The approach best fit for the context of this thesis is to use write-through invalidation that guarantees immediate response time as well as updating the content in-place such that the content cannot become older than the time taken to compute the value.
@@ -144,19 +142,20 @@ To give an example, we will demonstrate the usage of the localization procedures
 
 % section the_cachable_function_model end
 
-\section{Discussion}
+\section{Discussion on Limitations of Cachable Functions}
 \label{sec:cachable-function-discussion}
 
-TODO: Write a discussion of the following topics:
+The design of the cachable functions require the programming language to support serialization and deserialization as described. In Python it is possible to localize modules and functions dynamically based on a string representation, but in other languages this could be a challenge or might even require a different solution, which could be a limitation of the design and implementation. For example statically typed languages that does not allow dynamic notations, might need a different solution, where the representations are mapped to a data structured holding references to the given functions. Furthermore the solution does not consider caching methods for objects in object oriented languages, which is considered a limitation of the solution. To cache methods of objects, the solution would have to be extended to consider the state of the object as ``input'' for the cached function.
 
-\begin{itemize}
-  \item (How does naming and locality solve the problem?)
-  \item Usability compared to other solutions (declares dependencies, not automatic)
-  \item Limitation: Can only use data from primary storage (alternatives than database? external resource?)
-  \item Flexibility/Adaptablity: Since functions are pretty low level they could easily be extended to support HTTP-Caching, query caching, etc.
-  \item Limitation with relation to serialize/deserialize. Our implementation targets dynamic languages, but Java or CSharp would probably need a completely different implementation
-\end{itemize}
+Another limitation of the interface of cachable functions described so far is that it is only possible to use it for trigger-based invalidation and the only control for the programmer is to define the dependencies such that the cached object is invalidated appropriately. There could be cases, where the cached object were to be invalidated based on some data sources, but also be once every day as an example using expiration-based invalidation. Luckily, the interface can easily be extended to include optional parameters that would allow hybrid approaches such as these.
 
 % section discussion end
+
+\section{Summary}
+\label{sec:cachable-functions-summary}
+
+In this chapter we introduces the interface for cachable functions that allows a programmer to declare a function to be cachable such that the second time the function is accessed the result will be served from the cache instead of recomputing it. The naming and identification of the related cached object instance is handled transparently by the caching system. The interface also includes declaration that allows to extend cachable functions to have automatic invalidation as described in the next chapter (chapter~\ref{chapter:invalidation}) and in-place updates (chapter~\ref{chapter:data-update-propagation}).
+
+% section summary end
 
 % chapter smache-cachable-functions end

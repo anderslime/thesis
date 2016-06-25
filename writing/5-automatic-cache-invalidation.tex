@@ -308,56 +308,14 @@ To implement concurrent invalidations in Python we will therefore use the concep
 
 % section implementing-automatic-invalidation end
 
-\section{Discussion}
-\label{sec:invalidation-discussion}
+\section{Summary}
+\label{sec:invalidation-summary}
 
-TODO: Discuss the following:
+In this chapter we suggest an extension to cachable functions that provides automatic invalidation. The caching system uses the dependency information given as arguments, when a function is made cachable, to derive the dependency strategy for how and when to invalidate the related cached object. To provide efficient and fast invalidation, the caching system uses extensions of the Simple Object Dependence Graph data structure called Declaration Dependence Graph (DDG) and Instance Dependence Graph (IDG), to access the dependency information fast.
+The caching system registers static dependency information stored in the DDG when the application starts and dynamic dependency information in the IDG when a cached function is called.
+When underlying data are changed, the caching system will query the dependency data structures to find the cached object instances affected by the change, which are then invalidated using timestamp invalidation.
 
-\begin{itemize}
-  \item How automatic invalidation meets the requirements
-  \item Discuss how deriving dependencies instead of tracking would affect the solution (maybe do this in the same section as describing dependency tracking)
-  \item Limitation on dependency management (it need to support locking or transactions)
-  \item Whether these persistent data should be represented in a cache database?
-  \item Timestamp invalidation => idempotent updates => we don't need an order of updates
-  \item Fault-Tolerance on the architecture
-\end{itemize}
-
-% section discussion end
-
-% - How we do it:
-%   - Discuss that the design meets the requirements and criteria stated
-% - Implementation:
-%   - Extending the API to support automatic cache invalidation
-
-% TODO:
-% - Discuss tracking dependencies vs. deriving them as in deploy-time model
-%   => With relation to efficiency
-%   => The input define the cached object. Another input == another cached object
-%     => input deps does not change
-%   => The relation dependencies change for a given cached object
-%     => Instead of tracking those, we just evaluate them every time
-
-% section existing_solutions_for_cache_invalidation end
-
-
-% - How it could work:
-%   - When calling the cached function (fun instance registration):
-%     - When a given computed fun is executed we will serialize the arguments the following way:
-%       - Raw values (that can be json) is just serialized into json
-%       - Underlying data (entities) are serialized by their entity id and instance id
-%     - We can then cache the given value under a unique identifier given by concatenation
-%       - A unique id for the fun (python: module + fun name)
-%       - The serialized arguments
-%     - From the entity arguments we store a reference from the entity instance to the computed fun instance
-%       - This is stored in the "dependency graph"
-%     - The next time the function is called with the same argument, it will be fetched from the cache
-%   - When underlying data changes:
-%     - If the data is corresponding to an (entity) argument of the function
-%       - We lookup the dependency graph for all the computed funs affected by the entity
-%       - These computed funs are then marked as stale and/or written throug/updated
-%   - TODO: describe relation updates
-
-
+% section summary end
 
 % chapter automatic_cache_invalidation end
 
