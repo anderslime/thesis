@@ -1,5 +1,5 @@
-\chapter{Results and Evaluation}
-\label{chapter:tests-and-evaluation}
+\chapter{Tests and Evaluation}
+\label{chapter:evaluation}
 
 Throughout this project Smache has been implemented in Python and integrated into the Peergrade.io-platform. The source code is available through a ZIP-file attached with the thesis as well as for open source contributions at:
 
@@ -7,14 +7,46 @@ Throughout this project Smache has been implemented in Python and integrated int
 
 Besides the Python implementation of Smache, the source code also includes automated tests with a test coverage of 98\% (TODO: update this result at end of project) and a small benchmark framework to execute and plot the results of performance tests with different sizes of data sets. The automated tests are automatically verified by a continous integration application, Travis, that runs the full test suite when new versions of the code are merged into the source code. The test results are available at \url{https://travis-ci.org/anderslime/smache}.
 
-The rest of this chapter will lay out test results of experiments made to test the assumptions about the solution. The results shown in the from executing the experiements on a MacBook Pro (Retina, 15-inch, Early 2013) with an 2.4 GHz Intel Core i7 (4 cores) and 8 GB 1600 MHz DDR3 RAM. The experiments will test the performance of the invalidation flow (section~\ref{sec:performance}), the update throughput (section~\ref{sec:update-throughput}) and the space (section~\ref{sec:space}). Finally, Smache is evaluated based on the test result and requirements (section~\ref{sec:evaluation}).
+The rest of this chapter will lay out test results of experiments made to test the assumptions about the solution. The results shown in the from executing the experiements on a MacBook Pro (Retina, 15-inch, Early 2013) with an 2.4 GHz Intel Core i7 (4 cores) and 8 GB 1600 MHz DDR3 RAM. The evaluation seeks to answer the following questions:
 
-\section{Performance of Requests that Changes Underlying Data}
-\label{sec:performance}
+\begin{itemize}
+  \item What changes are required to modify existing web application to use Smache? (section~\ref{sec:changes-required-to-cache-with-smache})
+  \item What is the performance impact for procedures updating data in the primary storage, when cachable functions are introduces with Smache? (section~\ref{sec:performance-impact-of-existing-procedures})
+  \item How efficient are Smache updating cached objects? (section~\ref{sec:update-throughput})
+\end{itemize}
+
+The chapter will end with an evaluation of the system based on the test results and the initial requirements~\ref{sec:evaluation}
+
+\section{Changes Required to Cache with Smache}
+\label{sec:changes-required-to-cache-with-smache}
+
+Smache was integrated in to the Peergrade.io platform, which is an existing web application with a single code base deployed to multiple web servers. To test the adaptability we applied the library to cached functions of different granularities such as function returning a single value, functions returning a data structure and functions returning the HTML served to the user. From this integrations we experienced an easy integration, but to cache optimally some of the functions had to be split up to.
+For example some of the functions had statistical calculations that iterated using \verb$for$-loops and made calculations in each iteration, which were not able to be cached individually as seen in code snippet~\ref{code:running-example-non-cachable}. To make this function optimally cachable by caching each participant score, we would have to extract it into a method such as in the running example in code snippet~\ref{code:running-example}. The running example are then made cachable by adding cachable declaration using Python-decorators after which it looks as in code snippet~\ref{code:basic-caching-running-example}.
+The HTTP-responses were not directly cachable either since they work on request-objects specific to the client making the request. In order to cache the responses we extracted the code that generated the HTML-fragment served as the HTTP-body.
+
+In order to use Smache, the system also require additional components added to the architecture. To achieve the guarantees described in this thesis, the system must add the following components to the architecture:
+
+\begin{itemize}
+  \item Cache database to store the cached values and metadata
+  \item Background Workers with a Queue-system to have asynchronous invalidation and updates
+\end{itemize}
+
+Even though this is optimal, Smache has been implemented such that it is easy leave them out. The cache database can for example be replaced by the primary storage that is already a part of the system. The background workers can also be left out and replaced by synchronous invalidation and updates that are executed in the same process as the web servers, but this would affect the performance of the web applications as seen in the results in section~\ref{sec:performance-impact-of-existing-procedures}.
+
+\begin{figure*}[ht!]
+  \input{code/running_example_non_cachable.py}
+  \caption{Code where Smache can cache the course score, but not the individual participant scores.}
+  \label{code:running-example-non-cachable}
+\end{figure*}
+
+% section changes-required-to-cache-with-smache end
+
+\section{Performance Impact of Existing Procedures}
+\label{sec:performance-impact-of-existing-procedures}
 
 One of the requirements of the system is that the performance of existing operations should not be affected negatively by introducing the caching system. On the requests that changes underlying data, the application will notify and execute invalidation in the same process, which will affect the response time of the update request. The performance of invalidation have been evaluated using a test that uses both \emph{direct dependencies} and \emph{lazy dependencies}.
 
-The results visualized on figure~\ref{fig:graph-update-requests} indicates how a synchronous and asynchronous write-through mechanism impacts the time taken to update underlying data. If we consider the asynchronous mechanism used by Smache, it introduces a small constant overhead of around $2$ ms as seen on the exact results shown on table~\ref{tab:update-requests}. The synchronous mechanism introduces an overhead depending on the execution time of the cached function, which means the time taken to update underlying data would be affected by the caching system.
+The results of this test, visualized on figure~\ref{fig:graph-update-requests}, indicates how a synchronous and asynchronous write-through mechanism impacts the time taken to update underlying data. If we consider the asynchronous mechanism used by Smache, it introduces a small constant overhead of around $2$ ms as seen on the exact results shown on table~\ref{tab:update-requests}. The synchronous mechanism introduces an overhead depending on the execution time of the cached function, which means the time taken to update underlying data would be affected by the caching system.
 
 \begin{figure*}[ht!]
   \centering
@@ -23,26 +55,31 @@ The results visualized on figure~\ref{fig:graph-update-requests} indicates how a
   \label{fig:graph-update-requests}
 \end{figure*}
 
-TODO: Fill out this table
-
-\begin{table}[htpb]
+\begin{table}[ht!]
   \centering
-  \caption{caption}
-  \label{tab:update-requests}
-  \begin{tabular}{c}
-
+  \begin{tabular}{llll}
+    \hline
+    Function duration & Without caching & Smache (async.) & Synchronous \\
+    \hline
+    50 ms  & 6.2 ms (1.0x)  & 7.9 ms (1.27x)  &  143.2 ms (23.0x) \\
+    100 ms & 6.3 ms (1.0x)  & 7.9 ms (1.25x)  &  146.9 ms (23.4x) \\
+    200 ms & 6.4 ms (1.0x)  & 8.0 ms (1.26x)  &  168.2 ms (26.4x) \\
+    400 ms & 6.6 ms (1.0x)  & 8.3 ms (1.25x)  &  207.1 ms (31.2x) \\
+    \hline
   \end{tabular}
+  \caption{The time taken updating underlying data that affects a single cached object for an application using Smache compared to a system using synchronous write-through invalidation.}
+  \label{tab:update-requests}
 \end{table}
 
-% section performance end
+% section performance-impact-of-existing-procedures end
 
 \section{Update Throughput}
 \label{sec:update-throughput}
 
-To evaluate the performance and scalability of the concurrency used in the data update propagation, we will measure the update throughput while increasing the number of workers, where the number of workers is the amount updates the system is able to process at the same time. While it would be possible to measure against examples in the context of the Peergrade.io, we have chosen to measure against patterns of cached functions. The tests will be performed against a use case, where many cached functions depends on a single underlying data resource (section~\ref{subsec:many-cached-functions} and afterwards a case where multiple cached functions depends on each other in a nested hierarchy (section~\ref{subsec:nested-cached-functions}).
+To evaluate the performance and scalability of the concurrency used in the data update propagation, we will measure the update throughput while increasing the number of workers, where the number of workers is the amount updates the system is able to process at the same time. While it would be possible to measure against examples in the context of the Peergrade.io, we have chosen to measure against patterns of cached functions. The tests will be performed against a use case, where many cached functions depends on a single underlying data resource (section~\ref{subsec:many-cached-object-instances} and afterwards a case where multiple cached functions depends on each other in a nested hierarchy (section~\ref{subsec:nested-cached-functions}).
 
-\subsection{Many Cached Functions}
-\label{subsec:many-cached-functions}
+\subsection{Many Cached Object Instances}
+\label{subsec:many-cached-object-instances}
 
 In this use case we will test a use case, where multiple instances of the same cached function depends on the same underlying data such that when the underlying data updates then all the cached objects instances for the cached function must be updated. The use case is illustrated on figure~\ref{fig:test-multi-deps}.
 
@@ -53,7 +90,7 @@ In this use case we will test a use case, where multiple instances of the same c
   \label{fig:test-multi-deps}
 \end{figure*}
 
-To simulate a slow functions the tests uses the \verb$sleep$-method from Python's \verb$time$-module such that each function uses $400$ ms to execute. The results of the tests are illustrated on the graph on figure~\ref{fig:graph_throughput_workers_multi}.
+To simulate a slow functions the tests use the \verb$sleep$-method from Python's \verb$time$-module such that each function uses $400$ ms to execute. The results of the tests are visualized figure~\ref{fig:graph_throughput_workers_multi} by a graph showing the number of updates the system can process per second (throughput) for different amount of workers. This graph shows of concurrency on the throughput of the cache system, where we see a significant increase in throughput every time the number of workers are increased. We also see that the impact of adding workers are becomes higher when there are more cached object instances even though it also has an impact for small amounts (around $10$ cached object instances).
 
 \begin{figure*}[ht!]
   \centering
@@ -62,22 +99,12 @@ To simulate a slow functions the tests uses the \verb$sleep$-method from Python'
   \label{fig:graph_throughput_workers_multi}
 \end{figure*}
 
-\begin{itemize}
-  \item Comment: scales at least linear (throughput stays the at least same while scaling functions)
-  \item Comment: multiple workers scales even better + better throughput
-\end{itemize}
-
-% subsection many-cached-functions end
+% subsection many-cached-object-instances end
 
 \subsection{Nested Cached Functions}
 \label{subsec:nested-cached-functions}
 
-\begin{itemize}
-  \item Figure of the cached functions (graph)
-  \item Show graph of no. of workers vs. throughput
-  \item Comment: nested updates are not that optimized by concurrent updates
-  \item Concurrent updates are faster for nested, because a scheduler would schedule this in sequence
-\end{itemize}
+To evaluate the performance on nested cached functions, we apply the tests on a setup, where multiple cached functions depend on each other as illustrated on figure~\ref{fig:test-nested-deps}.
 
 \begin{figure*}[ht!]
   \centering
@@ -86,6 +113,8 @@ To simulate a slow functions the tests uses the \verb$sleep$-method from Python'
   \label{fig:test-nested-deps}
 \end{figure*}
 
+Compared to the impact on the use case with many cached functions (section~\ref{subsec:many-cached-object-instances}), the results on figure~\ref{fig:graph_throughput_workers_nested} shows that the impact of concurrent updates are not as high and that the impact highly depends on the depth of the cached functions.
+
 \begin{figure*}[ht!]
   \centering
   \includegraphics[width=1.0\linewidth]{figures/results/graph_throughput_workers_nested.pdf}
@@ -93,77 +122,36 @@ To simulate a slow functions the tests uses the \verb$sleep$-method from Python'
   \label{fig:graph_throughput_workers_nested}
 \end{figure*}
 
-% subsection nested-cached-functions end
+Another reason why the use case with nested cached functions are interesting is because it cannot be parallelized by scheduling algorithms that assumes a given cached function is only computed once at the same time. These algorithms would process the cached functions in this test case sequentially, which corresponds to the result of using 1 worker. If we compare the throughput of using multiple workers to the throughput of using a single worker as seen on table~\ref{tab:nested-relative-results}, we see that there is still a gain in throughput from processing multiple functions at once.
 
-% section update-throughput end
+\begin{table}[ht!]
+  \centering
+  \begin{tabular}{llll}
+    \hline
+    Cached functions & Sequentially & Concurrently & Improvement \\
+    \hline
+    2 & 0.80 updates/sec & 1.57 updates/sec & 1.97x \\
+    4 & 0.94 updates/sec & 1.88 updates/sec & 2.01x \\
+    8 & 0.96 updates/sec & 2.43 updates/sec & 2.55x \\
+    \hline
+  \end{tabular}
+  \caption{Improvement of processing nested cached functions concurrently (using 8 workers) compared to sequentially (using 1 worker).}
+  \label{tab:nested-relative-results}
+\end{table}
 
-\section{Space}
-\label{sec:space}
-
-\subsection{Peergrade.io Platform}
-\label{subsec:peergrade-io-platform}
-
-\begin{itemize}
-  \item Test memory consumption of cache database when using Peergrade.io
-  \item Test dependency graph as well as the feasibility
-\end{itemize}
-
-% subsection peergrade-io-platform end
-
-% section space end
 
 \section{Evaluation}
 \label{sec:evaluation}
 
-% TODO: Should this be full evaluation
+In order to make the Smache library adaptable for existing application it has been designed and implemented to be flexible and introduce as few new components as possible. The architectural components are made as extensions such that they easily can be changed or left out if some of the guarantees are not needed in the given context. The interface for making functions cachable is not fully transparent, but it relies on the developer declaring dependencies. Smache could be extended with a transparent interface, where the dependencies are automatically detected, but this would also affect the flexibility, the control of the programmer and make it more difficult to understand when a given cached functions are invalidated. We therefore suggest to use a tool that helps the programmer identify dependencies instead of removing the control or a solution where the programmer optionally is able to declare dependencies. This also relates to the requirement of making the system maintainable and understandable for the developer.
 
-Discuss this:
+The test results of this chapter indicates that the Smache solution does not introduce performance regressions to the system. The requests that updates underlying data are normally affected when the application uses a basic write-through invalidation, but Smache only introduces a small constant overhead of a few milliseconds ($< 3 ms$) by invalidating and updating using an asynchronous technique that uses timestamp invalidation for correctness. The update propagation algorithm allows concurrent updates that in some cases results in a higher throughput than scheduling algorithms. The algorithm uses the timestamp invalidation technique to ensure correctness such that the updates can be executed concurrently, which means we achieve a simpler system that does not require scheduling algorithms to achieve a high throughput and we are able to scale the throughput by adding more workers, but it also means that algorithm can risk executing the same cached functions more than once and thereby using more CPU power than necessary. We can therefore say that the system is efficient with relation to the performance of the web application and the throughput, but not with relation to CPU usage.
 
-\subsubsection{Efficiency and Scalability}
-\label{subsubsec:efficiency-and-scalability}
+Smache does not control the space usage, which means the presence of the cached values depends on how the cache database controls space. The optimal choice for a cache database is a in-memory database, but since memory is expensive, it could be necessary to change to a disk-based database if the space used becomes too expensive.
 
-\begin{itemize}
-  \item We have a less efficient, but simpler + faster for some cases
-  \item By allowing multiple workers we even scale better in some cases
-\end{itemize}
-
-% subsubsection efficiency-and-scalability end
-
-
-\subsubsection{Adaptability}
-\label{subsubsec:adaptability}
-
-% Adaptability:
-% - Since we have made the solutions as layers we can provide flexiblity:
-% => Cachable Functions i only the basis - missing correct invalidations
-% => Automatic Invalidation - provide possibility to invalidate
-% => DUP - extends automatic invalidation to provide in-place updates
-% == We can easily configure Smache to omit the DUP-step and thereby obtain strict freshness (on a per-fun level)
-% == We support more use cases
-
-\begin{itemize}
-  \item See cached function section for changes
-  \item We have achieved a solution, where we are able to make functions cachable without changing the behaviour of the function. We can easily remove it again.
-  \item Maybe: we could achieve an even better solution by using transactions that sniffs the dependencies
-\end{itemize}
-
-% subsubsection adaptability end
-
-\subsubsection{Fault-Tolerance}
-\label{subsubsec:fault-tolerance}
-
-% Fault-Tolerance:
-%  - If the cache is not reachable:
-%    - If computation time > 10s: should return no result
-%    - If computation time < 10s
-%      - Should be computed
-%      - BUT: Be aware of (accidental) DOS (all web requests are hold up by long running computations)
-
-% subsubsection fault-tolerance end
+% TODO: Evaluate fault-tolerance
+% - We ensure integrity using the timestamp invalidation technique
+% - A degree of reliability ensured by having a simple architecture with few SPF's - the queueing system + the cache database
+% - Maintainability ensured by simple system with a well-tested library.
 
 % section evaluation end
-
-% chapter tests-and-evaluation end
-
-% chapter results_and_evaluation end
-

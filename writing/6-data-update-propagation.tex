@@ -37,13 +37,13 @@ As illustrated on figure~\ref{fig:incorrect-updates-analysis} a race condition c
 
 % section race-condition-on-write-through-invalidation end
 
-\section{The Data Update Propagation Algorithm}
+\section{Design of the DUP Algorithm}
 \label{sec:the-data-update-propagation-algorithm}
 
 % TODO: Consider this a chapter for itself
 The existing solution described in section~\ref{sec:existing-data-update-propagation-approaches} assumes that a given cached computation is only accessed by one process at the same time. This has the advantage that they avoid race conditions, but it also means that the scheduling have to synchronize parallel execution to avoid updating the same object. The optimizations are then achieved using scheduling algorithms that evaluates the update jobs and prioritize them based on some metric such as the freshness or computation time. By having this assumption and enforce an order of execution some jobs have to wait to be executed. The only way to optimize the execution of these jobs is to acquire faster CPU's, which is expensive compared to buying more CPU's.
 
-Instead of using advanced scheduling algorithms to achieve a high throughput we suggest a solution that allows concurrent updates of the same cached object. By allowing this we can scale our update execution by buying more CPU's and thereby be able to execute more jobs at the same time.
+Instead of using advanced scheduling algorithms to achieve a high throughput we suggest a solution that allows concurrent updates, which means we can scale our update execution by adding more processes and thereby be able to execute more jobs at the same time.
 
 To allow concurrent updates we use Timestamp Invalidation as already explained in section~\ref{subsec:timestamp-invalidation}. Timestamp Invalidation ensures that a given computation does not overwrite the value of a cached object if the computation is based on a newer version of underlying data. Figure~\ref{fig:incorrect-update-analysis-timestamp-fix}
 
@@ -54,54 +54,57 @@ To allow concurrent updates we use Timestamp Invalidation as already explained i
   \label{fig:incorrect-update-analysis-timestamp-fix}
 \end{figure*}
 
-Since invalidation timestamps ensures the integrity of the cached objects we are allowed to scale horizontally and thereby execute as many jobs at once as there are update processes available. Furthermore since timestamp invalidation makes it possible to evaluate if a cached object is fresh, we can avoid computation of duplicates by only execute computations for stale cached objects. We could also optimize it even further by avoid scheduling recomputations for cached objects that are already scheduled, but this would require an atomic procedure to check if there already exists a similar job and only schedule the new job if there are none.
+Since invalidation timestamps ensures the integrity of the cached objects we are allowed to scale horizontally and thereby execute as many jobs at once as there are update processes available. Beside updating the cached objects concurrently, the algorithm will only schedule new update jobs if a similar job has not already been scheduled. Furthermore when a scheduled update job is processed it will only update the cached value unless it is already fresh.
 
+If a failure happen during the update of a cached object, the algorithm will retry the job by re-scheduling the job. This can be done without additional contract since an update job cannot be scheduled incorrectly and if it an update is scheduled unnecessarily it cannot affect the integrity of the cached objects.
 
-% Our approach:
-% - Use invalidation timestamps (as described before!)
-% - We can then paralellize
+% section design-of-the-algorithm end
 
-% Advantages:
-% - We remove this assumption by using timestamp invalidation and always
-%   recompute values for sub-computations when they are not fresh.
-% - That is: Ensure that a given computation executed at time $t1$ always compute values
-%   based on the state of underlying data at time $t1$.
-% - This way we still have the possibility of optimizing the write-through by
-%   scheduling, but we also have a simple scheduling algorithm that is easy to
-%   parallelize and require no advanced algorithm.
-
-%   - Avoid unnecessary updates
-%     => Prune duplicate jobs? (spoiler: NOT)
-%     => Do not compute fresh values (YES!)
-%   - IBM:
-%     => Schedule in topological order + parallelize sub-graphs
-%   - Others:
-%     => "Update Propagation Strategies for Improving the Quality of Data on the Web "
-%   - Our solution:
-%     => Using timestamp invalidation for concurrency control also for in-place updates
-%     => Always compute newest value (do not use stale value of sub-computes)
-%     => We get: retries, parallel computations, simple scheduling
-%   - Maybe measure QoD?
-
-% section the-data-update-propagation-algorithm end
-
-\section{Implementing the Data Updata Propagation Algorithm}
+\section{Implementation}
 \label{sec:implementing-the-data-updata-propagation-algorithm}
 
-TODO: Write about how the data update propagation is implemented
+Smache implements the data update propagation described above as an extension of the implementation of the automatic invalidation. After a set of cached objects have been invalidated as illustrated on figure~\ref{fig:background-workers}, Smache schedules the same cached objects to be updated unless an update job already exists.
 
-\begin{itemize}
-  \item Using queues (i.e. the producer/consumer model) as the scheduling mechanism (add job to queue to schedule update). Workers are then polling from the queue and executing.
-  \item How the timestamp mechanism works (if it has not already been shown in the chapter on automatic invalidation)
-  \item The architecture of the solution
-\end{itemize}
+To be able to work on multiple jobs at the same time, the updates are scheduled asynchronous using the same concurrency model as with concurrent invalidation described in section~\ref{subsec:asynchronous-invalidation} - using background workers. A cached object is scheduled for object by pushing an update job with the name of a given cached object as seen on figure~\ref{fig:background-workers}. The background workers will pull the update jobs off the queue and update the cached object unless it is already fresh. Smache updates the cached object by deserializing the name (or key) of the cached object using the implementation of \verb$DESERIALIZED-FUN$ as seen in code snippet~\ref{code:function-serialization}, which results in a reference to the cached function and the arguments identifying the cached object. The cached function is then executed with the given arguments and updated in a transaction using timestamp invalidation as described in section~\ref{subsec:update-transactions}. The implementation of this procedure is seen in code snippet~\ref{code:dup-implementation}.
 
-% section implementing-the-data-updata-propagation-algorithm end
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=1.0\linewidth]{figures/dup-background-workers.pdf}
+  \caption{How Smache schedules cached objects to be updated using background workers}
+  \label{fig:dup-background-workers}
+\end{figure*}
 
-\section{Discussion}
-\label{sec:discussion}
+\begin{figure*}[ht!]
+  \centering
+  \input{code/dup_implementation.py}
+  \caption{The code for updating a cached object identified by the key (name).}
+  \label{code:dup-implementation}
+\end{figure*}
 
-% section discussion end
+Since we use the same background workers as with automatic invalidation but with different procedures, the DUP algorithm does not require additional components for the architecture as seen on figure~\ref{fig:architecture-with-workers}.
 
+% section implementation end
+
+\section{Discussion on Fault-Tolerance}
+\label{sec:discussion-on-fault-tolerance}
+
+In the current architecture described on figure~\ref{fig:architecture-with-workers} we assume the web serves and background workers to be redundant, such that if a process fails in some way (e.g. due to network failures), another process is ready to do the task. We do not make any assumptions about the primary storage, so the level of fault-tolerance depends on the setup. The last two components - the queue and the cache database are not redundant.
+
+The queue could fail if there is a network failure such that the web application cannot connect to the queue server. In this case the caching system would not be able to invalidate or schedule updates, which results in invalid freshness evaluation and no cache updates, which leads to two major problems. At first we lose the invalidation and update notifications we cannot be able to recover and restore the application into a consistent state. Secondly, the web application could potentially serve inconsistent cache values to the clients. We can solve the first problem by having a local proxy queue in the web application that receives the notifications and forwards them to the distributed queue. If a network failure happened, the local queue would still have stored the messages and when the connection is restored, it can resend it's messages. The other problem can only be solved by ensuring that we do not serve any cached values, since we cannot be sure if they are consistent. This is an appropriate fallback, but if we recomputed every cached value instead of serving stale values, the application could end up crashing due to high load on the servers.
+
+An advantage of having the queue is that the invalidation and update procedures are executed in isolation. This means if an error or failure happens during the invalidation or update process, then it will not affect the web server behaviour and due to the nature of background workers, we will be able to retry the procedures easily by rescheduling failed procedures. We can do this without implementing any protocol measures, because the invalidation and updates are designed to be \emph{At-Most-Once} semantics i.e. they must be ensured to be send at least once, but if they are received more than once then it will not affect correctness.
+
+The cache server is also not designed to be redundant since timestamp invalidations require transactions for a given key. We could implement distributed transactions using distributed locking as explained in the Redis documentation~\cite{docs:redis-locking}, but this solution requires all cache servers to be available all the time to ensure consensus across all the cache servers. We are able to scale horizontally by using the sharding technique, where the cached objects are distributed across nodes, because there is no need for interaction between the cached objects.
+
+If the cache server fails in an environment without redundancy, the application would not be able to evaluate freshness or fetch cached values. This should be handled as with failures to the queue, where we could either make the application fail if we want to ensure consistency or just compute the functions normally as before caching was introduced. The appropriate fallback here depends on the use case, which means it could be a declaration made for each cached function whether or not they should be computed on cache failure.
+
+% section discussion-on-fault-tolerance end
+
+\section{Summary}
+\label{sec:summary}
+
+In this chapter automatic invalidation was extended to have in-place updates such that the cached objects are updated as they are invalidated instead of updating as they are requested. To do this correctly we introduced a Data Update Propagation (DUP) algorithm that uses timestamp invalidation to allow updates to be executed in parallel instead of using a scheduling algorithm. The algorithm was implemented in Python with background workers for scheduling the update procedures to be executed concurrently with possibility for retries. The solution does not provide a maximum level of fault-tolerance, but the chapter discusses how the solution can be extended with additional measures to achieve a higher level of fault-tolerance.
+
+% section summary end
 
 % section updating_the_cache end

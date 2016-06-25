@@ -1,3 +1,4 @@
 [warnings_to_skip]
 Overfull
 Float
+floats
