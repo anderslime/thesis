@@ -1,16 +1,39 @@
 \chapter{Conclusion}
 \label{chapter:conclusion}
 
-- Pull based more fault tolerant - if execution fails, we just serve an allright value
+% Points:
+% - What it is the area?
+% => Find a caching solution that allowed immediate response times for cached
+% values, cached values to be as up to date as possible and easy cache
+% management
+
+% - Contributions:
+% => Defined a set of evaluation criteria for finding a caching strategy
+% => Researched and evaluated caching techniques
+% => Designed a new caching technique called 'cachable functions'
+% => Cachable functions was extended with automatic invalidation using this and that
+%    - Not fully transparent, but uses dependency declarations from the programmer
+% => Afterwards extended with in-place updates using a data update propagation.. CONCURRENCY!
+% => Implemented in Python and integrated into Peergrade.io
+% => Tested and evaluated performance of update propagation that showed it scales
+%    by only introducing a small overhead of a few milliseconds
+
+% What is so nice about our solution:
+% => Concurrent updates
+% => Simple (or no) scheduling of update propagation
+% => Application-Level cache + Flexible architecture that uses components already used in most web applications
 
 \section{Future Work}
 \label{sec:future_work}
 
-% - Test solution/caching for massive scale:
-%   - https://www.udacity.com/course/viewer#!/c-cs253/l-48683805/m-48271900
-
-% - Track dependencies using in-application transactions
-%   => Sniff database wrapper while computing cached object
+\begin{itemize}
+  \item Extend with fully transparent dependency sniffing
+  \item Extend with fault-tolerant measures
+  \item Extend library to support other invalidation techniques => HYBRID
+  \item Implement with other primary storage database technologies (such as SQL)
+  \item Implement with other caching database technologies
+  \item Implement with other programming languages
+\end{itemize}
 
 % section future_work end
 

@@ -9,16 +9,7 @@ In this chapter we will extend the current solution with in-place updates using 
 
 In the approach suggested by Jim Challenger et.al.~\cite{paper:ibm, paper:ibm-extended, paper:ibm-publishing-system}, the DUP algorithm is based on invalidation from the Object Dependence Graph described in section~\ref{sec:simple-object-dependence-graph}. When underlying data changes all depending cached objects are scheduled for update, but since some of the cached objects depends on other cached objects they cannot be computed in any order. If a cached object $o_2$ that depends on another cached object $o_1$ where updated first then it would be based on an old version of $o_1$, which means it would still be stale and the algorithm would not have liveness. To solve this problem the approach updates all cached objects in a topological order, which ensures that $o_2$ is ordered after $o_1$ since it depends on $o_1$. One limitations of this technique is that it only works if the object dependence graph has no cycles i.e. it is an \emph{Directed Asyclic Graph}. Another limitation is that when there is an order of the jobs then they must be synchronized when executed in parallel.
 
-TODOS:
-
-- Write about Labrinidis's strategy \\
-- Write about DBProxy
-
-% A. Labrinidis and N. Roussopoulos~\cite{paper:update-propagation-strategies}
-% Look for similar solutions in research!
-% => "DBProxy: A dynamic data cache for Web applications"
-% => "Update Propagation Strategies for improving the quality of the web"
-% => ?
+Labrinidis et.al.~\cite{paper:update-propagation-strategies} suggests an algorithm that schedules cache updates prioritized by a Quality of Data measurement, which they define as the probability that a request results in a fresh value from the cache. The algorithm is then designed to maximize the overall Quality of Data by continuously evaluating the measurements and scheduling the updates in a prioritized order.
 
 % section existing-data-update-propagation-approaches end
 
@@ -40,7 +31,6 @@ As illustrated on figure~\ref{fig:incorrect-updates-analysis} a race condition c
 \section{Design of the DUP Algorithm}
 \label{sec:the-data-update-propagation-algorithm}
 
-% TODO: Consider this a chapter for itself
 The existing solution described in section~\ref{sec:existing-data-update-propagation-approaches} assumes that a given cached computation is only accessed by one process at the same time. This has the advantage that they avoid race conditions, but it also means that the scheduling have to synchronize parallel execution to avoid updating the same object. The optimizations are then achieved using scheduling algorithms that evaluates the update jobs and prioritize them based on some metric such as the freshness or computation time. By having this assumption and enforce an order of execution some jobs have to wait to be executed. The only way to optimize the execution of these jobs is to acquire faster CPU's, which is expensive compared to buying more CPU's.
 
 Instead of using advanced scheduling algorithms to achieve a high throughput we suggest a solution that allows concurrent updates, which means we can scale our update execution by adding more processes and thereby be able to execute more jobs at the same time.
