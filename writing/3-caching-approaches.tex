@@ -168,12 +168,66 @@ Other solutions such as~\cite{paper:liskov, paper:ibm, paper:ibm-extended} assum
 
 In the techniques with in-application triggers, changes to the database around the application are not captured. So if the system has the requirement that the primary storage can receive commands from multiple applications, the best solution would be to use triggers directly from the database. But this also means the system is required to use a database technology that supports this. This comparison is also shown on figure~\ref{fig:invalidation-trigger-comparison}.
 
-\begin{figure*}[ht!]
+\begin{table}[ht!]
+  \footnotesize
   \centering
-  \includegraphics[width=0.9\linewidth]{figures/invalidation-trigger-comparison.png}
+  \begin{tabular}{lll}
+    \hline
+    & \textbf{Advantages} & \textbf{Disadvantages} \\
+    \hline
+    {
+      \emph{Directly from Database}
+    } & {
+      \parbox{3.5cm}{
+        \begin{itemize}[leftmargin=0.75em]
+          \item Any change is captured
+        \end{itemize}
+      }
+    } & {
+      \parbox{3.5cm}{
+        \begin{itemize}[leftmargin=0.75em]
+          \item Require database to support triggers
+        \end{itemize}
+      }
+    } \\
+    \hline
+    {
+      \emph{Database Sniffer}
+    } & {
+      \parbox{3.5cm}{
+        \begin{itemize}[leftmargin=0.75em]
+          \item Any change is captured
+        \end{itemize}
+      }
+    } & {
+      \parbox{3.5cm}{
+        \begin{itemize}[leftmargin=0.75em]
+          \item Require a database sniffer for the database technology used
+          \item Requires an extra running process
+        \end{itemize}
+      }
+    } \\
+    \hline
+    {
+      \emph{Database Wrapper}
+    } & {
+      \parbox{3.5cm}{
+        \begin{itemize}[leftmargin=0.75em]
+          \item Supports all database technologies supported by the database wrapper or the API used by the database wrapper
+        \end{itemize}
+      }
+    } & {
+      \parbox{3.5cm}{
+        \begin{itemize}[leftmargin=0.75em]
+          \item Changes made to the database around the database wrapper are not detected
+        \end{itemize}
+      }
+    } \\
+    \hline
+  \end{tabular}
   \caption{Comparison of triggers for automatic invalidation}
   \label{fig:invalidation-trigger-comparison}
-\end{figure*}
+\end{table}
 
 % subsubsection triggering-cache-invalidation end
 
@@ -190,12 +244,92 @@ The solution suggested by Jim Challenger et.al.~\cite{paper:ibm, paper:ibm-exten
 
 An overview of this discussion can be found in figure~\ref{fig:dependency-management-comparison}.
 
-\begin{figure*}[ht!]
+\begin{table}[ht!]
+  \footnotesize
   \centering
-  \includegraphics[width=0.9\linewidth]{figures/dependency-management-comparison.png}
+  \begin{tabular}{lll}
+    \hline
+    & \textbf{Advantages} & \textbf{Disadvantages} \\
+    \hline
+    {
+      \parbox{3.5cm}{
+        \emph{Declared in code} \\ (\cite{paper:cache-genie})
+      }
+    } & {
+      \parbox{3.5cm}{
+        \begin{itemize}[leftmargin=0.75em]
+          \item Easy to reason about dependencies
+        \end{itemize}
+      }
+    } & {
+      \parbox{3.5cm}{
+        \begin{itemize}[leftmargin=0.75em]
+          \item Relies on the developer declaring dependencies
+        \end{itemize}
+      }
+    } \\
+    \hline
+    {
+      \parbox{3.5cm}{
+        \emph{Declared in content} \\ (\cite{paper:ibm, paper:ibm-extended})
+      }
+    } & {
+      \parbox{3.5cm}{
+        \begin{itemize}[leftmargin=0.75em]
+          \item Allow different data source for different entities
+          \item The developer does not have to declare dependencies
+        \end{itemize}
+      }
+    } & {
+      \parbox{3.5cm}{
+        \begin{itemize}[leftmargin=0.75em]
+          \item Burden for users to define dependencies on each entity
+        \end{itemize}
+      }
+    } \\
+    \hline
+    {
+      \parbox{3.5cm}{
+        \emph{Code Generation From Static Analysis} \\ (\cite{paper:deploy-time})
+      }
+    } & {
+      \parbox{3.5cm}{
+        \begin{itemize}[leftmargin=0.75em]
+          \item Semi transparent  (requires definition of database relations)
+        \end{itemize}
+      }
+    } & {
+      \parbox{3.5cm}{
+        \begin{itemize}[leftmargin=0.75em]
+          \item Does not work for dynamic programming languages
+          \item Difficult to detect relational dependencies
+          \item Requires knowledge about static analysis to implement
+        \end{itemize}
+      }
+    } \\
+    \hline
+    {
+      \parbox{3.5cm}{
+        \emph{Database Transactions with Invalidation Tags} \\ (\cite{paper:liskov})
+      }
+    } & {
+      \parbox{3.5cm}{
+        \begin{itemize}[leftmargin=0.75em]
+          \item Fully transparent
+        \end{itemize}
+      }
+    } & {
+      \parbox{3.5cm}{
+        \begin{itemize}[leftmargin=0.75em]
+          \item Require the database to implement the transactions
+        \end{itemize}
+      }
+    } \\
+    \hline
+  \end{tabular}
   \caption{Comparison of dependency management techniques for automatic invalidation}
   \label{fig:dependency-management-comparison}
-\end{figure*}
+\end{table}
 
 % subsubsection dependency-management end
 
