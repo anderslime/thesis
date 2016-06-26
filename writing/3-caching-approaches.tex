@@ -401,7 +401,17 @@ In general there is not a best or correct caching solution - it's a matter of ch
   \doublespacing
   \centering
   \begin{tabular}{lccccc}
-                                          & \textbf{Freshness} & \parbox{1.5cm}{\textbf{In-place\\Updates}} & \parbox{1cm}{\textbf{\centering Immediate\\Response}} & \parbox{1.5cm}{\centering \textbf{No\\Management}} & \textbf{Adaptability} \\
+{} & {
+  \twolinecell{1.2cm}{Strict}{Freshness}
+} & {
+  \twolinecell{1.2cm}{In-place}{Updates}
+} & {
+  \threelinecell{1.4cm}{Always}{Immediate}{Response}
+} & {
+  \twolinecell{1.4cm}{No Cache}{Management}
+} & {
+  \textbf{Adaptability}
+} \\
   \hline
   \textbf{Arbitrary Content}           & & & & & \\
   Expiration-based                     & \no  & \no  & \yes & \yes & \high \\[7pt]

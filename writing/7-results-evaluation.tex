@@ -1,7 +1,7 @@
 \chapter{Tests and Evaluation}
 \label{chapter:evaluation}
 
-Throughout this project Smache has been implemented in Python and integrated into the Peergrade.io-platform. The source code is available through a ZIP-file attached with the thesis as well as for open source contributions at:
+Throughout this project Smache has been implemented in Python and integrated into the Peergrade.io-platform. Instructions for where to find and use the library is available in appendix~\ref{chapter:source-code}. The library is also open sourced on GitHub:
 
 \url{https://github.com/anderslime/smache}
 
@@ -15,7 +15,7 @@ The rest of this chapter will lay out test results of experiments made to test t
   \item How efficient are Smache updating cached objects? (section~\ref{sec:update-throughput})
 \end{itemize}
 
-The chapter will end with an evaluation of the system based on the test results and the initial requirements~\ref{sec:evaluation}
+The chapter will end with an evaluation of the system based on the test results and the initial requirements~\ref{sec:evaluation}.
 
 \section{Changes Required to Cache with Smache}
 \label{sec:changes-required-to-cache-with-smache}
@@ -139,11 +139,38 @@ Another reason why the use case with nested cached functions are interesting is 
   \label{tab:nested-relative-results}
 \end{table}
 
-
 \section{Evaluation}
 \label{sec:evaluation}
 
-The final solution, Smache, solves problem described in section~\ref{sec:problem} by introducing a caching system that provides automatic invalidation and in-place updates to ensure that the cached fragments are always served instantly.
+The final solution, Smache, solves problem described in section~\ref{sec:problem} by introducing a caching system that provides automatic invalidation and in-place updates to ensure that the cached fragments are always served instantly. Smache allows the programmer to define whether a given cached function should serve stale values or recompute a value if it is not fresh. To relate to existing solutions table~\ref{table:smache-evaluation} shows how Smache relates to the cache evaluation criteria.
+
+\begin{table}[ht!]
+  \scriptsize
+  \doublespacing
+  \centering
+  \begin{tabular}{lccccc}
+{} & {
+  \twolinecell{1.2cm}{Strict}{Freshness}
+} & {
+  \twolinecell{1.2cm}{In-place}{Updates}
+} & {
+  \threelinecell{1.4cm}{Always}{Immediate}{Response}
+} & {
+  \twolinecell{1.4cm}{No Cache}{Management}
+} & {
+  \textbf{Adaptability}
+} \\
+  \hline
+  \textbf{Arbitrary Content} & & & & & \\
+  \multicolumn{6}{c}{...} \\
+  Smache               & \no  & \yes & \yes & \opt & \med \\[7pt]
+  Smache w/o staleness & \yes & \yes & \no  & \opt & \med \\[7pt]
+  \multicolumn{6}{c}{...} \\
+  \hline
+  \end{tabular}
+  \caption{How Smache relates to the cache evaluation criteria}
+  \label{table:smache-evaluation}
+\end{table}
 
 In order to make the Smache library adaptable for existing application it has been designed and implemented to be flexible and introduce as few new components as possible. The architectural components are made as extensions such that they easily can be changed or left out if some of the guarantees are not needed in the given context. The interface for making functions cachable is not fully transparent, but it relies on the developer declaring dependencies. Smache could be extended with a transparent interface, where the dependencies are automatically detected, but this would also affect the flexibility, the control of the programmer and make it more difficult to understand when a given cached functions are invalidated. We therefore suggest to use a tool that helps the programmer identify dependencies instead of removing the control or a solution where the programmer optionally is able to declare dependencies. This also relates to the requirement of making the system maintainable and understandable for the developer.
 

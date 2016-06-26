@@ -42,8 +42,14 @@
 \usepackage{setspace}
 \newcommand{\specialcell}[2][c]{%
   \begin{tabular}[l]{@{}c@{}}#2\end{tabular}}
+\usepackage{multirow}% http://ctan.org/pkg/multirow
+\usepackage{hhline}% http://ctan.org/pkg/hhline
 
 % Colors
+
+\newcommand{\sss}[1]{\textsuperscript{#1}}
+\newcommand{\twolinecell}[3]{\parbox{#1}{\centering{\textbf{#2}}\\\centering{\textbf{#3}}}}
+\newcommand{\threelinecell}[4]{\parbox{#1}{\centering{\textbf{#2}}\\\centering{\textbf{#3}}\\\centering{\textbf{#4}}}}
 
 \newcommand{\good}[1]{\textcolor[HTML]{6AA84F}{#1}}
 \newcommand{\okay}[1]{\textcolor[HTML]{F1C232}{#1}}
@@ -123,6 +129,7 @@
 \include{Appendix1}
 \include{appendix/trigger-based-with-async-update-code}
 \include{appendix/function-serializer}
+\include{appendix/source-code}
 %-----------
 % Backmatter
 %-----------
