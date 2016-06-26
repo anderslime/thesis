@@ -8,5 +8,5 @@ def update_cached_object(key):
         # Store the new value unless it has been
         # updated by another update process
         computation_timestamp = CacheDB.last_update_timestamp(key)
-        CacheDB.store(key, computed_value, timestamp)
+        CacheDB.store(key, computed_value, computation_timestamp)
 \end{minted}

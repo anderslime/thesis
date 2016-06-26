@@ -1,14 +1,9 @@
 \chapter{Smache: Cachable Functions}
 \label{chapter:smache-cachable-functions}
 
-The goal of this thesis is to present a caching solution that is able to handle long running computations by presenting content to the user fast while addressing the challenges of cache management and efficient update propagation. Based on the overview of existing caching solutions introduces in the last chapter, we will present a solution that solves the problem for the context of the this thesis.
+The goal of this thesis is to present a caching solution that is able to handle long running computations by presenting content to the user fast while addressing the challenges of cache management and efficient update propagation. Based on the overview of existing caching solutions introduced in the last chapter, we will present a solution that solves the problem for the context and requirements of the this thesis.
 
-% TODO: Present the content of this chapter
-%   - Present that the requirements
-
-% Structure:
-% - Existing approaches does not solve our problem optimally
-% - Smache: Programming Model for Cachable Functions
+In this chapter we will start by arguing why the existing caching approaches are not sufficient (section~\ref{sec:existing-approaches-are-not-sufficient}). Followed by these arguments we present the programming model that is the basis of the solution suggested for this thesis (section~\ref{sec:the_cachable_function_model}), how we implemented this model in Python (section~\ref{sec:implementing_cachable_functions_in_python}) with a final discussion on the limitations of the design and implementation of the model (section~\ref{sec:cachable-function-discussion}).
 
 \section{Why Existing Approaches are Not Sufficient}
 \label{sec:existing-approaches-are-not-sufficient}
@@ -148,6 +143,8 @@ To give an example, we will demonstrate the usage of the localization procedures
 The design of the cachable functions require the programming language to support serialization and deserialization as described. In Python it is possible to localize modules and functions dynamically based on a string representation, but in other languages this could be a challenge or might even require a different solution, which could be a limitation of the design and implementation. For example statically typed languages that does not allow dynamic notations, might need a different solution, where the representations are mapped to a data structured holding references to the given functions. Furthermore the solution does not consider caching methods for objects in object oriented languages, which is considered a limitation of the solution. To cache methods of objects, the solution would have to be extended to consider the state of the object as ``input'' for the cached function.
 
 Another limitation of the interface of cachable functions described so far is that it is only possible to use it for trigger-based invalidation and the only control for the programmer is to define the dependencies such that the cached object is invalidated appropriately. There could be cases, where the cached object were to be invalidated based on some data sources, but also be once every day as an example using expiration-based invalidation. Luckily, the interface can easily be extended to include optional parameters that would allow hybrid approaches such as these.
+
+% TODO: Write about that the results which can be cached relies on the implementation and what is possible to serialize/deserialize into the cache.
 
 % section discussion end
 
