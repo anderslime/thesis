@@ -396,12 +396,34 @@ An overview of this discussion can be found in figure~\ref{fig:dependency-manage
 
 In general there is not a best or correct caching solution - it's a matter of choosing the solution best suited in the given context depending on the architecture of the web application and the specific use case. To get closer to the solution suited for our context (section~\ref{sec:context}) we will compare the different approaches based on the parameters described in section~\ref{sec:evaluating_caching_techniques}. This comparison is illustrated on figure~\ref{fig:existing-solutions-comparison}.
 
-\begin{figure*}[ht!]
+% \begin{figure*}[5cmht!]
+%   \centering
+%   \includegraphics[width=1.0\linewidth]{figures/existing-solutions-comparison.png}
+%   \caption{Comparison of caching approaches}
+%   \label{fig:existing-solutions-comparison}
+% \end{figure*}
+
+\begin{table}[htpb]
+	\scriptsize
+  \doublespacing
   \centering
-  \includegraphics[width=1.0\linewidth]{figures/existing-solutions-comparison.png}
+  \begin{tabular}{lcccccc}
+                                          & Consistency & Freshness & \parbox{1.5cm}{In-place\\Updates} & \parbox{1cm}{Immediate\\Response} & Management & Adaptability \\
+  \hline
+  \emph{Arbitrary Content}                & & & & & & \\
+  Expiration-based                        & maybe? & yes? & no? & yes? & maybe? & medium? \\
+  Key-based                               & maybe? & yes? & no? & yes? & maybe? & medium? \\
+  Manual Trigger-based                    & maybe? & yes? & no? & yes? & maybe? & medium? \\
+  \parbox{2.5cm}{Manual Trigger-based\\with Async Update}  & maybe? & yes? & no? & yes? & maybe? & medium? \\
+  Write-Trough                            & maybe? & yes? & no? & yes? & maybe? & medium? \\
+  \parbox{2.5cm}{Transactional\\Consistency}  & maybe? & yes? & no? & yes? & maybe? & medium? \\
+  \parbox{2.5cm}{Managing Cache\\Consistency} & maybe? & yes? & no? & yes? & maybe? & medium? \\
+  \hline
+  \emph{Declared Content}            & & & & & & \\
+  \end{tabular}
   \caption{Comparison of caching approaches}
   \label{fig:existing-solutions-comparison}
-\end{figure*}
+\end{table}
 
 \subsection{Immediate Response vs. Strict Freshness}
 \label{subsec:immediate-response-vs-strict-freshness}
