@@ -394,34 +394,36 @@ An overview of this discussion can be found in figure~\ref{fig:dependency-manage
 \section{Choosing the Right Caching Technique}
 \label{sec:choosing_the_right_caching_technique}
 
-In general there is not a best or correct caching solution - it's a matter of choosing the solution best suited in the given context depending on the architecture of the web application and the specific use case. To get closer to the solution suited for our context (section~\ref{sec:context}) we will compare the different approaches based on the parameters described in section~\ref{sec:evaluating_caching_techniques}. This comparison is illustrated on figure~\ref{fig:existing-solutions-comparison}.
-
-% \begin{figure*}[5cmht!]
-%   \centering
-%   \includegraphics[width=1.0\linewidth]{figures/existing-solutions-comparison.png}
-%   \caption{Comparison of caching approaches}
-%   \label{fig:existing-solutions-comparison}
-% \end{figure*}
+In general there is not a best or correct caching solution - it's a matter of choosing the solution best suited in the given context depending on the architecture of the web application and the specific use case. To get closer to the solution suited for our context (section~\ref{sec:context}) we will compare the different approaches based on the parameters described in section~\ref{sec:evaluating_caching_techniques}. An overview of the comparison on table~\ref{fig:existing-solutions-comparison} that shows how the different caching approaches relates to the evaluation criteria (except for transactional consistency since TxCache is only approach that achieves it).
 
 \begin{table}[htpb]
-	\scriptsize
+  \scriptsize
   \doublespacing
   \centering
-  \begin{tabular}{lcccccc}
-                                          & Consistency & Freshness & \parbox{1.5cm}{In-place\\Updates} & \parbox{1cm}{Immediate\\Response} & Management & Adaptability \\
+  \begin{tabular}{lccccc}
+                                          & \textbf{Freshness} & \parbox{1.5cm}{\textbf{In-place\\Updates}} & \parbox{1cm}{\textbf{\centering Immediate\\Response}} & \parbox{1.5cm}{\centering \textbf{No\\Management}} & \textbf{Adaptability} \\
   \hline
-  \emph{Arbitrary Content}                & & & & & & \\
-  Expiration-based                        & maybe? & yes? & no? & yes? & maybe? & medium? \\
-  Key-based                               & maybe? & yes? & no? & yes? & maybe? & medium? \\
-  Manual Trigger-based                    & maybe? & yes? & no? & yes? & maybe? & medium? \\
-  \parbox{2.5cm}{Manual Trigger-based\\with Async Update}  & maybe? & yes? & no? & yes? & maybe? & medium? \\
-  Write-Trough                            & maybe? & yes? & no? & yes? & maybe? & medium? \\
-  \parbox{2.5cm}{Transactional\\Consistency}  & maybe? & yes? & no? & yes? & maybe? & medium? \\
-  \parbox{2.5cm}{Managing Cache\\Consistency} & maybe? & yes? & no? & yes? & maybe? & medium? \\
+  \textbf{Arbitrary Content}           & & & & & \\
+  Expiration-based                     & \no  & \no  & \yes & \yes & \high \\[7pt]
+  Key-based                            & \no  & \no  & \no  & \no  & \high \\[7pt]
+  Manual Trigger-based                 & \yes & \no  & \no  & \no  & \high \\[7pt]
+  Async. Update                        & \yes & \no  & \yes & \no  & \high \\[7pt]
+  Write-Trough                         & \no  & \yes & \yes & \no  & \med  \\[7pt]
+  TxCache~\cite{paper:liskov}          & \opt & \no  & \opt & \yes & \low \\[7pt]
+  Chris Wasik~\cite{paper:deploy-time} & \yes & \no  & \yes & \opt & \med  \\[7pt]
   \hline
-  \emph{Declared Content}            & & & & & & \\
+  \textbf{Declared Content}            & & & & & \\
+  IBM~\cite{paper:ibm, paper:ibm-extended} & \no & \yes & \yes & \yes & \low \\[7pt]
+  \hline
+  \textbf{HTTP-Response}               & & & & & \\
+  Chang et.al.~\cite{paper:db-driven-http} & \no & \yes & \yes & \yes & \low \\[7pt]
+  \hline
+  \textbf{DB-Queries}                   & & & & & \\
+  Cache-Genie~\cite{paper:cache-genie}  & \no & \yes & \yes & \yes & \med \\[7pt]
+  Materialized Views                    & \no & \no  & \yes & \yes & \med \\[7pt]
+  \hline
   \end{tabular}
-  \caption{Comparison of caching approaches}
+  \caption{Comparison of caching approaches for different types of content}
   \label{fig:existing-solutions-comparison}
 \end{table}
 

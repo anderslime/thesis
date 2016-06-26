@@ -37,7 +37,25 @@
 \newcommand{\myquote}[1]{\emph{``#1''}}
 \usepackage{array,longtable}
 \usepackage{enumitem}
+
+% Tables
 \usepackage{setspace}
+\newcommand{\specialcell}[2][c]{%
+  \begin{tabular}[l]{@{}c@{}}#2\end{tabular}}
+
+% Colors
+
+\newcommand{\good}[1]{\textcolor[HTML]{6AA84F}{#1}}
+\newcommand{\okay}[1]{\textcolor[HTML]{F1C232}{#1}}
+\newcommand{\bad}[1]{\textcolor[HTML]{CC0000}{#1}}
+
+\newcommand{\no}{\textcolor{lightgray}{-}}
+\newcommand{\yes}{\good{Yes}}
+\newcommand{\opt}{\okay{Yes}}
+
+\newcommand{\high}{\good{High}}
+\newcommand{\med}{\okay{Medium}}
+\newcommand{\low}{\bad{Low}}
 
 %===============================================================================
 % THESIS PROPERTIES (Modifiy these fields with your details)
