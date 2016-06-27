@@ -44,15 +44,18 @@
 % Code environment
 \usepackage{float}
 \usepackage{newfloat}
+\newcounter{code}
+
+\usepackage{chngcntr}
+\counterwithin{code}{chapter}
 
 \DeclareFloatingEnvironment[placement={!ht}]{myfloat}
 
-\newcounter{code}[chapter]
 \newenvironment{code}[1]{
 	\begin{myfloat}
 	\refstepcounter{code}\par\medskip
 	\rmfamily
-	\centering{\textbf{Code Snippet~\thechapter.\thecode}: #1}
+	\centering{\textbf{Code Snippet~\thecode}: #1}
 }{\medskip\end{myfloat}}
 
 % Links

@@ -48,11 +48,10 @@ The challenge of this method is to construct the key. To use this technique corr
 
 In the web application framework, Ruby on Rails, the key construction is simplified by using a key that includes the timestamps of the last update on some underlying data. An example of this technique can be seen in code example~\ref{code:key-based-invalidation}. In this example we use the type, id and update timestamp as parts of the key. This means that the cached value is considered invalid if it is called with an entity that has a different type, id or update timestamp. The intuition behind these components is that we want a unique cache value for each entity and we want the value to be recomputed when the entity is updated.
 
-\begin{figure}
-\input{code/key_based_invalidation.py}
-\caption{Example of the key-based invalidation technique}
-\label{code:key-based-invalidation}
-\end{figure}
+\begin{code}{Example of the key-based invalidation technique}
+  \input{code/key_based_invalidation.py}
+  \label{code:key-based-invalidation}
+\end{code}
 
 The key-based invalidation performs invalidation at the moment, the cached value is requested, but it is considered invalid at the moment after the cache key components are updated (e.g. the \emph{updated\_timestamp} in the code example). This means we get interval the value is considered value and fresh are always overlapping, which means we have consistency.
 
@@ -78,11 +77,10 @@ Having a static key also has the advantage that we can locate the old/stale valu
 
 The simplest type of triggers are manually defined code that invalidates a given key. A code snippet for a naive implementation of manual triggers can be seen in snippet~\ref{code:manual-trigger-invalidation}. In practice the manual code triggers are often placed right after updates to the underlying data. Although this method is simple it often requires a lot of effort from the programmer and is prone to errors since it requires global reasoning of the application to identify the places where underlying data is updated.
 
-\begin{figure}
-\input{code/manual_trigger_invalidation.py}
-\caption{Example of how trigger based invalidation works with manual code invalidation}
-\label{code:manual-trigger-invalidation}
-\end{figure}
+\begin{code}{Example of how trigger based invalidation works with manual code invalidation}
+  \input{code/manual_trigger_invalidation.py}
+  \label{code:manual-trigger-invalidation}
+\end{code}
 
 Having a static key also introduces a challenge related to concurrency since we assume that there are multiple application servers. The challenge origins from the problem illustrated on figure~\ref{fig:trigger-based-concurrency-problem}, where an update to the underlying happens during the computation of a cached value. When the computation has finished it will incorrectly mark the cached value as fresh even though it is based on an old version of the underlying data, which makes it stale.
 

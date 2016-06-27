@@ -40,11 +40,10 @@ In order to use Smache, the system also require additional components added to t
 
 Even though this is optimal, Smache has been implemented such that it is easy leave them out. The cache database can for example be replaced by the primary storage that is already a part of the system. The background workers can also be left out and replaced by synchronous invalidation and updates that are executed in the same process as the web servers, but this would affect the performance of the web applications as seen in the results in section~\ref{sec:performance-impact-of-existing-procedures}.
 
-\begin{figure*}[ht!]
+\begin{code}{Code where Smache can cache the course score, but not the individual participant scores.}
   \input{code/running_example_non_cachable.py}
-  \caption{Code where Smache can cache the course score, but not the individual participant scores.}
   \label{code:running-example-non-cachable}
-\end{figure*}
+\end{code}
 
 % section changes-required-to-cache-with-smache end
 

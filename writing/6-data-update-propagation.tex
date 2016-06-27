@@ -64,12 +64,11 @@ To be able to work on multiple jobs at the same time, the updates are scheduled 
   \label{fig:dup-background-workers}
 \end{figure*}
 
-\begin{figure*}[ht!]
+\begin{code}{The code for updating a cached object identified by the key (name).}
   \centering
   \input{code/dup_implementation.py}
-  \caption{The code for updating a cached object identified by the key (name).}
   \label{code:dup-implementation}
-\end{figure*}
+\end{code}
 
 Since we use the same background workers as with automatic invalidation but with different procedures, the DUP algorithm does not require additional components for the architecture as seen on figure~\ref{fig:architecture-with-workers}.
 

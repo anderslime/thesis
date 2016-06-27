@@ -274,11 +274,10 @@ Alternatively we could represent the dependency graphs using a cache manager pro
 To implement timestamp invalidation we need to implement concurrency control to ensure that the timestamp invalidation is implemented correctly. In the version of Smache implemented during this thesis, we use \emph{Redis}~\footnote{http://redis.io/} as the cache database. Redis have support for simple transactions using a combination of the \verb$WATCH$-command and the \verb$MULTI$-command. The \verb$WATCH$-command is executed with a key, which tells Redis that a given transaction should fail if the specificed key is modified during the transaction. The \verb$MULTI$-command allows to specific multiple commands in a single atomic action.
 Code snippet~\ref{code:timestamp_invalidation} is a simplified version of the code that implements the update procedure with timestamp invalidation. It uses the Python Redis~\cite{docs:python-redis} library to communicate with the Redis database. When it invokes the \verb$WATCH$-command the client will request Redis to start a transaction. Afterwards we build a \verb$MULTI$-command that will update the cached object if it is newer and invokes the \verb$EXECUTE$-command. The Redis-client will send the command and if the transaction fails it will raise a \verb$WatchError$-exception indicating the key has been modified, after which we retry the transaction with the same values.
 
-\begin{figure*}[ht!]
+\begin{code}{The code for implementing timestamp invalidation in Python. RedisConnection represents an object communicating with the (Redis) cache database. CacheStore represents the object that communicates with the cache database.}
   \input{code/timestamp_invalidation.py}
-  \caption{The code for implementing timestamp invalidation in Python. RedisConnection represents an object communicating with the (Redis) cache database. CacheStore represents the object that communicates with the cache database.}
   \label{code:timestamp_invalidation}
-\end{figure*}
+\end{code}
 
 % subsection update-transactions end
 
