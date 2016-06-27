@@ -168,11 +168,11 @@ Since the process of finding keys for depending objects involves multiple networ
 \subsection{Timestamp Invalidation}
 \label{subsec:timestamp-invalidation}
 
-To invalidate correctly the technique must comply with the liveness and safety property, which we define in the following terms:
+To invalidate correctly the technique require the following liveness and safety property:
 
 \begin{itemize}
+  \item \textbf{Safety}: \emph{The value representing a fresh cached object must be based on the newest version of the underlying data}
   \item \textbf{Liveness}: \emph{A stale object must eventually be invalidated}
-  \item \textbf{Safety}: \emph{The value representing a fresh object must be based on the newest version of the underlying data}
 \end{itemize}
 
 In trigger-based invalidation where the name of a cached object is considered static we need external information to evaluate whether a given cached object is fresh. In a naive invalidation technique, we can use a boolean value that indicates whether or not the cached value is fresh. When invalidation is triggered the value is set to \verb$false$ and when the cached object has been updated it would be set to \verb$true$. The problem here is that in an environment with multiple application servers, the technique would be prone to race conditions as illustrated on figure~\ref{fig:trigger-based-concurrency-problem}. Since the given cached object would be marked as fresh even though the value of the object in reality is stale, the cached object will not be invalidated until a new trigger is invoked and thereby contradict the liveness property.
@@ -188,41 +188,45 @@ When the computation returns the new value for the cached object, we write updat
   \item
     \begin{enumerate}
       \item If $latest\_num\_of\_updates \geq current\_computation\_timestamp$ then we do nothing since a computation based on newer data has already updated the cached object.
-      \item Else we update $last\_update\_timestamp$ to be equal to $current\_computation\_timestamp$ and update the value.
+      \item Else we update $last\_update\_timestamp$ to be equal to \\ $current\_computation\_timestamp$ and update the value.
     \end{enumerate}
 \end{enumerate}
 
 We can then say the following about the freshness of a cached object:
 
 \begin{itemize}
-  \item \textbf{A cached object is fresh} when its $num\_of\_updates = last\_update\_timestamp$
+  \item \textbf{A cached object is fresh} when\\$num\_of\_updates = last\_update\_timestamp$
 \end{itemize}
 
-To avoid race conditions the execution of this algorithm need to be executed in a transaction such that if $num\_of\_updates$ is incremented between step 1 and 2 then the algorithm be aborted. Fortunately, timestamps have the property that the execution of a computation at a given timestamp always yields the same result, which means we can retry the algorithm with the same result. In other words the algorithm is considered idempotent. We will therefore retry the update algorithm until it has finished. Alternatively we could lock all the values while executing the algorithm, but this means we will block the incremental of $num\_of\_updates$ that is responsible for invalidating and therefore more important.
+To avoid race conditions the execution of this algorithm need to be executed in a transaction such that if $num\_of\_updates$ is incremented between step 1 and 2 then the algorithm be aborted. We assume that the execution of a computation at a given timestamp always yields the same result, which means we can retry the algorithm with the same result. In other words the algorithm is considered idempotent. We will therefore retry the update algorithm until it has finished. Alternatively we could lock all the values while executing the algorithm, but this means we will block the incremental of $num\_of\_updates$ that is responsible for invalidating and therefore more important.
 Furthermore we also need the incremental of $num\_of\_updates$ to be atomic.
 
 \subsubsection{Proof}
 \label{subsubsec:proof}
 
-TODO: Add a proof here that it has safety and liveness
+Since the technique has not been proved for correctness in~\cite{paper:ibm-extended} and because the correctness of Smache relies on this technique, we will give a proof of correctness for timestamp invalidation by proving the liveness and safety requirements described above. In these proves we assume that the invalidation and update algorithms are executed atomically and that the invalidation happens immediately after underlying data has been changed.
 
-% - We assume step 2 is atomic
-%   => The underlying data representing the cached object has a timestamp from the start of the computation
-% - If we start computation at t=3 after the computation we have two cases:
-% 1. last_update_timestamp is >= 3, because there have been an
-% update to underlying data as well as the value since the computation
-% was started. Since the given value was inserted with a timestamp larger than t
-% then it must be started later and is therefore newer.
-% 2. last_update_timestamp is < 3. Then we know that there has been a change
-% to underlying data after the value update that have triggered an increment
-% to num_of_updates, which is used for the given computation. The computation
-% that resulted in the current value was started when num_of_updates was < 3,
-% and we therefore know that the given computation was started later than that
-% one (todo: use references). When we reach step 2 and write the new value,
-% we therefore know that it is the latest.
+\textbf{Safety}
+
+We will prove \emph{safety} by contradiction by \emph{assuming we have a cached object considered fresh that holds a stale value}.
+
+\begin{enumerate}
+  \item We assume that $num\_of\_updates = t_i$ and since we know that a cached object is considered stale when $num\_of\_updates = last\_update\_timestamp$, we also have that $last\_update\_timestamp = t_i$
+  \item For this to happen a computation $f_i$ starting when $num\_of\_updates$ was equal to $t_i$ ended up updating the cached value to be $v_i$ and $last\_update\_timestamp$ to be $t_i$.
+  \item Since $v_i$ by definition is a fresh value, the value of the cached object can only become stale in on of the following cases:
+    \begin{enumerate}
+      \item[a)] Another computation $f_j$ updated the value of the cached object after the computation from step 2 updated the cached object
+      \item[b)] The underlying data was updated after the computation from step 2 was started
+    \end{enumerate}
+  \item If the computation $f_j$ resulted in a stale value it must have been started at a point where $num\_of\_updates$ was equal to $t_j$, where $t_j < t_i$. This would contradict the algorithm since $f_j$ would not update the cached object with its stale value since $num\_of\_updates$ must have been equal to $t_i$ since it updated the cached object after $f_i$ and $t_i > t_j$.
+  \item If the underlying data was updated after the computation was started when $num\_of\_updates$ was equal to $t_i$ then $num\_of\_updates$ must have been updated to be $t_k$, where $t_k > t_i$ after which we have a contradiction since $last\_update\_timestamp = t_i$ and the cached object is therefore not fresh since $num\_of\_updates \neq last\_update\_timestamp$ since $t_k \neq t_i$.
+\end{enumerate}
+
+\textbf{Liveness}
+
+The \emph{liveness} property directly holds from the fact that $last\_update\_timestamp$ cannot be set to a value larger than $num\_of\_updates$ and since we assume that $num\_of\_updates$ is incremented immediately after an update to underlying data then we have that $num\_of\_updates > last\_update\_timestamp$ in the moment after the update. Since $num\_of\_updates \neq last\_update\_timestamp$ the cached object is stale and has therefore been invalidated.
 
 % subsubsection proof end
-
 
 % subsection timestamp-invalidation end
 
