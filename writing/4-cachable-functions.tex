@@ -104,8 +104,19 @@ Having in-place updates allows the programmer to have immediate response times w
 Smache implements the cachable function by exposing an implementation of the \verb$MAKE-CACHABLE$. To apply the procedure the Smache library must be loaded in the application and applied. The \verb$MAKE-CACHABLE$ converts the original function to a cached function that intercepts the method invocation and directs it to a wrapper function in the Smache library. When a client makes a request involving a cached function, the application will call the function wrapper that tries to find the value in the cache first and if it is not present in the cache, the original function will be called after which the result is cached and returned to the caller. This control flow of a cached function is illustrated on figure~\ref{fig:cachable-function-control-flow}.
 
 \begin{figure*}[ht!]
-  \centering
-  \includegraphics[width=1.0\linewidth]{figures/cachable-function-control-flow.pdf}
+  \begin{center}
+    \includegraphics[width=1.0\linewidth]{figures/cachable-function-control-flow.pdf}
+  \end{center}
+  \begin{enumerate}
+    \item The caller invokes the cached function through the cached wrapper in Smache
+    \item Smache sends a \verb$Lookup$ request to the Cache Database
+    \item The cache database returns a cached object instance
+    \item[(4)] Smache calls the original function through the application
+    \item[(5)] The application executes the original function, makes the necessary calls to the primary storage and returns the result
+    \item[(6)] Smache sends a \verb$Store$ request to the Cache Database with the result from the application
+    \item Smache returns the value to the caller from the application
+  \end{enumerate}
+  \footnotesize{Steps annotated with \emph{parenthesis and dashed lines} are only executed in case of cache miss or cache failure}
   \caption{The control flow during a call to a function cached through Smache}
   \label{fig:cachable-function-control-flow}
 \end{figure*}

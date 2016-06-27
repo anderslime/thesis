@@ -6,29 +6,31 @@ In order to get a common understanding of caching and the terminology related to
 \section{Basic Caching Algorithm}
 \label{sec:caching_basics}
 
-In general caching is about storing the result of a computation at a where you are able to retrieve it fast, such that it is possible to get the result fast instead of recomputing it. This basic algorithm is illustrated on figure~\ref{fig:basic-caching} and can be described as following:
+In general caching is about storing the result of a computation a place, where you are able to retrieve it fast, such that it is possible to get the result fast instead of recomputing it. This basic algorithm is described on figure~\ref{fig:basic-caching}.
 
 \begin{figure*}[ht!]
-  \centering
-  \includegraphics[width=0.6\linewidth]{figures/basic-caching-figure.pdf}
+  \begin{center}
+    \includegraphics[width=0.6\linewidth]{figures/basic-caching-figure.pdf}
+  \end{center}
   \begin{enumerate}
-    \item The result $v$ of a computation $f$ is requested.
-    \item If $v$ is cached and is valid, we go to 5 with $v'=v$. Else we continue.
-    \item We run the computation $f$
-    \item The new result $v'$ of $f$ is stored in the cache.
-    \item $v'$ is returned.
+    \item The caller requests the value of the computation by calling the proxy
+    \item The proxy fetches the cached value of the computation through the cache
+    \item[(3)] The proxy calls the computation
+    \item[(4)] The result of the computation is stored in the cache
+    \item The value is returned to the caller
   \end{enumerate}
+  \footnotesize{Steps annotated with \emph{parenthesis and dashed lines} are only executed in case of cache miss or cache failure}
   \caption{The flow of basic caching}
   \label{fig:basic-caching}
 \end{figure*}
 
-In some cases, where the client is not allowed to wait for the computation to run, step 3-4 are replaced by a step that simply returns an empty value.
+In some cases, where the caller is not allowed to wait for the computation to run, step 3 and 4 are replaced by a step that simply returns an empty value.
 
 If we look at the cached object from an abstract point of view, we can see it as a \emph{result of a function} given certain \emph{inputs}. Sometimes the inputs are data from a storage system, sometimes it's the result of an API call to some external resource, sometimes it's global variables in the code. These \emph{inputs} we from now on be referred to as \emph{underlying data}.
 
 % Also mention 'locality' here
 
-In order for the algorithm to work, we need to be sure that when we store the cached object it has to be uniquely identified by some key such that when we lookup the value as in step 2 of the algorithm, we always locate $v$. This presents one of the challenges of cache management, which is in many cases closely related to cache invalidation (one of the two hard things in computer science\footnote{Not scientifically, but at least a favorite saying of Martin Fowler and quote by Phil Karlton}).
+In order for the algorithm to work, we need to be sure that when we store the cached object it has to be uniquely identified by a given name. This presents one of the challenges of cache management, which in many cases are closely related to cache invalidation (one of the two hard things in computer science\footnote{Not scientifically, but at least a favorite saying of Martin Fowler and quote by Phil Karlton}).
 
 In the algorithm cache invalidation is simply described as a \emph{check}, but in reality this is the hard challenge of caching. The \emph{check} could be a precomputed indicator from earlier triggers, it could be based on a key derived from the underlying data or some timestamp. These cache invalidation approaches will be described more in section~\ref{sec:invalidation_techniques}.
 

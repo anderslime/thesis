@@ -1,4 +1,4 @@
-\section{Implementation of Function Serialization and Deserialization}
+\chapter{Implementation of Function Serialization and Deserialization}
 \label{appendix:implementation-of-function-serialization-and-deserialization}
 
 To be able to serialize and deserialize a cached object instance, the Smache library implements the class \verb$FunctionSerializer$ with the public method \verb$serialized_fun$ and \verb$deserialized_fun$, which respectively serializes a function with input into a string representation and deserializes a string representation into a function name with deserialized arguments.
@@ -6,7 +6,6 @@ To be able to serialize and deserialize a cached object instance, the Smache lib
 \begin{minted}[linenos]{python}
 import json
 from functools import reduce
-
 
 class FunctionSerializer:
     seperator_token = '~~~'
