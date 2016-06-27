@@ -148,8 +148,11 @@ The final solution, Smache, solves problem described in section~\ref{sec:problem
   \scriptsize
   \doublespacing
   \centering
-  \begin{tabular}{lccccc}
+  \hspace*{-1cm}
+  \begin{tabular}{lcccccc}
 {} & {
+  \textbf{Consistency}
+} & {
   \twolinecell{1.2cm}{Strict}{Freshness}
 } & {
   \twolinecell{1.2cm}{In-place}{Updates}
@@ -161,12 +164,13 @@ The final solution, Smache, solves problem described in section~\ref{sec:problem
   \textbf{Adaptability}
 } \\
   \hline
-  \textbf{Arbitrary Content} & & & & & \\
-  \multicolumn{6}{c}{...} \\
-  Smache               & \no  & \yes & \yes & \opt & \med \\[7pt]
-  Smache w/o staleness & \yes & \yes & \no  & \opt & \med \\[7pt]
-  \multicolumn{6}{c}{...} \\
+  \textbf{Arbitrary Content} & & & & & & \\
+  \multicolumn{7}{c}{...} \\
+  Smache               & \no & \no  & \yes & \yes & \opt\sss{*} & \med \\[7pt]
+  Smache w/o staleness & \no & \yes & \yes & \no  & \opt\sss{*} & \med \\[7pt]
+  \multicolumn{7}{c}{...} \\
   \hline
+  \multicolumn{7}{l}{*) Dependencies to underlying data must be declared}
   \end{tabular}
   \caption{How Smache relates to the cache evaluation criteria}
   \label{table:smache-evaluation}

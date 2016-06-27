@@ -339,9 +339,11 @@ In general there is not a best or correct caching solution - it's a matter of ch
 \begin{table}[htpb]
   \scriptsize
   \doublespacing
-  \centering
-  \begin{tabular}{lccccc}
+  \hspace*{-1cm}
+  \begin{tabular}{lcccccc}
 {} & {
+  \textbf{Consistency}
+} & {
   \twolinecell{1.2cm}{Strict}{Freshness}
 } & {
   \twolinecell{1.2cm}{In-place}{Updates}
@@ -353,25 +355,26 @@ In general there is not a best or correct caching solution - it's a matter of ch
   \textbf{Adaptability}
 } \\
   \hline
-  \textbf{Arbitrary Content}           & & & & & \\
-  Expiration-based                     & \no  & \no  & \yes & \yes & \high \\[7pt]
-  Key-based                            & \no  & \no  & \no  & \no  & \high \\[7pt]
-  Manual Trigger-based                 & \yes & \no  & \no  & \no  & \high \\[7pt]
-  Async. Update                        & \yes & \no  & \yes & \no  & \high \\[7pt]
-  Write-Trough                         & \no  & \yes & \yes & \no  & \med  \\[7pt]
-  TxCache~\cite{paper:liskov}          & \no  & \no  & \no & \yes & \low \\[7pt]
-  Chris Wasik~\cite{paper:deploy-time} & \yes & \no  & \yes & \opt & \med  \\[7pt]
+  \textbf{Arbitrary Content}           & & & & & & \\
+  Expiration-based                     & \no  & \no  & \no  & \yes & \yes & \high \\[7pt]
+  Key-based                            & \yes & \no  & \no  & \no  & \no  & \high \\[7pt]
+  Manual Trigger-based                 & \yes & \yes & \no  & \no  & \no  & \high \\[7pt]
+  Async. Update                        & \no  & \yes & \no  & \yes & \no  & \high \\[7pt]
+  Write-Trough                         & \no  & \no  & \yes & \yes & \no  & \med  \\[7pt]
+  TxCache~\cite{paper:liskov}          & \yes & \no  & \no  & \opt & \yes & \low \\[7pt]
+  Chris Wasik~\cite{paper:deploy-time} & \yes & \yes & \no  & \yes & \opt\sss{*} & \med  \\[7pt]
   \hline
-  \textbf{Declared Content}            & & & & & \\
-  IBM~\cite{paper:ibm, paper:ibm-extended} & \no & \yes & \yes & \yes & \low \\[7pt]
+  \textbf{Declared Content}            & & & & & & \\
+  IBM~\cite{paper:ibm, paper:ibm-extended} & \no & \no & \yes & \yes & \yes & \low \\[7pt]
   \hline
-  \textbf{HTTP-Response}               & & & & & \\
-  Chang et.al.~\cite{paper:db-driven-http} & \no & \yes & \yes & \yes & \low \\[7pt]
+  \textbf{HTTP-Response}               & & & & & & \\
+  Chang et.al.~\cite{paper:db-driven-http} & \no & \no & \yes & \yes & \yes & \low \\[7pt]
   \hline
-  \textbf{DB-Queries}                   & & & & & \\
-  Cache-Genie~\cite{paper:cache-genie}  & \no & \yes & \yes & \yes & \med \\[7pt]
-  Materialized Views                    & \no & \no  & \yes & \yes & \med \\[7pt]
+  \textbf{DB-Queries}                   & & & & & & \\
+  Cache-Genie~\cite{paper:cache-genie}  & \yes & \no & \yes & \yes & \yes & \med \\[7pt]
+  Materialized Views                    & \no & \no & \no  & \yes & \yes & \med \\[7pt]
   \hline
+  \multicolumn{7}{l}{*) Dependencies to underlying data must be declared}
   \end{tabular}
   \caption{Comparison of caching approaches for different types of content}
   \label{fig:existing-solutions-comparison}
