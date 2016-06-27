@@ -144,8 +144,6 @@ The design of the cachable functions require the programming language to support
 
 Another limitation of the interface of cachable functions described so far is that it is only possible to use it for trigger-based invalidation and the only control for the programmer is to define the dependencies such that the cached object is invalidated appropriately. There could be cases, where the cached object were to be invalidated based on some data sources, but also be once every day as an example using expiration-based invalidation. Luckily, the interface can easily be extended to include optional parameters that would allow hybrid approaches such as these.
 
-% TODO: Write about that the results which can be cached relies on the implementation and what is possible to serialize/deserialize into the cache.
-
 % section discussion end
 
 \section{Summary}

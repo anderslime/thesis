@@ -1,9 +1,9 @@
-\chapter{Caching Model}
+\chapter{Caching Basics}
 \label{chapter:caching-model}
 
 In order to get a common understanding of caching and the terminology related to the topic, we will go through the basics of caching by describing the architecture of a web system using a cache, present a model based on a timeline that introduces the different events involved in caching and last we list criteria for evaluating a caching technique in order to choose an appropriate technique for a given use case.
 
-\section{Caching Basics}
+\section{Basic Caching Algorithm}
 \label{sec:caching_basics}
 
 In general caching is about storing the result of a computation at a where you are able to retrieve it fast, such that it is possible to get the result fast instead of recomputing it. This basic algorithm is illustrated on figure~\ref{fig:basic-caching} and can be described as following:
@@ -26,7 +26,7 @@ In some cases, where the client is not allowed to wait for the computation to ru
 
 If we look at the cached object from an abstract point of view, we can see it as a \emph{result of a function} given certain \emph{inputs}. Sometimes the inputs are data from a storage system, sometimes it's the result of an API call to some external resource, sometimes it's global variables in the code. These \emph{inputs} we from now on be referred to as \emph{underlying data}.
 
-% TODO: Also mention 'locality' here
+% Also mention 'locality' here
 
 In order for the algorithm to work, we need to be sure that when we store the cached object it has to be uniquely identified by some key such that when we lookup the value as in step 2 of the algorithm, we always locate $v$. This presents one of the challenges of cache management, which is in many cases closely related to cache invalidation (one of the two hard things in computer science\footnote{Not scientifically, but at least a favorite saying of Martin Fowler and quote by Phil Karlton}).
 
@@ -48,12 +48,8 @@ Most modern web applications needs to serve multiple users at the same time, whi
 
 A popular choice for cache databases are key-value stores such as Redis~\footnote{http://redis.io/} and Memcached~\footnote{https://memcached.org/} since they are simple distributed key-value stores that lives in memory and therefore allows for scalability and high-performance operations. In order to support most practical web applications, we will therefore make the assumption that the cache database has the same functionality: it should be possible to store arbitrary content for a given key. Furthermore the final solution of this thesis require the cache database to support atomic transactions for a given key, which are supported in Memcached using the CAS command~\cite{docs:memcached-protocol} and in Redis using the \verb$WATCH$-command~\cite{docs:redis-transactions}. The reasons behind this assumption will be explained more in chapter~\ref{chapter:data-update-propagation}.
 
-% TODO: Maybe write about cleanup (removing unused values)
-
 \subsection{Cache Server}
 \label{subsec:cache-server}
-
-% TODO: Write about how the basic cache server works (LOOKUP and STORE)
 
 % subsection cache-server end
 
@@ -103,7 +99,7 @@ To evaluate the caching technique for a given use case, we will see the situatio
 
 %%%% CONSISTENCY
 
-% TODO: Rewrite this to transactional consistency since normal consistency comes from strict freshness
+% Rewrite this to transactional consistency since normal consistency comes from strict freshness
 
 We will not make any assumptions about the content send by the server, which means the content could be the result of multiple cached computations. Each of these computations are based on some underlying data e.g. served from the primary store. In the case where some computations are based on the same data we have to keep the different results consistent. Furthermore the response might be based on both cached content and content loaded directly from the primary store in which case we have to keep the data consistent across the cache database and the primary storage. This issue leads to the criteria of the level of consistency.
 
@@ -156,7 +152,7 @@ The reason behind the \emph{Low} criteria is that when the technique has assumpt
 From this discussion, we can sum up the evaluation parameters as follows:
 
 \begin{itemize}
-  \item \textbf{Consistency}: The cached object must be consistent with the other data
+  \item \textbf{Consistency}: The cached object must be consistent with the data from the primary storage
   \item \textbf{Strict Freshness}: The cached object must be as fresh as the state of the primary store when the value was requested
   \item \textbf{Automatic Update}: The cached object is automatically updated after it has been invalidated
   \item \textbf{Always Immediate Response}: The cached object must be served immediately after it has been requested

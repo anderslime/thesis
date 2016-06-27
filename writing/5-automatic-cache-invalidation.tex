@@ -39,9 +39,6 @@ Figure~\ref{fig:simple-odg} illustrates an instance of a simple ODG with four ve
 \section{Dependency Data Structure for Cachable Functions}
 \label{sec:dependency-data-structure-for-cachable-functions}
 
-% TODO: Describe this in a way so that we understand the purpose of the graphs instead of how they are represented
-% TODO: Make it clear that we only use these data structures to represent the dependencies
-
 There exists two representations of dependencies for cachable functions. The first one is the static representation, which can be derived directly from the declarations in the source code. This representation only describes dependencies between the declarations and not cached object instances. We will define this representation as the \emph{Declaration Dependence Graph (DDG)}. The other representation is dynamic and describes the dependencies between the entities of the underlying data and the cached object instances. We define this as the \emph{Instance Dependence Graph (IDG)}.
 
 \subsection{Declaration Dependence Graph}
@@ -118,8 +115,6 @@ The queries needed for automatic invalidation are:
 \begin{itemize}
   \item \verb$lookup_cached_object(entity_id)$: Finds all cached objects depending on the \verb$entity_id$.
 \end{itemize}
-
-% TODO: Analyze time and space (not the same as DDG since it depends on the data)
 
 % subsection instance-dependence-graph end
 

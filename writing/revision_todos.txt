@@ -1,5 +1,3 @@
-# TODOS
-
 - Tables:
   - Include references to the paper suggesting the solution
   - Remove unnecessary split lines (read Writing for Computer Science)
