@@ -98,13 +98,29 @@ In this example we have a function \verb$course_score$ that computes the average
 
 % subsection running-example end
 
-
 % section context end
 
 \section{Contributions}
 \label{sec:contributions}
 
-This thesis addresses challenges described in section~\ref{sec:problem} and requirements in section~\ref{sec:requirements} in the context of a caching system. The result will be a design of a cache system solving those challenges based on the requirements. The design will be implemented in Python  and made available as open source to allow further research and extensions from the implementation. The implementation will therefore also have a focus on delivering a maintainable and tested library.
+From the goal of finding and implementing a caching system that solves the problem in the context of the requirements described above, the thesis makes the following contributions.
+
+First, research covering existing caching approaches for web development. We present a set of criteria used to evaluate caching approaches. These criteria are applied to existing approaches used in practical web development and proposed in research. The existing approaches are compared through an overview, which can be used to find a caching approach suitable for a given use case. By the end of the thesis the overview is extended with the solution proposed by this thesis, Smache.
+
+Secondly, we present the design of Smache, a caching solution that aims to be easy to integrate into existing application and be able to cache the existing functions while invalidating and updating related cached values automatically. From this solution, the thesis makes the following technical contributions:
+
+\begin{itemize}
+  \item a \emph{programming model} that allows programmers to cache existing functions by declaring the dependencies to underlying data, after which the caching system automatically caches the result of the function by naming, localizing and storing the cached value for the function.
+  \item a \emph{description and proof} of how to use \emph{timestamp invalidation} to invalidate and update cached values in a concurrent environment.
+  \item an \emph{automatic invalidation system} based on \emph{timestamp invalidation}, a \emph{data structure} for representing dependencies between cached values and underlying data.
+  \item a \emph{data update propagation algorithm} based on timestamp invalidation that is able to update all cached functions concurrently without additional concurrency control mechanisms.
+\end{itemize}
+
+Thirdly, we also present an implementation of Smache using the programming language Python, MongoDB as primary storage and Redis as the cache database, which is available open-source for future contributions at:
+
+\url{https://github.com/anderslime/smache}
+
+We have evaluated the performance and scalability of the data update propagation algorithm and how Smache affects existing operations on the application.
 
 \section{Outline}
 \label{sec:outline}

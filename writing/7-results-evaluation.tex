@@ -24,12 +24,19 @@ Smache was integrated in to the Peergrade.io platform, which is an existing web 
 For example some of the functions had statistical calculations that iterated using \verb$for$-loops and made calculations in each iteration, which were not able to be cached individually as seen in code snippet~\ref{code:running-example-non-cachable}. To make this function optimally cachable by caching each participant score, we would have to extract it into a method such as in the running example in code snippet~\ref{code:running-example}. The running example are then made cachable by adding cachable declaration using Python-decorators after which it looks as in code snippet~\ref{code:basic-caching-running-example}.
 The HTTP-responses were not directly cachable either since they work on request-objects specific to the client making the request. In order to cache the responses we extracted the code that generated the HTML-fragment served as the HTTP-body.
 
-In order to use Smache, the system also require additional components added to the architecture. To achieve the guarantees described in this thesis, the system must add the following components to the architecture:
+In order to use Smache, the system also require additional components added to the architecture. To achieve the guarantees described in this thesis, the system must add the following components to the architecture, also illustrated on figure~\ref{fig:smache-architecture-changes}:
 
 \begin{itemize}
   \item Cache database to store the cached values and metadata
   \item Background Workers with a Queue-system to have asynchronous invalidation and updates
 \end{itemize}
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=1.0\linewidth]{figures/smache-architecture-changes.pdf}
+  \caption{Additional architectural components required to use Smache compared to a normal web application including clients, web application servers and a primary storage.}
+  \label{fig:smache-architecture-changes}
+\end{figure*}
 
 Even though this is optimal, Smache has been implemented such that it is easy leave them out. The cache database can for example be replaced by the primary storage that is already a part of the system. The background workers can also be left out and replaced by synchronous invalidation and updates that are executed in the same process as the web servers, but this would affect the performance of the web applications as seen in the results in section~\ref{sec:performance-impact-of-existing-procedures}.
 
@@ -148,7 +155,7 @@ The final solution, Smache, solves problem described in section~\ref{sec:problem
   \scriptsize
   \doublespacing
   \centering
-  \hspace*{-1cm}
+  \hspace*{-1.5cm}
   \begin{tabular}{lcccccc}
 {} & {
   \textbf{Consistency}
