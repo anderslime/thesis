@@ -17,7 +17,7 @@
 \documentclass[10pt,twoside]{book}                  %Official DTU-IMM Thesis document setup
 %
 %Set to 'print' for printed version, use 'net' for online version
-\def\thesisversion{print}
+\def\thesisversion{net}
 %
 %===============================================================================
 % PACKAGES
@@ -37,6 +37,22 @@
 \newcommand{\myquote}[1]{\emph{``#1''}}
 \usepackage{array,longtable}
 \usepackage{enumitem}
+\usepackage{cleveref}
+\usepackage{filecontents}
+
+% Links
+\usepackage{url}
+\newcommand\myshade{85}
+\colorlet{mylinkcolor}{violet}
+\colorlet{mycitecolor}{YellowOrange}
+\colorlet{myurlcolor}{Aquamarine}
+
+\hypersetup{
+  linkcolor  = mylinkcolor!\myshade!black,
+  citecolor  = mycitecolor!\myshade!black,
+  urlcolor   = myurlcolor!\myshade!black,
+  colorlinks = true,
+}
 
 % Tables
 \usepackage{setspace}
@@ -45,7 +61,6 @@
 \usepackage{multirow}% http://ctan.org/pkg/multirow
 \usepackage{hhline}% http://ctan.org/pkg/hhline
 \usepackage{colortbl}
-\usepackage{xcolor}
 
 % Colors
 
