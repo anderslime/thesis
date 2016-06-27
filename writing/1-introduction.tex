@@ -88,26 +88,10 @@ Peergrade.io is a platform for facilitating peer-evaluation in university and hi
 
 To relate the solution to a practical example, the thesis will use the following code as a running example:
 
-\begin{figure*}[ht!]
-  \input{code/running_example.py}
-  \caption{Code with the running example written in Python}
-  \label{code:running-example}
-\end{figure*}
-
-\begin{figure}
-    \centering
-		\scriptsize
-		\hspace*{-1.5cm}
-    \begin{subfigure}[b]{0.5\textwidth}
-			\input{code/running_example.py}
-    \end{subfigure}
-    ~ %add desired spacing between images, e. g. ~, \quad, \qquad, \hfill etc.
-    %(or a blank line to force the subfigure onto a new line)
-    \begin{subfigure}[b]{0.5\textwidth}
-			\input{code/running_example.py}
-    \end{subfigure}
-\end{figure}
-
+\begin{code}{Code with the running example written in Python}
+	\input{code/running_example.py}
+	\label{code:running-example}
+\end{code}
 
 In this example we have a function \verb$course_score$ that computes the average score in a given course by fetching the participants from the primary data store and through iterations of each participant calculate the average score using the function \verb$participant_score$ that calculates the score of a single participant using a long running external method.
 

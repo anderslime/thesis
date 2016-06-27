@@ -41,6 +41,20 @@
 \usepackage{filecontents}
 \usepackage{listings}
 
+% Code environment
+\usepackage{float}
+\usepackage{newfloat}
+
+\DeclareFloatingEnvironment[placement={!ht}]{myfloat}
+
+\newcounter{code}[chapter]
+\newenvironment{code}[1]{
+	\begin{myfloat}
+	\refstepcounter{code}\par\medskip
+	\rmfamily
+	\centering{\textbf{Code Snippet~\thechapter.\thecode}: #1}
+}{\medskip\end{myfloat}}
+
 % Links
 \usepackage{url}
 \newcommand\myshade{85}
