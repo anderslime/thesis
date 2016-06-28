@@ -67,21 +67,32 @@ The final solution addressing the problems described, will be designed with the 
 
 The problem and requirements are based on a running web applications - the Peergrade.io-platform to ensure that the system is also designed, implemented and tested to be used in practice.
 
-Peergrade.io is a platform for facilitating peer-evaluation in university and high school courses. Currently the platforms serves multiple institutions and thousands of students. One of the key parts of the platform is showing various statistics about the performance of the students in a course. The statistics are based on advanced calculations which take up a large amount of time and needs to be recalculated on small changes to the underlying data.
+The problem description and requirements of the system is based on a practical problem experienced by a running web application - the Peergrade.io-platform. Throughout the thesis the system has been integrated and tested on the web application to ensure the system is designed and implemented with a practical perspective. Peergrade.io is a platform for facilitating peer-evaluation in university and high school courses. Currently the platforms serves multiple institutions and thousands of students.
 
-\section{The Peergrade.io Platform}
-\label{sec:the-peergrade-io-platform}
+\subsection{Peergrade.io Platform}
+\label{subsec:the-peergrade-io-platform}
 
-% - User stories:
-%   - Teachers have courses, they create assignments and a feedback formular that the students answer to evaluate each other
-%   - The students hand in their assignment and afterwards are randomly delegated assignments anonymously that they grade/gives feedback to using the fomular created by the teacher
-%   - After the studens have evaluated, the teacher is presented with statistics about the grades the students have given to each other
-% - Current technology stack:
-%   - Python + Flask + MongoDB + Background Jobs
+Universities and single teachers are able to sign up their courses to use Peergrade.io for facilitating peer-evaluation, where the students are able to grade and/or give each other feedback on their assignments. When a teacher has registered a course to use Peergrade.io, the teacher is able to create assignments. Beside the description of what the assignment is about, the teacher also sets deadlines for handing in and for the grading, and creates structured forms for the students to fill out with grades and text feedback.
 
-% section peergrade-io-platform end
+When an assignment is open, the student is able to upload their hand-in for the assignment. After the deadline for handing in is reached, the Peergrade.io platform will automatically distribute hand-ins for students to answer feedback questions and give grades. When the deadline for grading is reached, the feedback and grades are made available to the author of the hand-in, and the authors are able to indicate give indicate the helpfulness of the feedback by giving a constructive score for the feedback or mark the feedback as inappropriate. After this step, the assignment is considered completed for the student. Figure~\ref{fig:student-screenshot} shows a screenshot of the Peergrade.io platform from the student's perspective.
 
-% section the-peergrade-io-platform end
+\begin{figure*}[ht!]
+  \includegraphics[width=\textwidth]{figures/screenshots/student_give_feedback.png}
+  \caption[Screenshot from Peergrade.io]{A student grades another student's hand-in.}
+  \label{fig:student-screenshot}
+\end{figure*}
+
+The last part of the platform is a complete overview of the assignment presented to the teacher with hand-ins, feedback, grades, constructive scores, statistical analysis for assignments, and statistical analysis of all the data to help the teachers give grades to the students. Furthermore the teacher is able to get a ``summary'' for a student to help grade the individual student and see how the students perform compared to other students. Figure~\ref{fig:teacher-screenshot} show screenshots of some of the interfaces seen by the teacher.
+
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=1.0\linewidth]{figures/screenshots/teacher_assignment_overview.png}
+  \caption[Screenshot from Peergrade.io]{A teacher sees the overview of a given assignment.}
+  \label{fig:teacher-screenshot}
+\end{figure*}
+
+% subsection the-peergrade-io-platform end
+
 
 \subsection{Running Example}
 \label{subsec:running-example}

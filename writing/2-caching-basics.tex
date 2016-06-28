@@ -32,7 +32,7 @@ In order for the algorithm to work, we need to be sure that when we store the ca
 
 In the algorithm cache invalidation is simply described as a \emph{check}, but in reality this is the hard challenge of caching. The \emph{check} could be a precomputed indicator from earlier triggers, it could be based on a key derived from the underlying data or some timestamp. These cache invalidation approaches will be described more in section~\ref{sec:invalidation_techniques}.
 
-\subsection{Architecture}
+\section{Caching Architecture}
 \label{subsec:architecture}
 
 \begin{figure*}[ht!]
@@ -48,10 +48,10 @@ Most modern web applications needs to serve multiple users at the same time, whi
 
 The cache database is often an in-memory key-value database that supports \verb$LOOKUP$ to find cached values and \verb$STORE$ to store cached values and behaviour for cleaning up old cached values. A popular choice for cache databases are technologies such as Redis~\footnote{http://redis.io/} and Memcached~\footnote{https://memcached.org/} since they are simple distributed key-value stores that lives in memory and therefore allows for scalability and high-performance operations. In order to support most practical web applications, we will therefore make the assumption that the cache database has the same functionality: it should be possible to store arbitrary content for a given key.
 
-% subsection architecture end
+% section caching-architecture end
 
-\subsection{Timeline Model}
-\label{subsec:timeline_model}
+\section{Timeline Model}
+\label{sec:timeline-model}
 
 As with the algorithm on figure~\ref{fig:basic-caching}, caching can be described by a series of events. The ordering of events decides whether the cached content or a fresh computation is presented to the client. To describe the different caching techniques, we will use a timeline model with a stream of events. One timeline describes the events occurring in a single process. We can therefore assume that there exists a total ordering of events for a single timeline. To be able to describe the caching techniques explained in this thesis, we will define the following events:
 
@@ -75,9 +75,8 @@ The timeline model applied to the basic caching algorithm~\ref{fig:basic-caching
   \label{fig:basic-caching-timeline}
 \end{figure*}
 
-% subsection timeline_model end
+% section timeline-model end
 
-% section caching_basics end
 
 \section{Evaluating Caching Techniques}
 \label{sec:evaluating_caching_techniques}
