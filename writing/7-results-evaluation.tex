@@ -148,7 +148,7 @@ Another reason why the use case with nested cached functions are interesting is 
 \section{Evaluation}
 \label{sec:evaluation}
 
-The final solution, Smache, solves problem described in section~\ref{sec:problem} by introducing a caching system that provides automatic invalidation and in-place updates to ensure that the cached fragments are always served instantly. Smache allows the programmer to define whether a given cached function should serve stale values or recompute a value if it is not fresh. To relate to existing solutions table~\ref{table:smache-evaluation} shows how Smache relates to the cache evaluation criteria (see appendix~\ref{chapter:comparison-of-caching-approaches-including-smache} for the table including existing approaches).
+The final solution, Smache, solves problem described in section~\ref{sec:problem} by introducing a caching system that provides automatic invalidation and on-write updates to ensure that the cached fragments are always served instantly. Smache allows the programmer to define whether a given cached function should serve stale values or recompute a value if it is not fresh. To relate to existing solutions table~\ref{table:smache-evaluation} shows how Smache relates to the cache evaluation criteria (see appendix~\ref{chapter:comparison-of-caching-approaches-including-smache} for the table including existing approaches).
 
 \begin{table}[ht!]
   \scriptsize

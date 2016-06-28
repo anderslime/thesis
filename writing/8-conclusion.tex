@@ -1,4 +1,4 @@
-\chapter{Conclusion}
+\chapter{Conclusion and Future Work}
 \label{chapter:conclusion}
 
 Caching is a popular technique for improving the performance and scalability of web applications, but it also relies on the programmer correctly managing the cache and making decisions about the freshness and cache updates. In some cases the cached computations are taking a long time to compute and a cache miss resulting in a user waiting for the computation would be fatal for the user experience.
@@ -7,7 +7,7 @@ In this thesis we have analyzed the challenges of cache management and presented
 
 Smache makes it easier for the programmer to cache long running computations without affecting the user experience of the end user. It has been designed to be easy to integrate into existing applications with a possibility to cache existing functions without changing the code inside the function and by reusing architectural components used in many web application. Our experiments performed on the Smache library showed that it only introduces a constant overhead for existing operations of the application and the update throughput showed to increase when more updates where processed concurrently. That is, Smache can be scaled horizontally by adding more update workers to maintain the update throughput when the number of users rises or when new cached functions are introduces.
 
-To our knowledge, Smache is the first caching system with automatic invalidation and in-place updates that allows to cache arbitrary computations.
+To our knowledge, Smache is the first caching system with automatic invalidation and on-write updates that allows to cache arbitrary computations.
 
 \section{Future Work}
 \label{sec:future_work}

@@ -344,7 +344,7 @@ In general there is not a best or correct caching solution - it's a matter of ch
 } & {
   \twolinecell{1.2cm}{Strict}{Freshness}
 } & {
-  \twolinecell{1.2cm}{In-place}{Updates}
+  \threelinecell{1.2cm}{Update}{On}{Invalidation}
 } & {
   \threelinecell{1.4cm}{Always}{Immediate}{Response}
 } & {
@@ -377,13 +377,5 @@ In general there is not a best or correct caching solution - it's a matter of ch
   \caption{Comparison of caching approaches for different types of content}
   \label{fig:existing-solutions-comparison}
 \end{table}
-
-\subsection{Immediate Response vs. Strict Freshness}
-\label{subsec:immediate-response-vs-strict-freshness}
-
-From this comparison we see that there exists not solution that is able to both give an immediate response for every cached function and ensure strict freshness. This trade-off not only exists with the existing solutions, it is not possible to achieve in theory.
-If we have strict freshness for a solution and the client requests the value of a cached object at time $t_2$ and the given cached object was invalidated at time $t_1$, then the value that is fresh at time $t_2$ cannot be available before $\Delta t_c - (t_1 - t_2)$, where $\Delta t_c$ denotes the time taken to compute the value. Unless we make assumptions about the computation time then we cannot achieve immediate response time. The same argument can be used for the reverse situation.
-
-% subsection immediate-response-vs-strict-freshness end
 
 % section choosing_the_right_caching_technique end

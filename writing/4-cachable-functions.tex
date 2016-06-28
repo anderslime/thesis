@@ -29,7 +29,7 @@ The approach best fit for the context of this thesis is to use write-through inv
 
 Although this is the best fit, it still leaves a burden for the programmer to declare the triggers that invokes the write through updates. Furthermore it leaves the challenge of ensuring the integrity of the cached values and invalidation marks in concurrent environments as described on figure~\ref{fig:trigger-based-concurrency-problem}.
 
-The goal of this thesis is to present a caching approach that solves the problem of the thesis for the use case described in section~\ref{sec:context} as well as fulfill the requirements described in section~\ref{sec:requirements}. Since the computation time in the given use case can be long, we must ensure that the response time does not depend on the computation time. Since we must respond immediately we need to trade-off strict freshness. To keep the values as up to date as possible we can use in-place updates based on trigger invalidation. As we can see on figure~\ref{fig:existing-solutions-comparison}, there exists no solutions fulfilling those criteria. In the rest of the thesis we will present the design and implementation of the solution that meets these requirements, which we call ``Smache''.
+The goal of this thesis is to present a caching approach that solves the problem of the thesis for the use case described in section~\ref{sec:context} as well as fulfill the requirements described in section~\ref{sec:requirements}. Since the computation time in the given use case can be long, we must ensure that the response time does not depend on the computation time. Since we must respond immediately we need to trade-off strict freshness. To keep the values as up to date as possible we can use on-write updates based on trigger invalidation. As we can see on figure~\ref{fig:existing-solutions-comparison}, there exists no solutions fulfilling those criteria. In the rest of the thesis we will present the design and implementation of the solution that meets these requirements, which we call ``Smache''.
 
 % section existing-approaches-are-not-sufficient end
 
@@ -67,7 +67,7 @@ When the application fetches and stores cached objects, the developer must deriv
 
 This procedure makes it possible to represent the cached object in the cache such that it is possible to locate and store the result of a given cached function in the cache database.
 
-To support in-place updates that allows the cache system to automatically update the cached objects as they are invalidated, \verb$SERIALIZABLE-FUN-NAME$ must also comply with the following requirement:
+To support on-write updates that allows the cache system to automatically update the cached objects as they are invalidated, \verb$SERIALIZABLE-FUN-NAME$ must also comply with the following requirement:
 
 \begin{itemize}
   \item The serializations of \emph{fn} and \emph{input} must be done in such a way that there exists another procedure \verb$DESERIALIZE-FUN$ that deserializes \emph{fun-name} such that it is possible to locate and call \emph{fn} with \emph{input} in another process.
@@ -88,12 +88,12 @@ Smache does not remove the burden of cache management, but it will handle naming
 
 % subsection automatic_cache_invalidation end
 
-\subsection{In-place Updates}
+\subsection{Update On Write}
 \label{subsec:write-through-updates}
 
-Smache also offers the possibility to perform in-place updates using a data update propagation system inspired by the solution IBM used to achieve a 100\% cache hit rate on the content management system for the Olympic Games in 2000~\cite{paper:ibm, paper:ibm-extended}.
+Smache also offers the possibility to perform on-write updates using a data update propagation system inspired by the solution IBM used to achieve a 100\% cache hit rate on the content management system for the Olympic Games in 2000~\cite{paper:ibm, paper:ibm-extended}.
 
-Having in-place updates allows the programmer to have immediate response times while ensuring that the values returned are updated as soon as they are invalidation such that the value is not more stale than the time taken to compute it. This will be explained more in chapter~\ref{chapter:data-update-propagation}.
+Having on-write updates allows the programmer to have immediate response times while ensuring that the values returned are updated as soon as they are invalidation such that the value is not more stale than the time taken to compute it. This will be explained more in chapter~\ref{chapter:data-update-propagation}.
 
 % subsection write-through-updates end
 
@@ -134,7 +134,7 @@ The implementation of the basic caching on the running example is seen on code s
 Smache require the programmer to annotate the types of ``data source'', which are passed into the original function. In this case we have annotated using the \verb$Course$-class that corresponds to an object for an Object-Relational Mapper (ORM) that represents the collection \emph{course}. The ``data source types'' supported are ORM-objects as well as the ``Raw''-type that represents primitive values (such as strings, numbers etc.). The number of type annotations has to be the same number of arguments given to the original function. The type annotations are used to derive direct dependencies as explained more in section~\ref{chapter:invalidation} and to implement automatic naming.
 
 % Naming
-The Smache library implements both the \verb$SERIALIZED-FUN-NAME$ and \verb$DESERIALIZED-FUN$ to support automatic invalidation and in-place updates. The implementation works by having a \emph{seperator-token} that is used in between the concatenations. The input is deserialized and serialized using the \emph{JavaScript Object Notation (JSON)}protocol~\cite{docs:json}. Using the python implementation~\cite{docs:python-json} Smache encodes primitive Python values into JSON and decode it back from JSON to Python values. The implementation of the encoding and decoding can be seen in appendix~\ref{appendix:implementation-of-function-serialization-and-deserialization}. Besides decoding and encoding the cached object instances, the full implementation also involves storing and loading references from/to the computed functions.
+The Smache library implements both the \verb$SERIALIZED-FUN-NAME$ and \verb$DESERIALIZED-FUN$ to support automatic invalidation and on-write updates. The implementation works by having a \emph{seperator-token} that is used in between the concatenations. The input is deserialized and serialized using the \emph{JavaScript Object Notation (JSON)}protocol~\cite{docs:json}. Using the python implementation~\cite{docs:python-json} Smache encodes primitive Python values into JSON and decode it back from JSON to Python values. The implementation of the encoding and decoding can be seen in appendix~\ref{appendix:implementation-of-function-serialization-and-deserialization}. Besides decoding and encoding the cached object instances, the full implementation also involves storing and loading references from/to the computed functions.
 To give an example, we will demonstrate the usage of the localization procedures with the default seperator token $~~~$. We can serialize the function \verb$course_score$ from the running example in code~\ref{code:running-example}. When the running example has been made cachable as in code~\ref{code:basic-caching-running-example} and we use a \verb$Course$-object from the \verb$ORM$ we can serialize and deserialize as seen in code~\ref{code:function-serialization}.
 
 \begin{code}{Example of how function serialization and deserialization can be done in Smache}
@@ -158,7 +158,7 @@ Another limitation of the interface of cachable functions described so far is th
 \section{Summary}
 \label{sec:cachable-functions-summary}
 
-In this chapter we introduces the interface for cachable functions that allows a programmer to declare a function to be cachable such that the second time the function is accessed the result will be served from the cache instead of recomputing it. The naming and identification of the related cached object instance is handled transparently by the caching system. The interface also includes declaration that allows to extend cachable functions to have automatic invalidation as described in the next chapter (chapter~\ref{chapter:invalidation}) and in-place updates (chapter~\ref{chapter:data-update-propagation}).
+In this chapter we introduces the interface for cachable functions that allows a programmer to declare a function to be cachable such that the second time the function is accessed the result will be served from the cache instead of recomputing it. The naming and identification of the related cached object instance is handled transparently by the caching system. The interface also includes declaration that allows to extend cachable functions to have automatic invalidation as described in the next chapter (chapter~\ref{chapter:invalidation}) and on-write updates (chapter~\ref{chapter:data-update-propagation}).
 
 % section summary end
 
