@@ -122,8 +122,8 @@ Secondly, we present the design of Smache, a caching solution that aims to be ea
 \begin{itemize}
   \item a \emph{programming model} that allows programmers to cache existing functions by declaring the dependencies to underlying data, after which the caching system automatically caches the result of the function by naming, localizing and storing the cached value for the function.
   \item a \emph{description and proof} of how to use \emph{timestamp invalidation} to invalidate and update cached values in a concurrent environment.
-  \item an \emph{automatic invalidation system} based on \emph{timestamp invalidation}, a \emph{data structure} for representing dependencies between cached values and underlying data.
-  \item a \emph{data update propagation algorithm} based on timestamp invalidation that is able to update all cached functions concurrently without additional concurrency control mechanisms.
+  \item an \emph{automatic invalidation system} based on \emph{timestamp invalidation} and a variant of a \emph{Simple Object Dependence Graph} for representing dependencies between cached values and underlying data.
+  \item a \emph{data update propagation algorithm} based on \emph{timestamp invalidation} that is able to update all cached functions concurrently without additional concurrency control mechanisms.
 \end{itemize}
 
 Thirdly, we also present an implementation of Smache using the programming language Python, MongoDB as primary storage and Redis as the cache database, which is available open-source for future contributions at:
