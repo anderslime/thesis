@@ -118,6 +118,8 @@ The queries needed for automatic invalidation are:
   \item \verb$lookup_cached_object(entity_id)$: Finds all cached objects depending on the \verb$entity_id$.
 \end{itemize}
 
+If we use perfect hashing as with the DDG we will also be able to lookup instance dependencies using $O(1)$ expected time. The space used by the IDG If we denote the total number of direct dependency declarations for all the cached functions as $|d|$ then the IDG uses $O(|d|)$ space in worst case.
+
 % subsection instance-dependence-graph end
 
 % section dependency-management-for-cachable-functions end
