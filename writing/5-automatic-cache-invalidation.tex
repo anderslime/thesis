@@ -36,7 +36,7 @@ Figure~\ref{fig:simple-odg} illustrates an instance of a simple ODG with four ve
 
 % section simple-object-dependence-graph end
 
-\section{Dependency Data Structure for Cachable Functions}
+\section{Dependency Data Structures}
 \label{sec:dependency-data-structure-for-cachable-functions}
 
 If we consider the solutions already suggested and compared on figure~\ref{fig:dependency-management-comparison}, the database transaction technique allows for the most transparent dependency declaration and require no effort from the programmer, but it makes assumptions about how the database technology works, which makes it more difficult to make adaptable. Declaring dependencies in the content is not appropriate for caching functions and the technique with code generation requires lots of effort to implement the static analysis, which will only work for a specific programming language and database query language. Smache uses the last technique, where dependencies are declared in code as suggested by Gupta et.al.~\cite{paper:cache-genie} using variants of the Simple ODG.

@@ -17,7 +17,7 @@ The rest of this chapter will lay out test results of experiments made to test t
 
 The chapter will end with an evaluation of the system based on the test results and the initial requirements~\ref{sec:evaluation}.
 
-\section{Changes Required to Cache with Smache}
+\section{Changes Required to use Smache}
 \label{sec:changes-required-to-cache-with-smache}
 
 Smache was integrated in to the Peergrade.io platform, which is an existing web application with a single code base deployed to multiple web servers. To test the adaptability we applied the library to cached functions of different granularities such as function returning a single value, functions returning a data structure and functions returning the HTML served to the user. From this integrations we experienced an easy integration, but to cache optimally some of the functions had to be split up to.
@@ -47,7 +47,7 @@ Even though this is optimal, Smache has been implemented such that it is easy le
 
 % section changes-required-to-cache-with-smache end
 
-\section{Performance Impact of Existing Procedures}
+\section{Performance Impact of Existing Operations}
 \label{sec:performance-impact-of-existing-procedures}
 
 One of the requirements of the system is that the performance of existing operations should not be affected negatively by introducing the caching system. On the requests that changes underlying data, the application will notify and execute invalidation in the same process, which will affect the response time of the update request. The performance of invalidation have been evaluated using a test that uses both \emph{direct dependencies} and \emph{lazy dependencies}.

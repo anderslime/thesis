@@ -88,7 +88,7 @@ Smache does not remove the burden of cache management, but it will handle naming
 
 % subsection automatic_cache_invalidation end
 
-\subsection{Write-Through Updates}
+\subsection{In-place Updates}
 \label{subsec:write-through-updates}
 
 Smache also offers the possibility to perform in-place updates using a data update propagation system inspired by the solution IBM used to achieve a 100\% cache hit rate on the content management system for the Olympic Games in 2000~\cite{paper:ibm, paper:ibm-extended}.
@@ -146,7 +146,7 @@ To give an example, we will demonstrate the usage of the localization procedures
 
 % section the_cachable_function_model end
 
-\section{Discussion on Limitations of Cachable Functions}
+\section{Limitations of Cachable Functions}
 \label{sec:cachable-function-discussion}
 
 The design of the cachable functions require the programming language to support serialization and deserialization as described. In Python it is possible to localize modules and functions dynamically based on a string representation, but in other languages this could be a challenge or might even require a different solution, which could be a limitation of the design and implementation. For example statically typed languages that does not allow dynamic notations, might need a different solution, where the representations are mapped to a data structured holding references to the given functions. Furthermore the solution does not consider caching methods for objects in object oriented languages, which is considered a limitation of the solution. To cache methods of objects, the solution would have to be extended to consider the state of the object as ``input'' for the cached function.

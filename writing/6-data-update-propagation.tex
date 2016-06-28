@@ -13,8 +13,9 @@ Labrinidis et.al.~\cite{paper:update-propagation-strategies} suggests an algorit
 
 % section existing-data-update-propagation-approaches end
 
-\section{Race Condition on Write-Through Invalidation}
+\section{Concurrency Analysis of Write-Through Invalidations}
 \label{sec:race-condition-on-write-through-invalidation}
+
 
 When the name of the cached objects are the same as in trigger-based invalidation, the cached object becomes a shared resources that have to be accessed and updated from multiple web servers. This means we have to consider the concurrency challenges related to this concurrent environment to avoid avoid race conditions( while ensuring liveness of the system).
 As illustrated on figure~\ref{fig:incorrect-updates-analysis} a race condition can occur when there are processes updating the same cached objects at the same time. In this case a race condition affects the correctness of the system such that a given cached object is marked as fresh even though it's value is stale.
@@ -50,7 +51,7 @@ If a failure happen during the update of a cached object, the algorithm will ret
 
 % section design-of-the-algorithm end
 
-\section{Implementation}
+\section{Implementation of the DUP Algorithm}
 \label{sec:implementing-the-data-updata-propagation-algorithm}
 
 Smache implements the data update propagation described above as an extension of the implementation of the automatic invalidation. After a set of cached objects have been invalidated as illustrated on figure~\ref{fig:background-workers}, Smache schedules the same cached objects to be updated unless an update job already exists.
