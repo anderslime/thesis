@@ -54,12 +54,12 @@ Most modern web applications needs to serve multiple users at the same time, whi
 As with the algorithm on figure~\ref{fig:basic-caching}, caching can be described by a series of events. The ordering of events decides whether the cached content or a fresh computation is presented to the client. To describe the different caching techniques, we will use a timeline model with a stream of events. One timeline describes the events occurring in a single process. We can therefore assume that there exists a total ordering of events for a single timeline. To be able to describe the caching techniques explained in this thesis, we will define the following events:
 
 \begin{itemize}
-  \item \textbf{Requested} is the event occurring when a client requests a given cached object
-  \item \textbf{Computation Started} is when the computations is started
-  \item \textbf{Computation Finished} is when the computation is finished and a result is returned
-  \item \textbf{Stored} is happening when a given cached object is stored in the cache database
+  \item \textbf{Request} is the event occurring when a client requests a given cached object
+  \item \textbf{Response} is when the client receives the cached value
+  \item \textbf{Computation Started} The computation of a new cached object is started
+  \item \textbf{Computed and Stored} The computation is finished and the new object is stored in the cache
   \item \textbf{UD Updated} is when the underlying data has been updated
-  \item \textbf{Invalidated} is when the system has knowledge that the cached object is invalidated
+  \item \textbf{Invalidated} is when the system considers the cached object as invalid
 \end{itemize}
 
 Alongside these events the timeline model illustrates the interval in which the given cached object is considered valid (the cache system will serve the cached value) and when it is actually fresh (consistent with underlying data). The validity interval illustrates when the cache system will respond immediately, which means if the cached object is always considered valid then the approach supports immediate responses. In the time interval, where the fresh and valid interval overlaps, the approach will serve a fresh version of the cached value. If they always overlap then the given approach will guarantee strict freshness.
