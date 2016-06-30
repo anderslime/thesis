@@ -1,25 +1,16 @@
 \chapter{Existing Caching Approaches}
 \label{chapter:caching}
 
-Since caching is a solution widely used in practice there already exists multiple caching approaches described in literature, articles on the internet and in open source code. In this chapter we will cover some of these existing approaches. The approaches will be analyzed and evaluated based on the criteria described in section~\ref{sec:evaluating_caching_techniques} and requirements from section~\ref{sec:requirements}.
+Since caching is a solution widely used in practice there already exists multiple caching approaches described in literature, articles on the internet and in open source code. In this chapter we will cover some of these existing approaches. The approaches will be analyzed and evaluated based on the criteria described in section~\ref{sec:evaluating_caching_techniques} and requirements from section~\ref{sec:requirements}. The chapter will end with an overview of the different approaches and a final conclusion on how to choose the right caching technique.
 
-As already the described the most difficult part of caching is the invalidation. We will therefore start by describing existing invalidation techniques followed by how the cached values are updated and related problems. We will also describe some specific caching approaches related to web development and finish the chapter by giving an approach to picking an appropriate caching approach for a use case based on the caching criteria.
-
-\section{Invalidation Techniques}
-\label{sec:invalidation_techniques}
-
-When the underlying data for a cached value is updated we consider the cached value as invalid. Although this sounds as a trivial part, the mechanism for invalidating the cached value can become complex depending on the requirements for the use case. To be able to navigate the existing solutions we will cover the general invalidation techniques as well as the more advanced techniques described in literature.
-
-% section invalidation_techniques end
-
-\subsection{Expiration-based Invalidation}
+\section{Expiration-based Invalidation}
 \label{subsec:expiration_based_invalidation}
 
-In cases where it is accepted to keep the cached values stale up to a given time interval, we can use the expiration-based invalidation technique, which is the simplest invalidation mechanism since the invalidation only depends on time and not updates of underlying data. Using the expiration-based invalidation we give up consistency and the level of freshness depends on the time interval set by the programmer, but we are able to achieve immediate responses.
+In some cases it is acceptable to serve stale values in a certain time interval. In these cases, the simplest approach would be to use the expiration-based invalidation technique, which gives up consistency and makes freshness depend on the expiration, but is then able to respond with the cached object immediately independently of how underlying data changes.
 
-The expiration-based invalidation works by assigning a TTL (Time to Live) to the cached value. At some point when the TTL has expired, the cached value is invalidated. The responsibility of invalidation cached values with TTL is often placed on the cached database by piggybacking the TTL to the cached value when it is stored. This is for example supported by Redis and Memcached.
+The expiration-based invalidation works by assigning a TTL (Time to Live) to the cached object. At some point when the TTL expires after which the cached object is considered invalid. The responsibility of invalidation cached values with TTL is often placed on the cache database by piggybacking the TTL to the cached value when it is stored. The cache database will then invalidate and remove expired values. This is for example supported by in-memory cache database technologies, Redis and Memcached.
 
-To give a sense of how the relation between when a cached value is considered valid (it is served from the cache) and when it is actually fresh, the timeline model has been applied to the expiration-based invalidation on figure~\ref{fig:timeline:expiration-based}.
+The timeline model on figure~\ref{fig:timeline:expiration-based}, showing the relation between when the cached object is considered valid and fresh, illustrates how there is a time interval between the underlying data has updated and the object has expired in which the cached object is served stale.
 
 \begin{figure*}[ht!]
   \centering
@@ -28,16 +19,16 @@ To give a sense of how the relation between when a cached value is considered va
   \label{fig:timeline:expiration-based}
 \end{figure*}
 
-% subsection expiration_based_invalidation end
+% section expiration_based_invalidation end
 
-\subsection{Key-based invalidation}
+\section{Key-based invalidation}
 \label{subsec:key_based_invalidation}
 
-When the cached values are required to be up to date with the primary storage, we must ensure that when underlying data is updated, the depending cached values must be recomputed before the cached value can be served. The key-based invalidation gives these guarantees by giving up immediate responses since the users have to wait for computations to finish if they request an invalidated cached value. As mentioned in section~\ref{sec:evaluating_caching_techniques} the impact of this trade-off is proportional to the cache miss rate. This means that the key-based invalidation will not be suitable in cases where the computation time is too long or in cases where the cached values are updated too frequently.
+When the cached values are required to be consistent with the primary storage, we must ensure that when underlying data is updated, the depending cached values are updated accordingly. The key-based invalidation gives these guarantees by giving up immediate responses. As mentioned in section~\ref{sec:evaluating_caching_techniques} the impact of this trade-off is proportional to the cache miss rate. This means that the key-based invalidation will not be suitable in cases where the computation time exceeds the user's attention span or in cases where the cached values are updated too frequently.
 
-Key-based invalidation works by constructing the cache key from parts of the underlying data such that the when the cached object should change, then the key also changes.~\cite{blog:key-based-invalidation}. The cached content is considered immutable and only have to be written once. This simplifies version management from the perspective of cache storage since there is no chance you read stale values if the key is assumed to be derived from the most recent version of underlying data.
+Key-based invalidation works by constructing the cache key from the underlying data such that the key changes in lock-step with the cached content~\cite{blog:key-based-invalidation}. This means there is no specific name identifying some cached content and the cached content for a given key never changes. This simplifies version management from the perspective of cache storage since there is no chance you read stale values if the key is assumed to be derived from the most recent version of underlying data.
 
-The challenge of this method is to construct the key. To use this technique correctly (i.e. obtain the guarantees promised) the programmer must construct a key that is ensured to change when the cached value is considered stale. Furthermore to obtain a maximum hit rate, the key must not change when the cached value is fresh. Given that the key is optimally constructed, the timeline looks as on figure~\ref{fig:timeline:key-based}.
+The challenge of this method is to construct the key. To use this technique correctly (i.e. obtain the guarantees promised) the programmer must construct a key that is ensured to change when the cached value is considered stale. Furthermore to obtain a maximum hit rate, the key must not change when the cached value is fresh. Given that the key is optimally constructed, the timeline looks as on figure~\ref{fig:timeline:key-based}. The key-based invalidation performs invalidation at the moment, the cached value is requested, but it is considered invalid at the moment after the cache key components are updated (e.g. the \emph{updated\_timestamp} in the code snippet). This means the freshness and validity interval always overlap in the timeline model, and we therefore have consistency.
 
 \begin{figure*}[ht!]
   \centering
@@ -46,23 +37,21 @@ The challenge of this method is to construct the key. To use this technique corr
   \label{fig:timeline:key-based}
 \end{figure*}
 
-In the web application framework, Ruby on Rails, the key construction is simplified by using a key that includes the timestamps of the last update on some underlying data. An example of this technique can be seen in code example~\ref{code:key-based-invalidation}. In this example we use the type, id and update timestamp as parts of the key. This means that the cached value is considered invalid if it is called with an entity that has a different type, id or update timestamp. The intuition behind these components is that we want a unique cache value for each entity and we want the value to be recomputed when the entity is updated.
+In the web application framework, Ruby on Rails, key-based invalidation is implemented by construction the key from the timestamp of the last time the underlying data was updated. The next time the underlying data is updated, the timestamp also changes, and the cached content have thereby been invalidated. An example of this technique can be seen in code snippet~\ref{code:key-based-invalidation}. In this code snippet we use the function name, entity type, entity id and update timestamp as parts of the key. This means that the cached value is invalidated when any of these values changes. The intuition behind these components is that we want a unique cache value for each entity and function and we want the value to be recomputed when the entity is updated i.e. the update timestamp changes.
 
 \begin{code}{Example of the key-based invalidation technique}
   \input{code/key_based_invalidation.py}
   \label{code:key-based-invalidation}
 \end{code}
 
-The key-based invalidation performs invalidation at the moment, the cached value is requested, but it is considered invalid at the moment after the cache key components are updated (e.g. the \emph{updated\_timestamp} in the code example). This means we get interval the value is considered value and fresh are always overlapping, which means we have consistency.
+A caveat of this method method is that it generates cache garbage since new version of cached objects does not overwrite the content for existing keys but stored with a new key. To avoid the complexity of keeping track of the relations between the different cached objects, the responsibility for cleaning up old cached objects is moved to the cache database. Fortunately cache databases (such as Redis and Memcached) implements different such cleanup algorithms that detects obsolete values based on some policy. One such policy called \emph{Least Recently Used (LRU)} removes the objects that are least recently used. Another policy called \emph{Least Frequently Used (LFU)} removes the lease frequently accessed objects.
 
-A caveat of this method method is that it generates cache garbage since old versions of a cached value are not removed. To avoid the complexity of keeping track of the relations between the different, the responsibility for cleaning up is moved to the cache database. Fortunately cache databases (such as Redis and Memcached) implements different such cleanup algorithms that detects obsolete values based on some policy. One such policy called \emph{Least Recently Used (LRU)} removes the cached values that are least recently used by keeping a timestamp of when the cached values where accessed last. Another policy called \emph{Least Frequently Used (LFU)} keeps track of the frequency in which the different values are accessed and removes the ones that are least frequently accessed.
+% section key_based_invalidation end
 
-% subsection key_based_invalidation end
-
-\subsection{Trigger-based Invalidation}
+\section{Trigger-based Invalidation}
 \label{subsec:trigger_based_invalidation}
 
-Instead of invalidating the cached value when requested, the cached values can be invalidated based on certain events triggered when the underlying data is updated. Given that invalidation triggers are located at all the places where the underlying data is updated, we can achieve the same guarantees of consistency and freshness as with key-based invalidation. The timeline model of the trigger-based invalidation on figure~\ref{fig:timeline:trigger-based} therefore looks similar to the key-based invalidation.
+Instead of invalidating the cached object when requested, the cached values can be invalidated based on certain events triggered when the underlying data is updated. Given that the invalidation triggers are located at all the places where the underlying data is updated, we can achieve the same guarantees of consistency and freshness as with key-based invalidation. As seen on figure~\ref{fig:timeline:trigger-based}, the guarantees timeline is similar to the key-based invalidation and gives the same guarantees of freshness and consistency.
 
 \begin{figure*}[ht!]
   \centering
@@ -71,9 +60,9 @@ Instead of invalidating the cached value when requested, the cached values can b
   \label{fig:timeline:trigger-based}
 \end{figure*}
 
-Where the key is used as an invalidation mechanism in key-based invalidation, the key is static for trigger-based invalidation i.e. the key for identifying a cached value does not change in its lifetime. The actual key becomes simpler since it is only responsible for uniquely identifying the cached value, but the localization is still a challenge since the key needs to be shared between the triggers and the places where the cached value is accessed. The responsibility of invalidating the keys are then moved to the definition of event triggers.
+In key-based invalidation the key dynamic and used as an invalidation mechanism, but in trigger-based invalidation the key is static i.e. the key does not change in the lifetime of a cached object. We will therefore call it the \emph{name} of the cached object. The actual key becomes simpler since it is only responsible for uniquely identifying the cached value, but the localization is still a challenge since the key needs to be shared between the triggers and the places where the cached value is accessed.
 
-Having a static key also has the advantage that we can locate the old/stale value after invalidation as oppose to key-based invalidation where there is no relation between the versions of cached values. Using this information we can extend the technique to be more fault-tolerant by serving a stale value in the case where a computation fails\footnote{Here we assume that the application provides more value to the client by serving a stale value compared to serving an error or nothing}. We can also extend the technique to be more flexible with relation to the properties as explained in section~\ref{subsec:trigger-based-invalidation-with-asynchronous-update} and section~\ref{subsec:write_through_invalidation}.
+Having a static key also has the advantage that we can locate the old/stale value after invalidation as oppose to key-based invalidation where there is no relation between the versions of cached values. Using this information we can extend the technique to be more fault-tolerant by serving a stale value in the case where a computation fails\footnote{Here we assume that the application provides more value to the client by serving a stale value compared to serving an error or nothing}. Trigger-based invalidation is also a technique that comes with a lot of flexibility and easy to extend as done in section~\ref{subsec:trigger-based-invalidation-with-asynchronous-update} and section~\ref{subsec:write_through_invalidation}.
 
 The simplest type of triggers are manually defined code that invalidates a given key. A code snippet for a naive implementation of manual triggers can be seen in snippet~\ref{code:manual-trigger-invalidation}. In practice the manual code triggers are often placed right after updates to the underlying data. Although this method is simple it often requires a lot of effort from the programmer and is prone to errors since it requires global reasoning of the application to identify the places where underlying data is updated.
 
@@ -82,7 +71,7 @@ The simplest type of triggers are manually defined code that invalidates a given
   \label{code:manual-trigger-invalidation}
 \end{code}
 
-Having a static key also introduces a challenge related to concurrency since we assume that there are multiple application servers. The challenge origins from the problem illustrated on figure~\ref{fig:trigger-based-concurrency-problem}, where an update to the underlying happens during the computation of a cached value. When the computation has finished it will incorrectly mark the cached value as fresh even though it is based on an old version of the underlying data, which makes it stale.
+Having a static key also introduces a challenge related to concurrency since we assume that there are multiple application servers. The challenge origins from the problem illustrated on figure~\ref{fig:trigger-based-concurrency-problem}, where an update to the underlying happens during the computation of a cached value. When the computation has finished it will incorrectly mark the cached value as fresh even though it is based on an old version of the underlying data.
 
 \begin{figure*}[ht!]
   \centering
@@ -91,25 +80,25 @@ Having a static key also introduces a challenge related to concurrency since we 
   \label{fig:trigger-based-concurrency-problem}
 \end{figure*}
 
-% subsection trigger_based_invalidation end
+% section trigger_based_invalidation end
 
-\subsection{Trigger-based Invalidation with Asynchronous Update}
+\section{Trigger-based Invalidation with Asynchronous Update}
 \label{subsec:trigger-based-invalidation-with-asynchronous-update}
 
-We can extend the trigger-based invalidation by always serving the newest value from the cache and afterwards update the value asynchronously if it is stale. This way we always get an immediate response by giving up strict freshness and consistency. To give this guarantee fully the user have to wait for the computation the first time the value is requested if the application haven't `'pre-heated'` the cache i.e. included a build step before deployment that computes all cached values.
+We can extend the trigger-based invalidation by always serving the newest value from the cache and afterwards update the value asynchronously if it is stale. This way we always get an immediate response by giving up strict freshness and consistency.
 
-The timeline of this extension is as on figure~\ref{fig:timeline:trigger-based-with-asynchronous-update}. A naive implementation of this technique would be as the trigger-based seen in code snippet~\ref{code:manual-trigger-invalidation} with the modification that the system updates the value asynchronously instead of synchronously if no fresh value is found in the cache. The snippet for this can be found in appendix~\ref{appendix:code:trigger-based-invalidation-with-asynchronous-update}.
+The timeline of this extension is as on figure~\ref{fig:timeline:trigger-based-with-asynchronous-update}. A naive implementation of this technique would be as the trigger-based seen in code snippet~\ref{code:manual-trigger-invalidation} with the modification that the system updates the value asynchronously instead of synchronously if no fresh value is found in the cache. An implementation example for this technique can be found in appendix~\ref{appendix:code:trigger-based-invalidation-with-asynchronous-update}.
 
 \begin{figure*}[ht!]
   \centering
   \includegraphics[width=1.0\linewidth]{figures/timeline/trigger-based-with-asynchronous-update.pdf}
-  \caption{The lifecycle of the trigger-based invalidation technique where the value is updated in the asynchronous}
+  \caption{The lifecycle of the \emph{trigger-based invalidation} technique where the value is updated in the asynchronous}
   \label{fig:timeline:trigger-based-with-asynchronous-update}
 \end{figure*}
 
-% subsection trigger-based-invalidation-with-asynchronous-update end
+% section trigger-based-invalidation-with-asynchronous-update end
 
-\subsection{Write-Through Invalidation}
+\section{Write-Through Invalidation}
 \label{subsec:write_through_invalidation}
 
 Write-through invalidation is also an extension to the trigger-based invalidation method, but instead of updating the cached values when the value is requested, the value is updated in the moment after it has been invalidated. This way we invalidate by writing through the existing version in the cache. The timeline model of this technique seen on figure~\ref{fig:timeline:write-through} is similar to the asynchronous update extension, but the time interval in which it serves a stale value is only as long as the time taken to compute the value.
@@ -117,32 +106,28 @@ Write-through invalidation is also an extension to the trigger-based invalidatio
 \begin{figure*}[ht!]
   \centering
   \includegraphics[width=1.0\linewidth]{figures/timeline/write-through.pdf}
-  \caption{The lifecycle of the write-through invalidation technique}
+  \caption{The lifecycle of the \emph{write-through invalidation} technique}
   \label{fig:timeline:write-through}
 \end{figure*}
 
-% subsection write_through_invalidation end
+% section write_through_invalidation end
 
-\subsection{Automatic Invalidation}
+\section{Automatic Invalidation}
 \label{subsec:automatic_invalidation}
 
-The trigger-based invalidation is an attractive technique since it can provide guarantees with relation to freshness and consistency while allowing for flexibility by extending it. But in practice the overhead for the programmer of managing the triggers and keeping integrity becomes a burden that makes it hard to maintain. A lot of research have therefore been done in making it easier to use trigger-based invalidation.
+The trigger-based invalidation is an attractive technique since it can provide guarantees with relation to freshness and consistency while allowing for flexibility by extending it. But in practice the overhead for the programmer of managing the triggers and keeping integrity becomes a burden that makes it hard to maintain. A lot of research have therefore been done in making it easier to use trigger-based invalidation by automating cache invalidation and management.
 
 The cached objects are based on underlying data from the primary storage system, which means that changes to the underlying data also origins from the primary store. A lot of work have been put into using the database as the source of the triggers that invalidates the cached objects.
 
-In~\cite{paper:cache-genie} the database wrapper~\footnote{In this case in the form of an Object-Relational Mapper} is used to detect and trigger changes to the underlying data. This paper suggests a caching approach for caching database queries by declaring predefined queries with dependencies to underlying data using an extension to the database wrapper. The database wrapper is then responsible for detecting changes to underlying data and invalidate the affected cached queries. The advantage of using a database wrapper is that the caching system will still work if the database used by the wrapper is changed. On the other hand changes made to the database that are not made through the given database wrapper are not detected as a trigger, which leaves the responsibility of ensuring all changes are made through the database wrapper.
+Cache-Genie~\cite{paper:cache-genie} complex caches database queries by letting the programmer declare predefined queries, which are then cached and update automatically. It uses an Object-Relational Mapper to detect and trigger changes to underlying data, which will invalidate and update the affected cached queries.
 
-This problem can be solved using a database technology that is able to notify about changes directly from the database as done in the approach from IBM~\cite{paper:ibm, paper:ibm-extended} that uses the IBM DB2~\footnote{\url{http://www.ibm.com/analytics/us/en/technology/db2/}} database. In this approach the triggers are intercepted by a cache-manager that is able to invalidate the affected values using a dependency graph. Having a cache-manager introduces a single point of failure and potentially a bottleneck, but it allows capturing dynamic dependencies, which is required for the given application. The details about this approach will be described in section~\ref{sec:simple-object-dependence-graph}.
+The deploy-time model suggested in~\cite{paper:deploy-time} also uses the database wrapper to trigger changes to underlying data, but instead of just caching database queries, the deploy-time model is able to cache the results of functions. The programmer is able to declare a function as cached in the source code with declaration of dependencies to underlying data after which the cache system will invalidate the cached functions automatically. The deploy-time model uses static analysis to detect dependencies between different cached functions and to underlying data.
 
-In~\cite{paper:liskov} a patch is made to the database such that the database is able to support so called ``invalidation streams'' that can help the caching system invalidate the affected cached values. The cache nodes stores information about how the different cache objects should be invalidated represented by invalidation tags. The invalidation stream from the storage system are then distributed across all cache nodes and used to invalidate the affected cached objects using the invalidation tags. The primary reason for these invalidation streams is to allow transactional consistency such that the primary storage and cache nodes share information that can be used to fetch a consistent set of data across both sources.
+TxCache suggested by Dan Ports et.al.~\cite{paper:liskov} also caches the results of functions, but it uses fully transparent programming model that allows a programmer to declare a function to be cached without any additional information. The TxCache patches the primary storage system to support ``invalidation streams'' and transactions to detect queries made during a call to a cached function. The primary storage distributes the ``invalidation stream'' to the cache databases, which uses the stream to invalidate affected cached values. Using this approach, it is possible to achieve transactional consistency across the cache and primary storage without enforcing full freshness by serving slightly stale data. That is, the TxCache improves the performance of requests to the users while ensuring that all the data served to the user is consistent for the given request. This technique is able to give a very strong guarantee, but it also comes with complexity in the architecture, since it requires an external process that manages snapshots of the databases and it requires the primary storage database to support the invalidation stream technique.
 
-The same approach also suggests using transactions between the primary storage and the application during the computation of cached objects to capture dependencies to entities from the primary storage using the queries made in the given transaction. This way the dependencies are captured automatically, but it requires the database to implement these transactions.
+On the other end of the granularity scale,~\cite{paper:db-driven-http} suggests a system that caches HTTP responses. It uses a proxy that that detects the queries made to the primary storage during a HTTP request. Through the information captured by the proxy, the system builds a table that maps a given HTTP resource to the queries made. Furthermore it uses a proxy between the application and database to detect changes to underlying data and invalidate affect cached HTTP responses. This method is interesting since it allows to cache without changing the code of the web application, but it is only described at the granularity of HTTP responses since it uses the communication between the web application, storage system and cache to achieve automatic invalidation.
 
-\cite{paper:deploy-time} suggests using static analysis of the code to capture dependencies between the cached functions and the underlying data. In this approach the programmer must denote the data relationships, which are analyzed by the static analyzer. The static analyzer will then detect relationships between the cached functions and the underlying data as well as between different cached functions. Based on this information an object in the application process will store the dependencies for each type of dependency and not for each dependency instance. The exact dependencies are then derived using queries to the primary storage when changes are triggered. The given approach also uses a static analyzer to detect the relevant triggers.
-
-The advantages of the deploy-time approach is that it doesn't require additional processes and it does not have to keep track of state in the form of dependencies between the different cache object instances, but these decisions have the cost that it is difficult to implement fault-tolerant measures (such as invalidation retry) as well as a poorer user experience from the performance impact of invalidation. Furthermore the approach has no mechanisms for avoiding the problem of concurrency bugs (describe in section~\ref{fig:trigger-based-concurrency-problem}).
-
-On the other end of the granularity scale,~\cite{paper:db-driven-http} suggests a system that caches HTTP responses. It uses a sniffer process that monitors the lifetime of a HTTP request with the queries made to the storage system. Through the information captured by the sniffer, the system builds a table that maps a given HTTP resource to the queries made. The system then caches the HTTP resource that is invalidated when underlying data related to the given resource changes. This method is interesting since it allows to cache without changing the code of the web application, but it is only described at the granularity of HTTP responses since it uses the communication between the web application, storage system and cache to achieve automatic invalidation.
+In a series of paper IBM describes the Content Management System (CMS) they developed for the Olympic Games in 2000~\cite{paper:ibm, paper:ibm-extended, paper:ibm-publishing-system}. In these paper they introduce the Object Dependence Graph (ODG) data structure (described in more details in section~\ref{sec:simple-object-dependence-graph}) that is optimized for querying the content affected by changes to underlying data. In this system the dependencies between the different content and the underlying data are declared by the content-writers, that is the dependencies are not declared in the code base, but they are declared directly data. Experiments made to the final system achieves a 100\% cache hit rate and the papers describes interesting ideas with relation to automatic invalidation, but the final system is designed for CMS-systems.
 
 To be able to evaluate the techniques used in the automatic invalidation approaches described, we will divide the process into different sub problems. Automatic invalidation are based on a caching system that reacts and invalidates when changes happens to underlying data. Automatic invalidation are therefore mainly working around requests, where the client requests to update underlying data in the primary store. If we consider figure~\ref{fig:automatic-invalidation-flow} that illustrates this flow, the invalidation mechanism is responsible for step 3, 4 and 5. This involves the tasks of: \emph{triggering cache invalidation} and \emph{managing dependencies between underlying data and cached objects}. The following sections will consider these tasks and compare existing techniques.
 
@@ -153,14 +138,15 @@ To be able to evaluate the techniques used in the automatic invalidation approac
   \label{fig:automatic-invalidation-flow}
 \end{figure*}
 
-\subsubsection{Triggering Cache Invalidation}
+\subsection{Triggering Cache Invalidation}
 \label{subsubsec:triggering-cache-invalidation}
 
-When the client updates underlying data, the application receives a request from the client and sends a request to the primary storage to update the relevant data. To be able to react to this action, triggers have to be implemented during this flow. One technique used by~\cite{paper:cache-genie, paper:deploy-time} is to have the triggers in the application such that the application triggers invalidation when the changes from the client has been applied to the primary storage. The given techniques involves a database wrapper (in the form of an ORM) that implements callbacks invoked when it sends commands to the database. If the database wrapper is implemented using the adapter-pattern, it is possible to change the underlying database technology without changing the implementation of the caching system. This means it is easier to implement the caching system for multiple database technologies as well as change the technology for existing solutions.
+% Cache-Genie:
+By using the database wrapper as in~\cite{paper:cache-genie, paper:deploy-time} is responsible for detecting changes to underlying data such that the cache system does not need to introduce external processes listening to changes or patch the database. One advantage of using a database wrapper is that in some cases, the wrapper is able to support multiple database technologies such that it e.g. is possible to switch from one SQL technology to another. On the other hand changes made to the database that are not made through the given database wrapper are not detected as a trigger, which leaves the responsibility of ensuring all changes are made through the database wrapper. By using a database wrapper we therefore get better adaptability by simplifying the architecture, but require discipline with relation to how changes are made to the primary storage.
 
-Other solutions such as~\cite{paper:liskov, paper:ibm, paper:ibm-extended} assumes that the database is able to send notifications when changes are made to the database. These information from the notifications are intercepted by the caching system and converted to invalidations.~\cite{paper:liskov} uses an ``invalidation stream'' that is replicated directly across all cache nodes, which means the cache nodes has the responsibility of invalidating the correct cached objects. In~\cite{paper:ibm, paper:ibm-extended} this responsibility is extracted into a third process that converts the change notifications to invalidation of affected cache objects. A similar approach is used in~\cite{paper:db-driven-http} that uses a proxy between the application and the primary storage to ``sniff'' the database traffic and relate it to the HTTP-request of the client.
+Other solutions such as~\cite{paper:liskov, paper:ibm, paper:ibm-extended} assumes that the database is able to send notifications when changes are made to the database. These information from the notifications are intercepted by the caching system and converted to invalidations.~\cite{paper:liskov} uses an ``invalidation stream'' that is replicated directly across all cache nodes, which means the cache nodes has the responsibility of invalidating the correct cached objects. In~\cite{paper:ibm, paper:ibm-extended} this responsibility is extracted into a \emph{cache manager} that transforms the change notifications to invalidation of affected cache objects. A similar approach is used in~\cite{paper:db-driven-http} that uses a proxy between the application and the primary storage to ``sniff'' the database traffic and relate it to the HTTP-request of the client.
 
-In the techniques with in-application triggers, changes to the database around the application are not captured. So if the system has the requirement that the primary storage can receive commands from multiple applications, the best solution would be to use triggers directly from the database. But this also means the system is required to use a database technology that supports this. This comparison is also shown on figure~\ref{fig:invalidation-trigger-comparison}.
+A comparison of different invalidation trigger techniques is shown on figure~\ref{fig:invalidation-trigger-comparison}.
 
 \begin{table}[ht!]
   \footnotesize
@@ -223,18 +209,18 @@ In the techniques with in-application triggers, changes to the database around t
   \label{fig:invalidation-trigger-comparison}
 \end{table}
 
-% subsubsection triggering-cache-invalidation end
+% subsection triggering-cache-invalidation end
 
-\subsubsection{Dependency Management}
+\subsection{Dependency Management}
 \label{subsubsec:dependency-management}
 
-After the invalidation has been triggered, the invalidation system needs to locate the cache objects that needs to be invalidated. This involves the task of identifying and declaring dependencies such that the triggers will invalidate the affected cache objects.
+After the invalidation has been triggered, the invalidation system needs to locate the cache objects that must be invalidated. This involves the task of identifying and declaring dependencies such that the triggers will invalidate the affected cached objects.
 
-Since dependency management is a burden for the programmer and affects the correctness of the cache implementation, it would be most desirable to have fully automatic dependency management, which is achieved in~\cite{paper:liskov, paper:db-driven-http}. In~\cite{paper:db-driven-http} use the technique of proxies between the different servers to sniff the traffic and thereby automatically derive dependencies between HTTP-responses and queries made during the request.~\cite{paper:liskov} runs a transaction with the database while the cached object is compute and uses information from the queries made during the transactions to derive dependencies between the underlying data and the cached object. These techniques removes the burden of cache management by having fully transparent caching, but it also means the programmer has less flexibility. Furthermore they are tightly coupled to the technologies used and makes it difficult to port the solutions to other technologies.
+Since dependency management is a burden for the programmer and affects the correctness of the cache implementation, it would be most desirable to have fully automatic dependency management, which is achieved in~\cite{paper:liskov, paper:db-driven-http}.~\cite{paper:db-driven-http} use the technique of proxies between the different servers to sniff the traffic and thereby automatically derive dependencies between HTTP-responses and queries made during the request.~\cite{paper:liskov} runs a transaction with the database while the cached object is compute and uses information from the queries made during the transactions to derive dependencies between the underlying data and the cached object. These techniques removes the burden of cache management by having fully transparent caching, but it also means the programmer has less flexibility. Furthermore they are tightly coupled to the technologies used and makes it difficult to port the solutions to other technologies.
 
-Other solutions relies such as~\cite{paper:cache-genie, paper:deploy-time} on the programmer declaring dependencies from the cached objects to underlying data. Since the trigger can include information about which underlying data are changed, the caching system can use the declared dependencies to invalidate the corresponding cached objects.~\cite{paper:cache-genie} supports declarations through function calls that are stored in the memory of the application. The deploy-time model suggested in~\cite{paper:deploy-time} uses static analysis of comments to allow the functions to be executed without the cache database. These techniques does not remove the burden of cache management completely, but they allow the programmer to specify the dependencies in a more declarative and robust way compared to using manual invalidation triggers.
+Other solutions such as~\cite{paper:cache-genie, paper:deploy-time} relies on the programmer declaring dependencies from the cached objects to underlying data. Since the trigger can include information about which underlying data are changed, the caching system can use the declared dependencies to invalidate the corresponding cached objects.~\cite{paper:cache-genie} supports declarations through function calls that are stored in the memory of the application. The deploy-time model suggested in~\cite{paper:deploy-time} uses static analysis of comments to allow the functions to be executed without the cache database. These techniques does not remove the burden of cache management completely, but they allow the programmer to specify the dependencies in a more declarative and robust way compared to using manual invalidation triggers.
 
-The solution suggested by Jim Challenger et.al.~\cite{paper:ibm, paper:ibm-extended} uses dependencies declared in the content to construct an advanced dependency graph. When updates are made to content or underlying data, the affected cache objects are derived using the dependency graph. This solution is developed for a content management system, where the users can declare dependencies between the fragments of the content i.e. the dependencies are declared in each entity. This makes it unfeasible to use in application with slightly advanced data models, but it solves the problem well in the given case.
+The solution suggested by Jim Challenger et.al.~\cite{paper:ibm, paper:ibm-extended} uses dependencies declared in the content to construct an advanced dependency graph. When updates are made to content or underlying data, the affected cached objects are derived using the dependency graph. This solution is developed for a content management system, where the users can declare dependencies between the fragments of the content i.e. the dependencies are declared in each entity. This makes it unfeasible to use in application with slightly advanced data models, but it solves the problem well in the given case.
 
 An overview of this discussion can be found in figure~\ref{fig:dependency-management-comparison}.
 
@@ -325,14 +311,14 @@ An overview of this discussion can be found in figure~\ref{fig:dependency-manage
   \label{fig:dependency-management-comparison}
 \end{table}
 
-% subsubsection dependency-management end
+% subsection dependency-management end
 
 % section caching_approaches_in_web_development end
 
 \section{Choosing the Right Caching Technique}
 \label{sec:choosing_the_right_caching_technique}
 
-In general there is not a best or correct caching solution - it's a matter of choosing the solution best suited in the given context depending on the architecture of the web application and the specific use case. To get closer to the solution suited for our context (section~\ref{sec:context}) we will compare the different approaches based on the parameters described in section~\ref{sec:evaluating_caching_techniques}. An overview of the comparison on table~\ref{fig:existing-solutions-comparison} that shows how the different caching approaches relates to the evaluation criteria (except for transactional consistency since TxCache is only approach that achieves it).
+In general there is not a best or correct caching solution - it's a matter of choosing the solution best suited in the given context depending on the architecture of the web application and the specific use case. To get closer to the solution suited for our context (section~\ref{sec:context}) we will compare the different approaches based on the parameters described in section~\ref{sec:evaluating_caching_techniques}. An overview of the comparison on table~\ref{fig:existing-solutions-comparison} shows how the different caching approaches relates to the evaluation criteria.
 
 \begin{table}[htpb]
   \scriptsize
@@ -355,12 +341,12 @@ In general there is not a best or correct caching solution - it's a matter of ch
   \hline
   \textbf{Arbitrary Content}           & & & & & & \\
   Expiration-based                     & \no  & \no  & \no  & \yes & \yes & \high \\[7pt]
-  Key-based                            & \yes & \no  & \no  & \no  & \no  & \high \\[7pt]
+  Key-based                            & \yes & \yes & \no  & \no  & \no  & \high \\[7pt]
   Manual Trigger-based                 & \yes & \yes & \no  & \no  & \no  & \high \\[7pt]
-  Async. Update                        & \no  & \yes & \no  & \yes & \no  & \high \\[7pt]
+  Async. Update                        & \no  & \no  & \no  & \yes & \no  & \high \\[7pt]
   Write-Trough                         & \no  & \no  & \yes & \yes & \no  & \med  \\[7pt]
-  TxCache~\cite{paper:liskov}          & \yes & \no  & \no  & \opt & \yes & \low \\[7pt]
   Chris Wasik~\cite{paper:deploy-time} & \yes & \yes & \no  & \yes & \opt\sss{*} & \med  \\[7pt]
+  TxCache~\cite{paper:liskov}          & \yes & \opt\sss{**}  & \no  & \opt\sss{**} & \yes & \low \\[7pt]
   \hline
   \textbf{Declared Content}            & & & & & & \\
   IBM~\cite{paper:ibm, paper:ibm-extended} & \no & \no & \yes & \yes & \yes & \low \\[7pt]
@@ -372,7 +358,7 @@ In general there is not a best or correct caching solution - it's a matter of ch
   Cache-Genie~\cite{paper:cache-genie}  & \yes & \no & \yes & \yes & \yes & \med \\[7pt]
   Materialized Views                    & \no & \no & \no  & \yes & \yes & \med \\[7pt]
   \hline
-  \multicolumn{7}{l}{*) Dependencies to underlying data must be declared}
+  \multicolumn{7}{l}{*) Dependencies to underlying data must be declared, **) Does not give these guarantees fully, but approximately.}
   \end{tabular}
   \caption{Comparison of caching approaches for different types of content}
   \label{fig:existing-solutions-comparison}

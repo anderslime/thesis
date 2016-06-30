@@ -22,12 +22,12 @@
   \hline
   \textbf{Arbitrary Content}           & & & & & & \\
   Expiration-based                     & \no  & \no  & \no  & \yes & \yes & \high \\[7pt]
-  Key-based                            & \yes & \no  & \no  & \no  & \no  & \high \\[7pt]
+  Key-based                            & \yes & \yes & \no  & \no  & \no  & \high \\[7pt]
   Manual Trigger-based                 & \yes & \yes & \no  & \no  & \no  & \high \\[7pt]
-  Async. Update                        & \no  & \yes & \no  & \yes & \no  & \high \\[7pt]
+  Async. Update                        & \no  & \no  & \no  & \yes & \no  & \high \\[7pt]
   Write-Trough                         & \no  & \no  & \yes & \yes & \no  & \med  \\[7pt]
-  TxCache~\cite{paper:liskov}          & \yes & \no  & \no  & \opt & \yes & \low \\[7pt]
   Chris Wasik~\cite{paper:deploy-time} & \yes & \yes & \no  & \yes & \opt\sss{*} & \med  \\[7pt]
+  TxCache~\cite{paper:liskov}          & \yes & \opt\sss{**}  & \no  & \opt\sss{**} & \yes & \low \\[7pt]
   \rowcolor{lightgray!20} Smache               & \no & \no  & \yes & \yes & \opt\sss{*} & \med \\[7pt]
   \rowcolor{lightgray!20} Smache w/o staleness & \no & \yes & \yes & \no  & \opt\sss{*} & \med \\[7pt]
   \hline
@@ -41,7 +41,7 @@
   Cache-Genie~\cite{paper:cache-genie}  & \yes & \no & \yes & \yes & \yes & \med \\[7pt]
   Materialized Views                    & \no & \no & \no  & \yes & \yes & \med \\[7pt]
   \hline
-  \multicolumn{7}{l}{*) Dependencies to underlying data must be declared}
+  \multicolumn{7}{l}{*) Dependencies to underlying data must be declared, **) Does not give these guarantees fully, but approximately.}
   \end{tabular}
   \caption{Comparison of caching approaches for different types of content including Smache}
   \label{fig:full-comparisonn}
