@@ -1,0 +1,23 @@
+\select@language {english}
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {3.1}{\ignorespaces Comparison of triggers for automatic invalidation\relax }}{28}{table.caption.20}
+\contentsline {table}{\numberline {3.2}{\ignorespaces Comparison of dependency management techniques for automatic invalidation\relax }}{29}{table.caption.21}
+\contentsline {table}{\numberline {3.3}{\ignorespaces Comparison of caching approaches for different types of content\relax }}{30}{table.caption.22}
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {7.1}{\ignorespaces The time taken updating underlying data that affects a single cached object for an application using Smache compared to a system using synchronous write-through invalidation.\relax }}{74}{table.caption.44}
+\contentsline {table}{\numberline {7.2}{\ignorespaces Improvement of processing nested cached functions concurrently (using 8 workers) compared to sequentially (using 1 worker).\relax }}{77}{table.caption.49}
+\contentsline {table}{\numberline {7.3}{\ignorespaces How Smache relates to the cache evaluation criteria\relax }}{79}{table.caption.50}
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {D.1}{\ignorespaces Comparison of caching approaches for different types of content including Smache\relax }}{98}{table.caption.53}

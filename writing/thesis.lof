@@ -1,0 +1,48 @@
+\select@language {english}
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {1.1}{\ignorespaces Screenshot from Peergrade.io}}{5}{figure.caption.5}
+\contentsline {figure}{\numberline {1.2}{\ignorespaces Screenshot from Peergrade.io}}{6}{figure.caption.6}
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {2.1}{\ignorespaces The flow of basic caching\relax }}{10}{figure.caption.8}
+\contentsline {figure}{\numberline {2.2}{\ignorespaces The assumed architecture of the system\relax }}{11}{figure.caption.9}
+\contentsline {figure}{\numberline {2.3}{\ignorespaces The timeline model applied to the basic caching algorithm\relax }}{13}{figure.caption.10}
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {3.1}{\ignorespaces The lifecycle of the expiration-based invalidation technique\relax }}{18}{figure.caption.11}
+\contentsline {figure}{\numberline {3.2}{\ignorespaces The lifecycle of the key-based invalidation technique\relax }}{19}{figure.caption.12}
+\contentsline {figure}{\numberline {3.3}{\ignorespaces The lifecycle of the trigger-based invalidation technique\relax }}{21}{figure.caption.14}
+\contentsline {figure}{\numberline {3.4}{\ignorespaces A scenario of the trigger-based invalidation that results in a race condition, where the cached value are being incorrectly marked as valid even though it is storing a stale value.\relax }}{23}{figure.caption.16}
+\contentsline {figure}{\numberline {3.5}{\ignorespaces The lifecycle of the \emph {trigger-based invalidation} technique where the value is updated in the asynchronous\relax }}{24}{figure.caption.17}
+\contentsline {figure}{\numberline {3.6}{\ignorespaces The lifecycle of the \emph {write-through invalidation} technique\relax }}{24}{figure.caption.18}
+\contentsline {figure}{\numberline {3.7}{\ignorespaces The control flow of automatic invalidation when a client requests to update underlying data\relax }}{27}{figure.caption.19}
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {4.1}{\ignorespaces The control flow during a call to a function cached through Smache\relax }}{40}{figure.caption.23}
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {5.1}{\ignorespaces An example instance of a simple ODG\relax }}{45}{figure.caption.26}
+\contentsline {figure}{\numberline {5.2}{\ignorespaces The Declaration Dependence Graph of the running example\relax }}{47}{figure.caption.27}
+\contentsline {figure}{\numberline {5.3}{\ignorespaces An illustration of the data structure representing the DDG on figure~\ref {fig:declaration-dependence-graph}\relax }}{48}{figure.caption.28}
+\contentsline {figure}{\numberline {5.4}{\ignorespaces An example of an Instance Dependence Graph based on the running example, where we have a single course entity that have two participant entities.\relax }}{49}{figure.caption.29}
+\contentsline {figure}{\numberline {5.5}{\ignorespaces An illustration of the data structure representing the IDG on figure~\ref {fig:instance-dependence-graph}\relax }}{49}{figure.caption.30}
+\contentsline {figure}{\numberline {5.6}{\ignorespaces The flow in which lazy and direct dependencies are registered from the declarations\relax }}{51}{figure.caption.31}
+\contentsline {figure}{\numberline {5.7}{\ignorespaces The flow in which cached object instances are accessed when they are accessed the first time\relax }}{52}{figure.caption.32}
+\contentsline {figure}{\numberline {5.8}{\ignorespaces The invalidation propagation algorithm for Smache.\relax }}{53}{figure.caption.33}
+\contentsline {figure}{\numberline {5.9}{\ignorespaces The architecture required by a web application that uses Smache with automatic invalidation.\relax }}{60}{figure.caption.35}
+\contentsline {figure}{\numberline {5.10}{\ignorespaces How background workers are used do perform invalidation asynchronously.\relax }}{61}{figure.caption.36}
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {6.1}{\ignorespaces Showing how two concurrent caching updates from two different application servers results in an inconsistent state. We see that even though the request from \emph {Update Process 2} are based on data older than \emph {Update Process 1} it gets to write.\relax }}{65}{figure.caption.37}
+\contentsline {figure}{\numberline {6.2}{\ignorespaces How Invalidation Timestamps fixes the concurrency problem described in figure~\ref {fig:incorrect-updates-analysis}.\relax }}{66}{figure.caption.38}
+\contentsline {figure}{\numberline {6.3}{\ignorespaces How Smache schedules cached objects to be updated using background workers\relax }}{67}{figure.caption.39}
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {7.1}{\ignorespaces Additional architectural components required to use Smache compared to a normal web application including clients, web application servers and a primary storage.\relax }}{73}{figure.caption.41}
+\contentsline {figure}{\numberline {7.2}{\ignorespaces Impact of introducing synchronous and asynchronous write-through in a case, where the update affects a single cached object instance with variable execution time.\relax }}{75}{figure.caption.43}
+\contentsline {figure}{\numberline {7.3}{\ignorespaces Illustration of the dependencies of the cached function for the "Many Cached Functions" test case\relax }}{76}{figure.caption.45}
+\contentsline {figure}{\numberline {7.4}{\ignorespaces How the system scales with many cached functions depending on the same underlying data while the number of workers is increased\relax }}{77}{figure.caption.46}
+\contentsline {figure}{\numberline {7.5}{\ignorespaces Illustration of the dependencies of the cached function for the "Nested Cached Functions" test case\relax }}{78}{figure.caption.47}
+\contentsline {figure}{\numberline {7.6}{\ignorespaces How the system scales with nested cached functions while the number of workers is increased\relax }}{79}{figure.caption.48}
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
