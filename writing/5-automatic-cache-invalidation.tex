@@ -150,17 +150,21 @@ To generate the name of the cached objects we use the ordered direct dependencie
 \section{Invalidation Propagation}
 \label{sec:invalidation-propagation}
 
-The purpose of invalidation is to be able to evaluate the freshness of a given cached object and know which cached objects are fresh and which are stale and need to be updated. A cached object is considered stale when its underlying data has been updated, which happens during the request from a client that involves updating, inserting or deleting data in the primary storage. To be able to react to these events, Smache subscribes to callbacks from the database wrapper. When the database transaction succeeds the database wrapper will notify Smache with the id and type~\footnote{Type is another word for the relation in a relational database and a collection in a document-oriented database} of the manipulated entity. This notification will trigger cache invalidation through Smache.
+The purpose of invalidation is to be able to evaluate the freshness of a given cached object and know which cached objects are fresh and which are stale and need to be updated. A cached object is considered stale when its underlying data has been updated, which happens during the request from a client that involves updating, inserting or deleting data in the primary storage. To be able to react to these events, Smache subscribes to callbacks from the database wrapper. When the database transaction succeeds the database wrapper will notify Smache with the id and type~\footnote{Type is another word for the relation in a relational database and a collection in a document-oriented database} of the manipulated entity. This notification will trigger cache invalidation through Smache. Smache receives the type and id of the updated entity, and runs the algorithm described on figure~\ref{fig:invalidation-propagation}.
 
-Based on the type and id of the changed entity, Smache updates affected cached objects in four steps:
-
-\begin{enumerate}
-  \item Query the IDG using \verb$lookup_cached_object$ with the updated entity id to find instance dependencies
-  \item Query the DDG using \verb$lookup_lazy_dependencies$ with the update entity type to find lazy dependencies
-  \item Evaluate the procedures for lazy dependencies, which returns a set of entities
-  \item Query the IDG using \verb$lookup_cached_object$ with the set of entities from the lazy dependency procedures
-  \item Invalidate cached objects from instance and lazy dependencies using timestamp invalidation
-\end{enumerate}
+\begin{figure*}[ht!]
+  \centering
+  \includegraphics[width=1.0\linewidth]{figures/invalidation-propagation.pdf}
+  \begin{enumerate}
+    \item The invalidation trigger notifies Smache about an update to underlying data with type and id of entity.
+    \item Smache queries the IDG using \verb$lookup_cached_object$ with the updated entity id to find instance dependencies>
+    \item Smache queries the DDG using \verb$lookup_lazy_dependencies$ with the update entity, and evaluates the procedures for the returned lazy dependencies.
+    \item Smache queries the IDG using \verb$lookup_cached_object$ with the set of entities returned from the lazy dependency procedures.
+    \item The cached objects from instance and lazy dependencies are invalidated using \emph{timestamp invalidation}
+  \end{enumerate}
+  \caption{The invalidation propagation algorithm for Smache.}
+  \label{fig:invalidation-propagation}
+\end{figure*}
 
 Since the process of finding keys for depending objects involves multiple network calls to the primary storage, the invalidation propagation must be asynchronous to avoid a performance degrade for requests that involves updating underlying data.
 
@@ -169,63 +173,64 @@ Since the process of finding keys for depending objects involves multiple networ
 \subsection{Timestamp Invalidation}
 \label{subsec:timestamp-invalidation}
 
-To invalidate correctly the technique require the following liveness and safety property:
+To invalidate correctly, the technique for invalidating cached objects require the following liveness and safety property:
 
 \begin{itemize}
   \item \textbf{Safety}: \emph{The value representing a fresh cached object must be based on the newest version of the underlying data}
-  \item \textbf{Liveness}: \emph{A stale object must eventually be invalidated}
+  \item \textbf{Liveness}: \emph{A cached object with a stale value must eventually be invalidated}
 \end{itemize}
 
-In trigger-based invalidation where the name of a cached object is considered static we need external information to evaluate whether a given cached object is fresh. In a naive invalidation technique, we can use a boolean value that indicates whether or not the cached value is fresh. When invalidation is triggered the value is set to \verb$false$ and when the cached object has been updated it would be set to \verb$true$. The problem here is that in an environment with multiple application servers, the technique would be prone to race conditions as illustrated on figure~\ref{fig:trigger-based-concurrency-problem}. Since the given cached object would be marked as fresh even though the value of the object in reality is stale, the cached object will not be invalidated until a new trigger is invoked and thereby contradict the liveness property.
+In trigger-based invalidation where the name of a cached object is considered static we need additional information to evaluate whether a given cached object is fresh. In a naive invalidation technique, we can use a boolean value that indicates whether or not the cached value is fresh, which would be correct in an where invalidations are processed sequentially. When an invalidation is triggered the value is set to \verb$false$ and when the cached object has been updated it would be set to \verb$true$. The problem here is that in an environment with multiple application servers, the technique would be prone to race conditions as illustrated on figure~\ref{fig:trigger-based-concurrency-problem}. Since the given cached object would be marked as fresh even though the value of the object in reality is stale, the cached object will not be invalidated until a new trigger is invoked and thereby contradict the liveness property.
 
-One solution to this problem is to lock the invalidation mechanism such that the invalidation indication cannot be changed during an update. By using a lock the technique achieves liveness, but it also means that when another process wants to invalidate, it has to wait until the lock has been released. If the waiting process is a web server serving a user, the user would have to wait for the computation to finish.
+One solution to solve this problem is to lock the invalidation mechanism such that the invalidation indication cannot be changed during an update. By using a lock the technique gets atomic updates across invalidation and value updates and thereby achieves liveness, but it also means that when another process wants to invalidate, it has to wait until the lock has been released. If the waiting process is a web server serving a user, the user would have to wait for the computation to finish.
 
 To accommodate the liveness property and avoid user's having to wait for invalidation, we use a solution suggested in~\cite{paper:ibm-extended} that uses a form of logical timestamps to represent the version of a cached object. In this technique the cache system keeps track of the number of times a given cached object has been invalidated, which we denote $num\_of\_updates$. The number starts with $0$ and is incremented every time a cached object's underlying data changes.
-We also keep a value representing the timestamp in which the current value of a cached object is based on, which we denote we $last\_update\_timestamp$. When the cached object is recomputed, the $num\_of\_updates$ is fetched and set as the timestamp of the current computation denoted $current\_computation\_timestamp$.
-When the computation returns the new value for the cached object, we write update the cached object unless it has been updated during the computation. We can do this using the following algorithm:
+We also keep a timestamp representing the number of invalidations for the given cached object before the computation of the last object, which we denote we $last\_update\_timestamp$. When the cached object is recomputed, the $num\_of\_updates$ is fetched and set as the timestamp of the current computation denoted $current\_computation\_timestamp$. When the computation returns the new value for the cached object, we write update the cached object unless it has been updated during the computation. We can do this using the following algorithm:
 
 \begin{enumerate}
   \item Fetch the value for $num\_of\_updates$ again denoted $latest\_num\_of\_updates$.
-  \item
-    \begin{enumerate}
-      \item If $latest\_num\_of\_updates \geq current\_computation\_timestamp$ then we do nothing since a computation based on newer data has already updated the cached object.
-      \item Else we update $last\_update\_timestamp$ to be equal to \\ $current\_computation\_timestamp$ and update the value.
-    \end{enumerate}
+  \item If $latest\_num\_of\_updates < current\_computation\_timestamp$ then we update $last\_update\_timestamp$ to be equal to $current\_computation\_timestamp$ and update the cached value. Else we do nothing.
 \end{enumerate}
 
-We can then say the following about the freshness of a cached object:
+We are able to evaluate the freshness of a cached object as following:
 
 \begin{itemize}
   \item \textbf{A cached object is fresh} when\\$num\_of\_updates = last\_update\_timestamp$
 \end{itemize}
 
-To avoid race conditions the execution of this algorithm need to be executed in a transaction such that if $num\_of\_updates$ is incremented between step 1 and 2 then the algorithm be aborted. We assume that the execution of a computation at a given timestamp always yields the same result, which means we can retry the algorithm with the same result. In other words the algorithm is considered idempotent. We will therefore retry the update algorithm until it has finished. Alternatively we could lock all the values while executing the algorithm, but this means we will block the incremental of $num\_of\_updates$ that is responsible for invalidating and therefore more important.
-Furthermore we also need the incremental of $num\_of\_updates$ to be atomic.
+To avoid race conditions the execution of this algorithm need to be executed in a transaction such that if $num\_of\_updates$ is incremented between step 1 and 2 then the algorithm be aborted. We assume that the execution of a computation at a given timestamp always yields the same result, which means we can retry the update algorithm with the same result. In other words the algorithm is considered idempotent, and we can therefore retry the update algorithm until it has finished. Alternatively we could lock all the values while executing the algorithm, but this means we will block the incremental of $num\_of\_updates$ that is responsible for invalidating, which we would like to be fast.
+Furthermore the algorithm require the incremental of $num\_of\_updates$ to be atomic.
 
 \subsubsection{Proof}
 \label{subsubsec:proof}
 
-Since the technique has not been proved for correctness in~\cite{paper:ibm-extended} and because the correctness of Smache relies on this technique, we will give a proof of correctness for timestamp invalidation by proving the liveness and safety requirements described above. In these proves we assume that the invalidation and update algorithms are executed atomically and that the invalidation happens immediately after underlying data has been changed.
+Since the technique has not been proved for correctness in~\cite{paper:ibm-extended} and because the correctness of Smache relies on this technique, we will give a proof of correctness for timestamp invalidation by proving the liveness and safety requirements described above. In these proves we assume that the invalidation and update algorithms are executed atomically.
 
 \textbf{Safety}
 
-We will prove \emph{safety} by contradiction by \emph{assuming we have a cached object considered fresh that holds a stale value}.
+We will prove \emph{safety} using contradiction by \emph{assuming we have a cached object considered fresh that holds a stale value stored in the cache}.
 
 \begin{enumerate}
   \item We assume that $num\_of\_updates = t_i$ and since we know that a cached object is considered stale when $num\_of\_updates = last\_update\_timestamp$, we also have that $last\_update\_timestamp = t_i$
-  \item For this to happen a computation $f_i$ starting when $num\_of\_updates$ was equal to $t_i$ ended up updating the cached value to be $v_i$ and $last\_update\_timestamp$ to be $t_i$.
-  \item Since $v_i$ by definition is a fresh value, the value of the cached object can only become stale in on of the following cases:
+  \item For this to happen, a computation $f_i$ starting when $num\_of\_updates$ was equal to $t_i$ ended up updating the cached value to be $v_i$ and $last\_update\_timestamp$ to be $t_i$.
+  \item Since $v_i$ by definition is a fresh value, because the value of $num\_of\_updates$ has not changed during the execution of $f_$, the value of the cached object can only become stale in on of the following cases:
     \begin{enumerate}
-      \item[a)] Another computation $f_j$ updated the value of the cached object after the computation from step 2 updated the cached object
+      \item[a)] Another computation $f_j$ updated the cached object with a stale value after the computation from step 2 updated the cached object
       \item[b)] The underlying data was updated after the computation from step 2 was started
     \end{enumerate}
-  \item If the computation $f_j$ resulted in a stale value it must have been started at a point where $num\_of\_updates$ was equal to $t_j$, where $t_j < t_i$. This would contradict the algorithm since $f_j$ would not update the cached object with its stale value since $num\_of\_updates$ must have been equal to $t_i$ since it updated the cached object after $f_i$ and $t_i > t_j$.
-  \item If the underlying data was updated after the computation was started when $num\_of\_updates$ was equal to $t_i$ then $num\_of\_updates$ must have been updated to be $t_k$, where $t_k > t_i$ after which we have a contradiction since $last\_update\_timestamp = t_i$ and the cached object is therefore not fresh since $num\_of\_updates \neq last\_update\_timestamp$ since $t_k \neq t_i$.
+  \item If the computation $f_j$ resulted in a stale value it must have been started at a point where $num\_of\_updates$ was equal to $t_j$, where $t_j < t_i$. This would contradict the algorithm since $f_j$ would not update the cached object with its stale value since $num\_of\_updates$ must have been equal to $t_i$ after the update from $f_i$ and since $t_i > t_j$.
+  \item If the underlying data was updated after the computation was started when $num\_of\_updates$ was equal to $t_i$ then $num\_of\_updates$ must have been updated to be $t_k$, where $t_k > t_i$ after which we have a contradiction of the original assumption since $last\_update\_timestamp = t_i$ and the cached object is therefore not fresh since $num\_of\_updates \neq last\_update\_timestamp$ since $t_k \neq t_i$.
 \end{enumerate}
 
 \textbf{Liveness}
 
-The \emph{liveness} property directly holds from the fact that $last\_update\_timestamp$ cannot be set to a value larger than $num\_of\_updates$ and since we assume that $num\_of\_updates$ is incremented immediately after an update to underlying data then we have that $num\_of\_updates > last\_update\_timestamp$ in the moment after the update. Since $num\_of\_updates \neq last\_update\_timestamp$ the cached object is stale and has therefore been invalidated.
+The value of a cached object becomes stale, when the underlying data has been updated. We therefore need to prove that an update underlying data affecting a cached object considered fresh, eventually results in the cached object becoming stale. We will also prove this by contradiction using the \emph{assumption that an update to underlying data affecting a fresh cached object, resulted in the object having a stale value and still be considered fresh}.
+
+\begin{enumerate}
+  \item We know that the algorithm eventually triggers an invalidation that will increment $num\_of\_updates$ and we know that $last\_update\_timestamp$ cannot be set to a value larger than $num\_of\_updates$.
+  \item That is we have a moment immediately after $num\_of\_updates$ was incremented, where $num\_of\_updates > last\_update\_timestamp$.
+  \item The only case in which the cached object can be considered fresh and still have a stale value after this moment of staleness, would be if the execution of a cached object update resulted in an update to set $last\_update\_timestamp$ equal to $num\_of\_updates$ without updating the value of the cached object. This contradicts the algorithm of timestamp invalidation, because we only update $last\_update\_timestamp$ while updating the cached value.
+\end{enumerate}
 
 % subsubsection proof end
 
@@ -252,30 +257,32 @@ By representing the timestamps in the same object as the value we can more easil
 % Trigger Invalidation Through Database Wrapper
 % - Discuss the different alternatives and say why we want that
 
-We've already discussed existing approaches in section~\ref{subsubsec:triggering-cache-invalidation} that compares the techniques on figure~\ref{fig:invalidation-trigger-comparison}. The triggers sent directly from the database or through a database sniffer have an advantage of capturing all changes made to the database - also those not sent through the application. The disadvantage of those techniques is that they are coupled to the database technology used. Instead of using a technique that depends on the exact database technology, Smache uses the database wrapper to trigger invalidations. The database wrapper makes it easier to change the implementation and thereby the database technology, which means the caching system becomes more flexible and easier to use in applications using different technologies. Furthermore since the triggers are intercepted through function callbacks in the web server process, the system doesn't need an external process to convert triggers from the database or sniffer into invalidations.
+We've already discussed existing approaches for triggering invalidation in section~\ref{subsubsec:triggering-cache-invalidation} with a comparison on figure~\ref{fig:invalidation-trigger-comparison}. The triggers sent directly from the database or through a database sniffer have an advantage of capturing all changes made to the database - also those not sent through the application. The disadvantage of those techniques are that they are coupled to the database technology used. Instead of using a technique that depends on the exact database technology, Smache uses the database wrapper to trigger invalidations. The database wrapper makes it easier to change the implementation and thereby the database technology, which means the caching system becomes more flexible and easier to use in applications using different technologies as well as to change the technologies in the future. Furthermore since the triggers are intercepted through function callbacks in the web server process, the system doesn't need an external process to convert triggers from the database or sniffer into invalidations.
 
 % subsection database-wrapper-triggers end
 
 \section{Implementing Automatic Invalidation}
 \label{sec:implementing-automatic-invalidation}
 
-The Smache library implements automatic invalidation as described in the design above except for a few details such as the exact data structures of the dependency graphs, which have been replaced by similar representations to simplify the implementation. In this section how cachable functions (section~\ref{sec:implementing_cachable_functions_in_python}) are extended to support automatic invalidation. We will start by explaining how the IDG and DDG are implemented (section ~\ref{subsec:dependency-graphs}) followed by a description on how we implement transactions to update cached objects with timestamp invalidation (section~\ref{subsec:update-transactions}). Finally, we explain how we implement asynchronous invalidation to avoid invalidation affecting the performance of requests updating underlying data (section~\ref{subsec:asynchronous-invalidation}).
+The Smache library implements automatic invalidation as described in the design above except for a few details such as the exact data structures of the dependency graphs, which have been replaced by similar representations to simplify the implementation. In this section we explain how the implementation of cachable functions (section~\ref{sec:implementing_cachable_functions_in_python}) is extended to support automatic invalidation. We will start by explaining how the IDG and DDG are implemented (section ~\ref{subsec:dependency-graphs}) followed by a description on how we implement transactions to update cached objects with timestamp invalidation (section~\ref{subsec:update-transactions}). Finally, we explain how we implement asynchronous invalidation to avoid affecting the performance of requests updating underlying data (section~\ref{subsec:asynchronous-invalidation}).
 
 \subsection{Dependency Graphs}
 \label{subsec:dependency-graphs}
 
-The dependency graphs are used by the update procedure to derive relevant cache objects to be invalidated.
-The DDG is static and will not change after the application starts and we can therefore easily duplicate the data across all the web server without implementing any replication since the data will not change. The DDG is therefore represented using objects in the application that can be queried by calling the methods of the DDG repository.
-The IDG is dynamic in the lifetime of the application and will therefore be represented in a separate process. Optimally the IDG should be represented using hash tables, but to simplify the architecture, the data structure is implemented using the cache database that is assumed to be a common cache server supporting \verb$LOOKUP$ and \verb$STORE$ as described in section~\ref{subsec:architecture}. In this implementation the keys corresponds to keys in the hash table and the linked lists are represented in the content by a serialized list.
+The dependency graphs are used by the update procedure to derive affected cached objects to be invalidated.
 
-Alternatively we could represent the dependency graphs using a cache manager process, but this would just introduce a potential bottleneck as well as a single point of failure. In our solution we limit the number of possible process failures by integrating the dependency graph into existing components of the architecture.
+The DDG is static and will not change after the application starts and we can therefore easily duplicate the data across all the web server without implementing any replication. The DDG is therefore represented using objects in the application that can be queried by calling the methods of the DDG repository.
+
+On the other hand, the IDG is dynamic in the lifetime of the application and will therefore be represented in a separate process. Optimally the IDG should be represented using hash tables, but to simplify the architecture, the data structure is implemented using the cache database that is assumed to be a common cache server supporting \verb$LOOKUP$ and \verb$STORE$ as described in section~\ref{subsec:architecture}. More specifically the current implementation uses \emph{Redis} for storing dependencies. In this implementation the keys corresponds to keys in the hash table and the linked lists are represented in the content by a serialized list.
+
+Alternatively we could represent the dependency graphs using a cache manager process, but this would just introduce an additional potential bottleneck as well as a single point of failure. In our solution we limit the number of possible process failures by integrating the dependency graph into existing components of the architecture.
 
 % subsection dependency-graphs end
 
 \subsection{Update Transactions}
 \label{subsec:update-transactions}
 
-To implement timestamp invalidation we need to implement concurrency control to ensure that the timestamp invalidation is implemented correctly. In the version of Smache implemented during this thesis, we use \emph{Redis}~\footnote{http://redis.io/} as the cache database. Redis have support for simple transactions using a combination of the \verb$WATCH$-command and the \verb$MULTI$-command. The \verb$WATCH$-command is executed with a key, which tells Redis that a given transaction should fail if the specificed key is modified during the transaction. The \verb$MULTI$-command allows to specific multiple commands in a single atomic action.
+To implement timestamp invalidation we need to implement concurrency control to ensure that the timestamp invalidation is implemented correctly. In the version of Smache implemented during this thesis, we use \emph{Redis}~\footnote{http://redis.io/} as the cache database. Redis have support for simple transactions using a combination of the \verb$WATCH$-command and the \verb$MULTI$-command. The \verb$WATCH$-command is executed with a key, which tells Redis that a given transaction should fail if the specificed key is modified during the transaction. The \verb$MULTI$-command allows to specify multiple commands in a single atomic action.
 Code snippet~\ref{code:timestamp_invalidation} is a simplified version of the code that implements the update procedure with timestamp invalidation. It uses the Python Redis~\cite{docs:python-redis} library to communicate with the Redis database. When it invokes the \verb$WATCH$-command the client will request Redis to start a transaction. Afterwards we build a \verb$MULTI$-command that will update the cached object if it is newer and invokes the \verb$EXECUTE$-command. The Redis-client will send the command and if the transaction fails it will raise a \verb$WatchError$-exception indicating the key has been modified, after which we retry the transaction with the same values.
 
 \begin{code}{The code for implementing timestamp invalidation in Python. RedisConnection represents an object communicating with the (Redis) cache database. CacheStore represents the object that communicates with the cache database.}
@@ -292,7 +299,7 @@ Recall figure~\ref{fig:automatic-invalidation-flow} illustrating the flow where 
 
 If the notification is delivered more than once we will just achieve a worse cache hit rate and affect performance, but it will not affect the integrity of the cache object. We must therefore monitor and ensure exactly-once-delivery of the notification.
 With most technologies the simplest solution for implementing asynchronous behaviour is to start a new thread that executes the invalidation. This way the asynchronous behaviour is controlled by the web server and we don't have to introduce new components to the architecture. Although this would be the preferred solution the Python language does not implement real concurrent behaviour, because it implements a Global Interpreter Lock that prevents multiple threads to execute the same bytecode at once.
-To implement concurrent invalidations in Python we will therefore use the concept of \emph{Background jobs}, where the notifications are represented by a \emph{job} that is pushed into a queue. To execute the jobs we have multiple \emph{workers}, which are basically processes that also contains a version of the source code for the application. When there are jobs in the queue, a worker will pull the given job from the queue and execute it. Figure~\ref{fig:background-workers} illustrates how background workers are used to invalidate cache object asynchronously. To implement this behaviour we need to add application workers to the architecture as illustrated on figure~\ref{fig:architecture-with-workers}.
+To implement concurrent invalidations in Python we will therefore use the concept of \emph{Background Jobs}, where the notifications are represented by a \emph{job} that is pushed into a queue. To execute the jobs we have multiple \emph{workers}, which are basically processes that also contains a version of the source code for the application. When there are jobs in the queue, a worker will pull the given job from the queue and execute it. Figure~\ref{fig:background-workers} illustrates how background workers are used to invalidate cache object asynchronously. To implement this behaviour we need to add application workers to the architecture as illustrated on figure~\ref{fig:architecture-with-workers}.
 
 \begin{figure*}[ht!]
   \centering
@@ -317,7 +324,8 @@ To implement concurrent invalidations in Python we will therefore use the concep
 
 In this chapter we suggest an extension to cachable functions that provides automatic invalidation. The caching system uses the dependency information given as arguments, when a function is made cachable, to derive the dependency strategy for how and when to invalidate the related cached object. To provide efficient and fast invalidation, the caching system uses extensions of the Simple Object Dependence Graph data structure called Declaration Dependence Graph (DDG) and Instance Dependence Graph (IDG), to access the dependency information fast.
 The caching system registers static dependency information stored in the DDG when the application starts and dynamic dependency information in the IDG when a cached function is called.
-When underlying data are changed, the caching system will query the dependency data structures to find the cached object instances affected by the change, which are then invalidated using timestamp invalidation.
+When underlying data are changed, the caching system will query the dependency data structures to find the cached object instances affected by the change, which are then invalidated using timestamp invalidation. To verify correctness of the solution, we proved safety and liveness of the timestamp invalidation technique.
+The automatic invalidation was implemented in Python and used Redis to represent dependency graphs and to facilitate update transactions required for timestamp invalidation. To avoid affecting the performance of existing update operations in the application, the invalidation are performed asynchronously using the \emph{Background Jobs}.
 
 % section summary end
 
