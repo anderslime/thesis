@@ -1,13 +1,13 @@
 \chapter{Tests and Evaluation}
 \label{chapter:evaluation}
 
-Throughout this project Smache has been implemented in Python and integrated into the Peergrade.io-platform. Instructions for where to find and use the library is available in appendix~\ref{chapter:source-code}. The library is also open sourced on GitHub:
+Throughout this project Smache has been implemented in Python and integrated into the Peergrade.io-platform. Instructions for where to find and use the library is available in appendix~\ref{chapter:source-code}. The library is also open sourced on GitHub available on the following URL:
 
 \url{https://github.com/anderslime/smache}
 
-Besides the Python implementation of Smache, the source code also includes automated tests with a test coverage of 97\% and a small benchmark framework to execute and plot the results of performance tests with different sizes of data sets. The automated tests are automatically verified by a continuous integration application, Travis, that runs the full test suite when new versions of the code are merged into the source code. The test results are available at \url{https://travis-ci.org/anderslime/smache}.
+Besides the Python implementation of Smache, the source code also includes automated tests with a test coverage of 97\% and a small benchmark framework to execute and plot the results of performance tests. The automated tests are automatically verified by a continuous integration application, Travis, that runs the full test suite when new versions of the code are merged into the source code. The results of the automated tests are available at \url{https://travis-ci.org/anderslime/smache}.
 
-The rest of this chapter will lay out test results of experiments made to test the assumptions about the solution. The results shown in the from executing the experiements on a MacBook Pro (Retina, 15-inch, Early 2013) with an 2.4 GHz Intel Core i7 (4 cores) and 8 GB 1600 MHz DDR3 RAM. The evaluation seeks to answer the following questions:
+The rest of this chapter will lay out results of experiments made to test the assumptions about the solution. The experiments are performed on a MacBook Pro (Retina, 15-inch, Early 2013) with an 2.4 GHz Intel Core i7 (4 cores) and 8 GB 1600 MHz DDR3 RAM. The evaluation seeks to answer the following questions:
 
 \begin{itemize}
   \item What changes are required to modify existing web application to use Smache? (section~\ref{sec:changes-required-to-cache-with-smache})
@@ -20,9 +20,9 @@ The chapter will end with an evaluation of the system based on the test results 
 \section{Changes Required to use Smache}
 \label{sec:changes-required-to-cache-with-smache}
 
-Smache was integrated in to the Peergrade.io platform, which is an existing web application with a single code base deployed to multiple web servers. To test the adaptability we applied the library to cached functions of different granularities such as function returning a single value, functions returning a data structure and functions returning the HTML served to the user. From this integrations we experienced an easy integration, but to cache optimally some of the functions had to be split up to.
-For example some of the functions had statistical calculations that iterated using \verb$for$-loops and made calculations in each iteration, which were not able to be cached individually as seen in code snippet~\ref{code:running-example-non-cachable}. To make this function optimally cachable by caching each participant score, we would have to extract it into a method such as in the running example in code snippet~\ref{code:running-example}. The running example are then made cachable by adding cachable declaration using Python-decorators after which it looks as in code snippet~\ref{code:basic-caching-running-example}.
-The HTTP-responses were not directly cachable either since they work on request-objects specific to the client making the request. In order to cache the responses we extracted the code that generated the HTML-fragment served as the HTTP-body.
+Smache was integrated into the Peergrade.io platform, which is an existing web application with a single code base deployed to multiple web servers. To test the adaptability we applied the library to cached functions of different granularities such as functions returning a single value, functions returning a data structure and functions returning the HTML served to the user. From this integrations we experienced an easy integration, but some of the functions had to be split up to to cache optimally .
+For example some of the functions had statistical calculations that iterated using \verb$for$-loops and made time consuming calculations in each iteration as seen in code snippet~\ref{code:running-example-non-cachable}, which were not able to be cached individually. To make this function optimally cachable, we would have to extract it into a method such as in the running example in code snippet~\ref{code:running-example}. The running example are then made cachable by adding cachable declaration using Python-decorators after which it looks as in code snippet~\ref{code:basic-caching-running-example}.
+The HTTP-responses were not directly cachable, since they work on request-objects specific to the client making the request. In order to cache the responses we extracted the code that generated the HTML-fragment served as the HTTP-body.
 
 In order to use Smache, the system also require additional components added to the architecture. To achieve the guarantees described in this thesis, the system must add the following components to the architecture, also illustrated on figure~\ref{fig:smache-architecture-changes}:
 
@@ -50,9 +50,9 @@ Even though this is optimal, Smache has been implemented such that it is easy le
 \section{Performance Impact of Existing Operations}
 \label{sec:performance-impact-of-existing-procedures}
 
-One of the requirements of the system is that the performance of existing operations should not be affected negatively by introducing the caching system. On the requests that changes underlying data, the application will notify and execute invalidation in the same process, which will affect the response time of the update request. The performance of invalidation have been evaluated using a test that uses both \emph{direct dependencies} and \emph{lazy dependencies}.
+One of the requirements of the system is that the performance of existing operations should not be affected negatively by introducing the caching system. On the requests that changes underlying data, the application will notify and execute invalidation in the same process, which could affect the response time of the update request. The performance of invalidation have been evaluated using a test that uses both \emph{direct dependencies} and \emph{lazy dependencies}.
 
-The results of this test, visualized on figure~\ref{fig:graph-update-requests}, indicates how a synchronous and asynchronous write-through mechanism impacts the time taken to update underlying data. If we consider the asynchronous mechanism used by Smache, it introduces a small constant overhead of around $2$ ms as seen on the exact results shown on table~\ref{tab:update-requests}. The synchronous mechanism introduces an overhead depending on the execution time of the cached function, which means the time taken to update underlying data would be affected by the caching system.
+The results of this test, visualized on figure~\ref{fig:graph-update-requests}, indicates how a synchronous and asynchronous write-through mechanism impacts the time taken to update underlying data. If we consider the asynchronous mechanism used by Smache, it introduces a small constant overhead of around $2$ ms as seen on the exact results shown on table~\ref{tab:update-requests}. The synchronous mechanism introduces an overhead that increases with the execution time of the cached function, which can become critical for the user experience with long running computations.
 
 \begin{figure*}[ht!]
   \centering
@@ -82,7 +82,7 @@ The results of this test, visualized on figure~\ref{fig:graph-update-requests}, 
 \section{Update Throughput}
 \label{sec:update-throughput}
 
-To evaluate the performance and scalability of the concurrency used in the data update propagation, we will measure the update throughput while increasing the number of workers, where the number of workers is the amount updates the system is able to process at the same time. While it would be possible to measure against examples in the context of the Peergrade.io, we have chosen to measure against patterns of cached functions. The tests will be performed against a use case, where many cached functions depends on a single underlying data resource (section~\ref{subsec:many-cached-object-instances} and afterwards a case where multiple cached functions depends on each other in a nested hierarchy (section~\ref{subsec:nested-cached-functions}).
+To evaluate the performance and scalability of the concurrency used in the data update propagation, we will measure the update throughput while increasing the number of workers, where the number of workers is the amount updates the system is able to process at the same time. While it would be possible to measure against examples in the context of the Peergrade.io, we have chosen to measure against patterns of cached functions to make the experiments easy to reproduce for future research. The tests will be performed against a use case, where many cached functions depends on a single underlying data resource (section~\ref{subsec:many-cached-object-instances} and afterwards a case where multiple cached functions depends on each other in a nested hierarchy (section~\ref{subsec:nested-cached-functions}).
 
 \subsection{Many Cached Object Instances}
 \label{subsec:many-cached-object-instances}
@@ -96,7 +96,9 @@ In this use case we will test a use case, where multiple instances of the same c
   \label{fig:test-multi-deps}
 \end{figure*}
 
-To simulate a slow functions the tests use the \verb$sleep$-method from Python's \verb$time$-module such that each function uses $400$ ms to execute. The results of the tests are visualized figure~\ref{fig:graph_throughput_workers_multi} by a graph showing the number of updates the system can process per second (throughput) for different amount of workers. This graph shows of concurrency on the throughput of the cache system, where we see a significant increase in throughput every time the number of workers are increased. We also see that the impact of adding workers are becomes higher when there are more cached object instances even though it also has an impact for small amounts (around $10$ cached object instances).
+To simulate slow functions the tests use the \verb$sleep$-method from Python's \verb$time$-module such that each function uses $400$ ms to execute.
+
+The results of the tests are visualized figure~\ref{fig:graph_throughput_workers_multi} by a graph showing the number of updates the system can process per second (throughput) for different amount of workers. This graph shows how concurrency affects the throughput of the cache system, where we see a significant increase in throughput every time the number of workers are increased. We also see that the impact of adding workers are becomes higher when there are more cached objects even though it also has an impact for small amounts (around $10$ cached objects).
 
 \begin{figure*}[ht!]
   \centering

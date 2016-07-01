@@ -213,7 +213,7 @@ We will prove \emph{safety} using contradiction by \emph{assuming we have a cach
 \begin{enumerate}
   \item We assume that $num\_of\_updates = t_i$ and since we know that a cached object is considered stale when $num\_of\_updates = last\_update\_timestamp$, we also have that $last\_update\_timestamp = t_i$
   \item For this to happen, a computation $f_i$ starting when $num\_of\_updates$ was equal to $t_i$ ended up updating the cached value to be $v_i$ and $last\_update\_timestamp$ to be $t_i$.
-  \item Since $v_i$ by definition is a fresh value, because the value of $num\_of\_updates$ has not changed during the execution of $f_$, the value of the cached object can only become stale in on of the following cases:
+  \item Since $v_i$ by definition is a fresh value, because the value of $num\_of\_updates$ has not changed during the execution of $f_i$, the value of the cached object can only become stale in on of the following cases:
     \begin{enumerate}
       \item[a)] Another computation $f_j$ updated the cached object with a stale value after the computation from step 2 updated the cached object
       \item[b)] The underlying data was updated after the computation from step 2 was started
