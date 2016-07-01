@@ -68,7 +68,7 @@ The DDG graph is represented using two data structures. The lazy dependencies ar
 
 The advantage of the DDG is that it does not change in the lifetime of the application, which means it can be preprocessed when the application starts and it does not have to support update queries.
 
-The DDG is build by iterating through all the cached functions with their respective dependencies and add the dependencies to the data structure as described above. The lazy dependencies are added with the entity type, the cached function and the procedure to evaluate it. The direct dependencies are added using with the cached function and the entity type. When a new dependency is added to the data structure, we lookup the indexed value in the hash table and if there exists an adjacency list, we add the dependency to the list. If there are no list, we create a new adjacency list with the given dependency as the only value.
+The DDG is build by iterating through all the cached functions with their respective dependencies and add the dependencies to the data structure. The lazy dependencies are added with the entity type, the cached function and the procedure to evaluate it. The direct dependencies are added using with the cached function and the entity type. When a new dependency is added to the data structure, we lookup the indexed value in the hash table and if there exists an adjacency list, we add the dependency to the list. If there are no list, we create a new adjacency list with the given dependency as the only value.
 
 The queries needed to find dependencies for automatic invalidation are the following:
 
@@ -77,21 +77,21 @@ The queries needed to find dependencies for automatic invalidation are the follo
   \item \verb$lookup_direct_dependencies(fun_id)$: Finds all direct dependencies from a given function id
 \end{itemize}
 
-Using these data structures we can access a pointer with access to all lazy or direct dependencies using $O(1)$ expected time if we use a hash table using perfect hashing.~\cite{paper:perfect-hashing}. In worst case the space used is the maximum number of edges $O(|u| \cdot |o|)$, where $|u|$ denotes the number of notes representing underlying data and $|o|$ represents the number of nodes representing objects.
+Using these data structures we can access a pointer with access to all lazy or direct dependencies using $O(1)$ expected time if we use a hash table using perfect hashing.~\cite{paper:perfect-hashing}. In worst case the space used is the maximum number of edges $O(|u| \cdot |o|)$, where $|u|$ denotes the number of nodes representing underlying data and $|o|$ represents the number of nodes representing cached objects. In our case the number different underlying data is the number of different entity types and the number of different cached objects are the number of different cached function definitions.
 
 % subsection declaration-dependence-graph end
 
 \subsection{Instance Dependence Graph}
 \label{subsec:instance-dependence-graph}
 
-The Instance Dependence Graph (IDG) is also an extension of the simple Object Dependence Graph (ODG), where the data entities corresponds to underlying data and the cached object instance generated from the cachable functions corresponds to the objects. An edge from underlying data $u$ to an object $o$ denoted ($u$, $o$) indicates that if $u$ is changed then $o$ must be updated.
+The Instance Dependence Graph (IDG) is also an extension of the simple Object Dependence Graph (ODG), where the data entities corresponds to underlying data and the cached object instance generated from the cachable functions. An edge from underlying data $u$ to an object $o$ denoted $(u, o)_i$ indicates that if $u$ is changed then $o$ must be updated.
 
 The instance dependence graph for the running example is illustrated on figure~\ref{fig:instance-dependence-graph}. In the given example, this graph is quite primitive. It's worth noting that the edges in the IDG are instance specific representations of the direct dependencies of the DDG seen on figure~\ref{fig:declaration-dependence-graph}.
 
 \begin{figure*}[ht!]
   \centering
-  \includegraphics[width=0.5\linewidth]{figures/instance-dependence-graph.pdf}
-  \caption{An example of an Instance Dependence Graph based on the running example}
+  \includegraphics[width=0.7\linewidth]{figures/instance-dependence-graph.pdf}
+  \caption{An example of an Instance Dependence Graph based on the running example, where we have a single course entity that have two participant entities.}
   \label{fig:instance-dependence-graph}
 \end{figure*}
 
@@ -99,7 +99,7 @@ The representation of the IDG is similar to the representation of lazy dependenc
 
 \begin{figure*}[ht!]
   \centering
-  \includegraphics[width=0.8\linewidth]{figures/idg-data-structure.pdf}
+  \includegraphics[width=0.7\linewidth]{figures/idg-data-structure.pdf}
   \caption{An illustration of the data structure representing the IDG on figure~\ref{fig:instance-dependence-graph}}
   \label{fig:idg-data-structure}
 \end{figure*}
@@ -118,7 +118,7 @@ The queries needed for automatic invalidation are:
   \item \verb$lookup_cached_objects(entity_id)$: Finds all cached objects depending on the \verb$entity_id$.
 \end{itemize}
 
-If we use perfect hashing as with the DDG we will also be able to lookup instance dependencies using $O(1)$ expected time. The space used by the IDG If we denote the total number of direct dependency declarations for all the cached functions as $|d|$ then the IDG uses $O(|d|)$ space in worst case.
+If we use perfect hashing as with the DDG we will also be able to lookup instance dependencies using $O(1)$ expected time. If we denote the total number of direct dependency declarations for all the cached functions as $|d|$ then the IDG uses $O(|d|)$ space in worst case.
 
 % subsection instance-dependence-graph end
 
@@ -127,7 +127,7 @@ If we use perfect hashing as with the DDG we will also be able to lookup instanc
 \section{Dependency Registration}
 \label{sec:dependency-registration}
 
-For the application to know what and when to invalidate, the application must register the dependency declarations and name of cached functions instances. The dependency declarations that defines the lazy and direct dependencies are part of the source code and therefore available when the application is started as illustrated on figure~\ref{fig:declaration-dependency-registration}. This registration flow simply collects all the cached functions registered through the cachable function procedure and adds them as dependencies in the DDG.
+For the application to know what and when to invalidate, the application must register the dependency declarations and names of cached objects. The dependency declarations that defines the lazy and direct dependencies are part of the source code and therefore available when the application is started as illustrated on figure~\ref{fig:declaration-dependency-registration}. This registration flow collects all the cached functions registered through the cachable function procedure and adds them as dependencies in the DDG.
 
 \begin{figure*}[ht!]
   \centering
@@ -136,7 +136,9 @@ For the application to know what and when to invalidate, the application must re
   \label{fig:declaration-dependency-registration}
 \end{figure*}
 
-The registration of cached object instances happens when the cached object is accessed for the first time as illustrated on figure~\ref{fig:instance-dependency-registration}. In this flow we start by looking up the given cached object in the IDG, but since it's the first time the object is accessed it does not exist. To generate the name of the cached objects we use the ordered direct dependencies from the DDG combined with the input from the request. We derive dependencies to underlying data from the input that represents entities and add dependencies between the given entities and the cached object through the IDG.
+The registration of cached object instances happens when a cached object is accessed for the first time as illustrated on figure~\ref{fig:instance-dependency-registration}. In this flow we start by looking up the given cached object in the IDG, but since it's the first time the object is accessed it does not exist.
+
+To generate the name of the cached objects we use the ordered direct dependencies from the DDG combined with the input from the request. We derive dependencies to underlying data from the input that represents entities and add dependencies between the given entities and the cached object through the IDG.
 
 \begin{figure*}[ht!]
   \centering
@@ -148,18 +150,18 @@ The registration of cached object instances happens when the cached object is ac
 \section{Invalidation Propagation}
 \label{sec:invalidation-propagation}
 
-The purpose of invalidation is to be able to evaluate the freshness of a given cached object and know which cached objects are stale and need to be updated. A cached object is considered stale when it's underlying data has been updated, which happens during the request from a client that involves updating, inserting or deleting data in the primary storage. To be able to react to these events, Smache subscribes to callbacks from the database wrapper. When the database transaction succeeds the database wrapper will notify Smache with the id and type~\footnote{Type is another word for the relation in a relational database and a collection in a document-oriented database} of the manipulated entity. This notification will trigger cache invalidation through Smache.
+The purpose of invalidation is to be able to evaluate the freshness of a given cached object and know which cached objects are fresh and which are stale and need to be updated. A cached object is considered stale when its underlying data has been updated, which happens during the request from a client that involves updating, inserting or deleting data in the primary storage. To be able to react to these events, Smache subscribes to callbacks from the database wrapper. When the database transaction succeeds the database wrapper will notify Smache with the id and type~\footnote{Type is another word for the relation in a relational database and a collection in a document-oriented database} of the manipulated entity. This notification will trigger cache invalidation through Smache.
 
-Based on the type and id of the changed entity, Smache updates affected cached objects in two steps:
+Based on the type and id of the changed entity, Smache updates affected cached objects in four steps:
 
 \begin{enumerate}
-  \item Find keys for cached objects depending on the changed entity
-  \item Invalidate both set of keys using timestamp invalidation
+  \item Query the IDG using \verb$lookup_cached_object$ with the updated entity id to find instance dependencies
+  \item Query the DDG using \verb$lookup_lazy_dependencies$ with the update entity type to find lazy dependencies
+  \item Evaluate the procedures for lazy dependencies, which returns a set of entities
+  \item Query the IDG using \verb$lookup_cached_object$ with the set of entities from the lazy dependency procedures
+  \item Invalidate cached objects from instance and lazy dependencies using timestamp invalidation
 \end{enumerate}
 
-There are two sets of object names found from the direct dependencies lazy and dependencies. To find the cached objects that directly depends on the given entity we query the IDG data structure with \verb$lookup_cached_objects(entity_id)$, which returns a list of names for cached objects affected by the given change. The other set of object names are found by evaluating lazy dependencies for the given entity type.
-The lazy dependency declarations are found by querying the DDG with \verb$lookup_lazy_dependencies(entity_type)$. The lazy dependency is then evaluated using the declared procedure, which returns a new set of entities directly related to the given data source. We then query the IDG with \verb$lookup_cached_objects(entity_id)$ with id's from the new set of relations, which returns lists of all cached objects that depends on the given entities. From these cached objects we filter all the keys such that we only include keys for cached objects related to the lazy dependency.
-At last we invalidate both set of keys using timestamp invalidation as explained in the following section~\ref{subsec:timestamp-invalidation}.
 Since the process of finding keys for depending objects involves multiple network calls to the primary storage, the invalidation propagation must be asynchronous to avoid a performance degrade for requests that involves updating underlying data.
 
 % Analyze the queries performed in the algorithm as prequel to the next chapter
