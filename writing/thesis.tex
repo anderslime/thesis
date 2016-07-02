@@ -23,6 +23,7 @@
 % PACKAGES
 %===============================================================================
 \usepackage{LukeThesis}                             %Import Thesis base style
+\usepackage[acronym,nonumberlist]{glossaries}
 
 %===============================================================================
 % SOURCE CODE
@@ -121,6 +122,7 @@
 %===============================================================================
 % THESIS STRUCTURE  (Modifiy to include more chapters etc)
 %===============================================================================
+% \input{glossaries}
 \begin{document}
 %------------------------
 %Pre-frontmatter material
@@ -136,6 +138,7 @@
 \input{preface}                                     %Preface
 \markboth{}{}                                       %Set headings (left)(right)
 \input{acknowledgements}                            %Acknowledgements
+\markboth{}{}                                       %Set headings (left)(right)
 \markboth{}{}                                       %Set headings (left)(right)
 %------------------
 % Table of contents
