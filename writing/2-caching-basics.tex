@@ -16,7 +16,7 @@ In general caching is about storing the result of a computation, such that it fo
     \item The caller requests the value of the computation by calling the proxy
     \item The proxy fetches the cached value of the computation through the cache
     \item[(3)] The proxy calls the computation
-    \item[(4)] The result of the computation is stored in the cache
+    \item[(4)] The new result of the computation is stored in the cache
     \item The value is returned to the caller
   \end{enumerate}
   \footnotesize{Steps annotated with \emph{parenthesis and dashed lines} are only executed in case of cache miss or cache failure.}
@@ -28,7 +28,7 @@ If we look at the cached object from an abstract point of view, we can see it as
 
 In order for the algorithm to work, we need to be sure that a cached object is uniquely identified by a given name. This presents one of the challenges of cache management, which involves naming and localizing cached values.
 
-Another essential part of the caching algorithm is the invalidation (one of the two hard things in computer science\footnote{Not scientifically, but at least a favorite saying of Martin Fowler and quote by Phil Karlton}), which in the algorithm is done using a \emph{freshness check} evaluated when the cached value is requested. How this \emph{check} is performed depends on the specific invalidation technique.
+Another essential part of the caching algorithm is the invalidation (one of the two hard things in computer science\footnote{Not scientifically, but at least a favorite saying of Martin Fowler and quote by Phil Karlton}), which in the algorithm is done using a \emph{freshness check} performed when the cached value is requested. How this \emph{check} is performed depends on the specific invalidation technique.
 
 \section{Caching Architecture}
 \label{subsec:architecture}
@@ -42,7 +42,7 @@ The common caching architecture e.g. used to support the basic algorithm for web
   \label{fig:caching-basics-architecture}
 \end{figure*}
 
-In most cases the cache database is an in-memory key-value database that supports \verb$LOOKUP$ to find cached values and \verb$STORE$ to store cached values and behaviour for cleaning up old cached values. A popular choice for cache databases are technologies such as Redis~\footnote{http://redis.io/} and Memcached~\footnote{https://memcached.org/} since they are simple distributed key-value stores that lives in memory and therefore allows for scalability and high-performance operations.
+In most cases the cache database is an in-memory key-value database that supports \verb$LOOKUP$ to find cached values and \verb$STORE$ to store cached values and behaviour for cleaning up old cached values. A popular choice for cache databases are technologies such as Redis~\footnote{http://redis.io/} and Memcached~\footnote{https://memcached.org/} since they are simple distributed key-value stores that lives in memory and therefore allows for high-performance operations.
 
 Most modern web applications needs to serve multiple users at the same time, which means the web application must run on multiple processes\footnote{This is processes as an abstract term used in distributed systems. If we need to be implementation specific this could just as well be threads.} deployed to one or more servers. We will therefore treat the web application as a concurrent environment.
 
@@ -55,14 +55,14 @@ As with the algorithm on figure~\ref{fig:basic-caching}, caching can be describe
 
 \begin{itemize}
   \item \textbf{Request} is the event occurring when a client requests a given cached object
-  \item \textbf{Response} is when the client receives the cached value
+  \item \textbf{Response} is when the client receives the cached value for the cached object
   \item \textbf{Computation Started} The computation of a new cached object is started
   \item \textbf{Computed and Stored} The computation is finished and the new object is stored in the cache
-  \item \textbf{UD Updated} is when the underlying data has been updated
+  \item \textbf{UD Updated} is when the underlying data has been updated and the cached object is considered stale
   \item \textbf{Invalidated} is when the system considers the cached object as invalid
 \end{itemize}
 
-Alongside these events the timeline model illustrates the interval in which the given cached object is considered valid (the cache system will serve the cached value) and when it is actually fresh (consistent with underlying data). The validity interval illustrates when the cache system will respond immediately, which means if the cached object is always considered valid then the approach supports immediate responses. In the time interval, where the fresh and valid interval overlaps, the approach will serve a fresh version of the cached value. If they always overlap then the given approach will guarantee strict freshness.
+Alongside these events the timeline model illustrates the interval in which the given cached object is considered valid (the cache system will serve the cached value) and when it is actually fresh (consistent with underlying data). The validity interval illustrates when the cache system will respond immediately, which means if the cached object is always considered valid then the approach always serves the latest stored value from the cache. In the time interval, where the fresh and valid interval overlaps, the approach will serve a fresh version of the cached value. If they always overlap then the given approach will guarantee strict freshness.
 
 The timeline model applied to the basic caching algorithm~\ref{fig:basic-caching} is illustrated on figure~\ref{fig:basic-caching-timeline}.
 
@@ -76,18 +76,18 @@ The timeline model applied to the basic caching algorithm~\ref{fig:basic-caching
 % section timeline-model end
 
 
-\section{Evaluating Caching Techniques}
+\section{Evaluating Caching Approaches}
 \label{sec:evaluating_caching_techniques}
 
 % Goals of caching
 
-To choose the correct caching technique for a given use case, we need to decide the criteria for picking the best suited. The overall goal of caching in web development is to achieve a better user experience by responding to the user quickly and to save money by using less CPU power. If we assume that the cache system is able to retrieve cached objects fast, the goals can be achieved by ``hitting the cache'' as often as possible. We can measure this using the metric \emph{cache hit rate}, which refers to the rate at which the cache is hit among the total number of requests for the cached object.
+To choose the correct caching technique for a given use case, we need to decide the criteria for evaluating caching approaches. The overall goal of caching in web development is to achieve a better user experience by responding to the user quickly and to save money by using less CPU power. If we assume that the cache system is able to retrieve cached objects fast, the goals can be achieved by ensuring computations are only executed with purpose and ``hitting the cache'' as often as possible. We can measure the frequency in which the cache is hit using the metric \emph{cache hit rate}.
 
 %% END CORRECTNESS
 
 % Intro: from perspective of user
 
-To evaluate the caching technique for a given use case, we will see the situation from the perspective of the client (i.e. a user). The client makes a request for some content that is served by the web server. This content are the results of one or more computations that can be cached individually.
+To evaluate the caching technique for a given use case, we will see the situation from the perspective of the client (i.e. a user). The client makes a request for some content that is served by the web server. This content is the results of one or more computations that can be cached individually.
 
 %%%% CONSISTENCY
 
@@ -125,7 +125,7 @@ So far we've considered parameters from a user's perspective, but to evaluate th
 
 %%%% ADAPTABILITY
 
-The last parameter we will introduce is also a requirement of the system: \emph{adaptability}. Since adaptability cannot be evaluated objectively we will introduce a scale of \emph{high}, \emph{medium} and \emph{low}, where high means that is adaptable to most systems and low means that it is adaptable to a few systems. We will define the scale as following:
+The last parameter we will introduce is also a requirement of the system: \emph{adaptability}. Since there exists no metric for adaptability, we will introduce a scale of \emph{high}, \emph{medium} and \emph{low}, where high means that is adaptable to most systems and low means that it is adaptable to a few systems. We will define the scale as following:
 
 \begin{itemize}
   \item \textbf{Low}: The technique has assumptions about the primary storage, cache database and/or application, which makes it difficult to change technologies.
@@ -140,10 +140,10 @@ From this discussion, we can sum up the evaluation parameters as follows:
 \begin{itemize}
   \item \textbf{Consistency}: The cached object must be consistent with the data from the primary storage.
   \item \textbf{Strict Freshness}: The cached objects must be based on the newest version of it's underlying data.
-  \item \textbf{Update On Invalidation}: The cached objects are automatically updated after they has been invalidated.
-  \item \textbf{Always Immediate Response}: The cached objects must be served immediately after it has been requested.
-  \item \textbf{No Invalidation Management}: The programmer has not responsibility for naming, localizing or invalidating.
-  \item \textbf{Adaptability}: How adaptable the caching technique is to existing systems
+  \item \textbf{Update On Invalidation}: The cached objects are automatically updated after they become stale.
+  \item \textbf{Always Immediate Response}: The cached objects must be served immediately after they have been requested.
+  \item \textbf{No Invalidation Management}: The programmer does not have the responsibility for naming, localizing or invalidating.
+  \item \textbf{Adaptability}: How adaptable the caching technique is to existing systems.
 \end{itemize}
 
 % chapter caching_model end
