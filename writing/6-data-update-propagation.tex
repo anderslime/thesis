@@ -20,7 +20,7 @@ Since the cached objects are accessed by multiple processes they become a shared
 
 \begin{figure*}[ht!]
   \centering
-  \includegraphics[width=1.0\linewidth]{figures/incorrect-update-analysis.pdf}
+  \includegraphics[width=1.0\linewidth]{figures/incorrect-update-analysis.png}
   \caption{Showing how two concurrent caching updates from two different application servers results in an inconsistent state. We see that even though the request from \emph{Update Process 2} are based on data older than \emph{Update Process 1} it gets to write.}
   \label{fig:incorrect-updates-analysis}
 \end{figure*}
@@ -37,7 +37,7 @@ To allow concurrent updates we use Timestamp Invalidation as already explained i
 
 \begin{figure*}[ht!]
   \centering
-  \includegraphics[width=1.0\linewidth]{figures/incorrect-update-analysis-timestamp-fix.pdf}
+  \includegraphics[width=1.0\linewidth]{figures/incorrect-update-analysis-timestamp-fix.png}
   \caption{How Invalidation Timestamps fixes the concurrency problem described in figure~\ref{fig:incorrect-updates-analysis}.}
   \label{fig:incorrect-update-analysis-timestamp-fix}
 \end{figure*}

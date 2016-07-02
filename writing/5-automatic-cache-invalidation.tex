@@ -52,7 +52,7 @@ Figure~\ref{fig:declaration-dependence-graph} shows the DDG for the running exam
 
 \begin{figure*}[ht!]
   \centering
-  \includegraphics[width=0.6\linewidth]{figures/declaration-dependence-graph.pdf}
+  \includegraphics[width=0.6\linewidth]{figures/declaration-dependence-graph.png}
   \caption{The Declaration Dependence Graph of the running example}
   \label{fig:declaration-dependence-graph}
 \end{figure*}
@@ -61,7 +61,7 @@ The DDG graph is represented using two data structures. The lazy dependencies ar
 
 \begin{figure*}[ht!]
   \centering
-  \includegraphics[width=0.8\linewidth]{figures/ddg-data-structure.pdf}
+  \includegraphics[width=0.8\linewidth]{figures/ddg-data-structure.png}
   \caption{An illustration of the data structure representing the DDG on figure~\ref{fig:declaration-dependence-graph}}
   \label{fig:ddg-data-structure}
 \end{figure*}
@@ -131,7 +131,7 @@ For the application to know what and when to invalidate, the application must re
 
 \begin{figure*}[ht!]
   \centering
-  \includegraphics[width=1.0\linewidth]{figures/declaration-dependency-registration.pdf}
+  \includegraphics[width=1.0\linewidth]{figures/declaration-dependency-registration.png}
   \caption{The flow in which lazy and direct dependencies are registered from the declarations}
   \label{fig:declaration-dependency-registration}
 \end{figure*}
@@ -142,7 +142,7 @@ To generate the name of the cached objects we use the ordered direct dependencie
 
 \begin{figure*}[ht!]
   \centering
-  \includegraphics[width=1.0\linewidth]{figures/instance-dependency-registration.pdf}
+  \includegraphics[width=1.0\linewidth]{figures/instance-dependency-registration.png}
   \caption{The flow in which cached object instances are accessed when they are accessed the first time}
   \label{fig:instance-dependency-registration}
 \end{figure*}
@@ -154,7 +154,7 @@ The purpose of invalidation is to be able to evaluate the freshness of a given c
 
 \begin{figure*}[ht!]
   \centering
-  \includegraphics[width=1.0\linewidth]{figures/invalidation-propagation.pdf}
+  \includegraphics[width=1.0\linewidth]{figures/invalidation-propagation.png}
   \begin{enumerate}
     \item The invalidation trigger notifies Smache about an update to underlying data with type and id of entity.
     \item Smache queries the IDG using \verb$lookup_cached_object$ with the updated entity id to find instance dependencies>

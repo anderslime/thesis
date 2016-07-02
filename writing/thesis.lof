@@ -25,8 +25,8 @@
 \contentsline {figure}{\numberline {5.3}{\ignorespaces An illustration of the data structure representing the DDG on figure~\ref {fig:declaration-dependence-graph}\relax }}{49}{figure.caption.28}
 \contentsline {figure}{\numberline {5.4}{\ignorespaces An example of an Instance Dependence Graph based on the running example, where we have a single course entity that have two participant entities.\relax }}{51}{figure.caption.29}
 \contentsline {figure}{\numberline {5.5}{\ignorespaces An illustration of the data structure representing the IDG on figure~\ref {fig:instance-dependence-graph}\relax }}{51}{figure.caption.30}
-\contentsline {figure}{\numberline {5.6}{\ignorespaces The flow in which lazy and direct dependencies are registered from the declarations\relax }}{52}{figure.caption.31}
-\contentsline {figure}{\numberline {5.7}{\ignorespaces The flow in which cached object instances are accessed when they are accessed the first time\relax }}{53}{figure.caption.32}
+\contentsline {figure}{\numberline {5.6}{\ignorespaces The flow in which lazy and direct dependencies are registered from the declarations\relax }}{53}{figure.caption.31}
+\contentsline {figure}{\numberline {5.7}{\ignorespaces The flow in which cached object instances are accessed when they are accessed the first time\relax }}{54}{figure.caption.32}
 \contentsline {figure}{\numberline {5.8}{\ignorespaces The invalidation propagation algorithm for Smache.\relax }}{55}{figure.caption.33}
 \contentsline {figure}{\numberline {5.9}{\ignorespaces The architecture required by a web application that uses Smache with automatic invalidation.\relax }}{62}{figure.caption.35}
 \contentsline {figure}{\numberline {5.10}{\ignorespaces How background workers are used do perform invalidation asynchronously.\relax }}{63}{figure.caption.36}
